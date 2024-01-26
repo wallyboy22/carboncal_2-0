@@ -1,0 +1,202 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geom = 
+    /* color: #d63000 */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[-75.20771779196184, 6.31306782440633],
+          [-75.20771779196184, -35.31919759622834],
+          [-33.02021779196184, -35.31919759622834],
+          [-33.02021779196184, 6.31306782440633]]], null, false),
+    geom2 = 
+    /* color: #d63000 */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[-62.78923613554167, -7.529230134272356],
+          [-62.78923613554167, -10.047919609712524],
+          [-60.94353301054167, -10.047919609712524],
+          [-60.94353301054167, -7.529230134272356]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var scale = 30
+;
+var description  = 'biomass_balance_tC_ha-QCN_MapBiomas8-1986_2022-v025'+'-scale'+scale;
+var balance = ee.Image('projects/mapbiomas-workspace/CCAL/MODELOS/biomass_balance_tC_ha-QCN_MapBiomas8-1986_2022-v025');
+
+var table_biomes = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
+var table_states = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/estados-2017')
+  .map(function(feat){
+    return feat.set({
+      'CD_UF':ee.Number.parse(feat.get('CD_GEOCUF'))
+    });
+  });
+  
+print(table_states);
+
+var geometry = geom;
+
+var legends = require('users/geomapeamentoipam/MapBiomas__Fogo:00_Tools/Legends.js');
+var estados_legend = ee.Dictionary(legends.get('estados'));
+var ufs_legend = ee.Dictionary(legends.get('ufs'));
+var biomas_legend = ee.Dictionary(legends.get('biomas'));
+
+var img_biomes = ee.Image().paint(table_biomes,'CD_Bioma');
+var img_states = ee.Image().paint(table_states,'CD_UF');
+
+var territory = img_biomes.multiply(100).add(img_states);
+
+Map.addLayer(territory.randomVisualizer(),{},'territory');
+
+var area_ha = ee.Image.pixelArea().divide(10000);
+
+balance.bandNames()
+.evaluate(function(bandnames){
+  print(bandnames);
+  
+  var table = bandnames
+    .map(function(bandname){
+      var tC_ha = balance.select(bandname);
+      
+      var tC = tC_ha.multiply(area_ha);
+      
+      var reduce_ha_total = area_ha
+        .addBands(territory)
+        .reduceRegion({
+          reducer:ee.Reducer.sum().group(1,'territory'),
+          geometry:geometry, 
+          scale:scale,
+          // crs, crsTransform, bestEffort, 
+          maxPixels:1e13, 
+          // tileScale:
+        });
+      
+      var table_ha_total = ee.FeatureCollection(
+        ee.List(ee.Dictionary(reduce_ha_total).get('groups'))
+          .map(function(obj){
+            obj = ee.Dictionary(obj);
+            var territory_int = obj.getNumber('territory');
+            return ee.Feature(null)
+              .set({
+                'territory':territory_int,
+                'Área (ha total)':obj.get('sum')
+              });
+          })
+        );
+      var reduce_ha = area_ha
+        .addBands(territory)
+        .updateMask(tC.abs().selfMask())
+        .reduceRegion({
+          reducer:ee.Reducer.sum().group(1,'territory'),
+          geometry:geometry, 
+          scale:scale,
+          // crs, crsTransform, bestEffort, 
+          maxPixels:1e13, 
+          // tileScale:
+        });
+      
+      var table_ha = ee.FeatureCollection(
+        ee.List(ee.Dictionary(reduce_ha).get('groups'))
+          .map(function(obj){
+            obj = ee.Dictionary(obj);
+            var territory_int = obj.getNumber('territory');
+            return ee.Feature(null)
+              .set({
+                'territory':territory_int,
+                'Área (ha)':obj.get('sum')
+              });
+          })
+        );
+      var reduce_tC = tC
+        .addBands(territory)
+        .reduceRegion({
+          reducer:ee.Reducer.sum().group(1,'territory'),
+          geometry:geometry, 
+          scale:scale,
+          // crs, crsTransform, bestEffort, 
+          maxPixels:1e13, 
+          // tileScale:
+        });
+
+      var table_tC = ee.FeatureCollection(
+        ee.List(ee.Dictionary(reduce_tC).get('groups'))
+          .map(function(obj){
+            obj = ee.Dictionary(obj);
+            var territory_int = obj.getNumber('territory');
+            return ee.Feature(null)
+              .set({
+                'territory':territory_int,
+                'Toneladas de carbono':obj.get('sum')
+              });
+          })
+        );
+      
+    var join = ee.Join.inner();
+    var filter_join = ee.Filter.equals({
+      'leftField':'territory',
+      'rightField':'territory',
+    });
+    
+      
+
+    var table = join.apply(table_tC,table_ha,  filter_join)
+      .map(function(feat){
+        return ee.Feature(feat.get('primary'))
+        .set({
+          'Área (ha)':ee.Feature(feat.get('secondary')).get('Área (ha)')
+        });
+      })
+    
+    table = join.apply(table,table_ha_total,  filter_join)
+      .map(function(feat){
+        return ee.Feature(feat.get('primary'))
+        .set({
+          'Área (ha total)':ee.Feature(feat.get('secondary')).get('Área (ha total)')
+        });
+      });
+    
+      
+    table = table
+      .map(function(feat){
+        var territory_int = feat.getNumber('territory');
+
+        return ee.Feature(feat)
+          .set({
+            'biome_int':territory_int.divide(100).int16(),
+            'state_int':territory_int.mod(100).int16(),
+            'bandname':bandname,
+
+            'Unidade Federativa':estados_legend.get(territory_int.mod(100).int16()),
+            'UF':ufs_legend.get(territory_int.mod(100).int16()),
+            'Biomas':biomas_legend.get(territory_int.divide(100).int16()),
+            'Ano':bandname === 'stock' ? 2022 : bandname.slice(-4),
+            'Grupo':bandname === 'stock' ? 'stock' : bandname.slice(0,-5),
+          });
+      });
+
+      return table;
+      
+    });
+    
+    
+  table = ee.FeatureCollection(table).flatten();
+  
+  print('table',table);
+  
+  Export.table.toDrive({
+    collection:table,
+    description:description,
+    folder:'CCAL',
+    fileNamePrefix:description,
+    fileFormat:'csv',
+    // selectors:,
+    // maxVertices:
+  });
+  
+});
+

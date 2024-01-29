@@ -1,0 +1,238 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var Savana = /* color: #d63000 */ee.Geometry.Point([-40.82211429708013, -6.6372084744350826]),
+    F_Campestre = 
+    /* color: #98ff00 */
+    /* shown: false */
+    ee.Geometry.Point([-60.6827740604432, 3.866542148008096]),
+    savana_uso_savana = /* color: #d63000 */ee.Geometry.Point([-40.92728571388169, -6.553909907312341]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+/*
+  Gerar asset de ...
+  
+  --- Desmatamento e vegetação secundaria
+  - mapa de correlação do valor dos pixeis com a classe observado
+  1:'Antrópico',
+  2:'Veg. Primária',
+  3:'Veg. Secundária',
+  4:'Supressão Veg. Primária',
+  5:'Recrescimento de Veg. Secundária',IF
+  6:'Supressão Veg. Secundária',
+  7:'Outras transições',
+
+  
+*/
+
+// --- --- DATASETS
+var prodes_raw = ee.Image('projects/mapbiomas-workspace/SEEG/2023/BR_prodes_2012_2022_stack');
+var secVeg_cover = ee.Image('projects/mapbiomas-workspace/public/collection8/mapbiomas_collection80_deforestation_secondary_vegetation_v1');
+
+var bounds = prodes_raw.geometry().bounds();
+
+// --- --- PROCESSAMENTOS
+// --- PASSO 1: dinamica da vegetação primaria, prodes (2012 a 2022)
+// Aqui é construido a logica de vegetação primaria e desmatamento de primaria
+// com base nos dados do PRODES. 
+// 1:'Antrópico',
+// 2:'Veg. Primária',
+// 4:'Supressão Veg. Primária',
+
+
+// --- dinamica da vegetação primaria, prodes 2012 a 2022
+var prodes = prodes_raw
+  .slice(0,-2);
+  
+var years = [2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022];
+
+var prodes_adpt = ee.Image().select();
+
+years.forEach(function(year,i){
+  
+  var prodes_acum = prodes.slice(0,i+1)
+  // .aside(print,'prodes_acum ' + year)
+  .reduce('max')
+  //.clip() recortar para área do BR - tem pixels pelo mundo 
+  .gte(1)
+  .unmask(2)
+  .rename('classification_'+year);
+  
+  prodes_adpt = prodes_adpt
+    .addBands(prodes_acum);
+});
+
+prodes_adpt = prodes_adpt
+  .where(prodes.gte(1),4)
+  .updateMask(secVeg_cover.select(0).gte(0));
+
+// --- PASSO 2: dinamica da vegetação secundaria, MapBiomas coleção 8
+/*--- Desmatamento e vegetação secundaria
+- mapa de correlação do valor dos pixeis com a classe observado
+  1:'Antrópico',
+  2:'Veg. Primária',
+  3:'Veg. Secundária',
+  4:'Supressão Veg. Primária',
+  5:'Recrescimento de Veg. Secundária',
+  6:'Supressão Veg. Secundária',
+  7:'Outras transições',
+*/
+
+var secVeg = secVeg_cover.divide(100).int16();
+var cover = secVeg.mod(100).int16();
+
+// recrescimento e supressão de veg secundaria
+var regrowth_secDeforest = secVeg.multiply(0)
+  .where(secVeg.eq(5),5)
+  .where(secVeg.eq(6),6)
+  .selfMask();
+
+var secundary_dinamic = ee.Image().select();
+years = [
+  // 1985,
+       1986,1987,1988,1989,
+  1990,1991,1992,1993,1994,
+  1995,1996,1997,1998,1999,
+  2000,2001,2002,2003,2004,
+  2005,2006,2007,2008,2009,
+  2010,2011,2012,2013,2014,
+  2015,2016,2017,2018,2019,
+  2020,2021,2022,
+  // 2023,2024,
+  ];
+
+years.forEach(function(year,i){
+  
+  var loop = ee.List.sequence(0,i,1)
+    .iterate(function(current,previous){
+      var I = ee.Number(current).int();
+      var img = regrowth_secDeforest.select(I)
+      .remap([5,6],[3,1])
+      .rename('classification');
+      
+      return ee.List(previous)
+        .add(img);
+        
+    },[]);
+    
+    loop= ee.ImageCollection(ee.List(loop));
+    
+    // print('loop',loop);
+  var secundary_dinamic_year = loop
+    .mosaic()
+    .rename('classification_'+year);
+  
+  // var secundary_age_year = loop
+  //   .map(function(img){return
+  //   img.eq(3)
+      
+  //   })
+  //   .sum()
+  //   .rename('age_'+year);
+  
+  secundary_dinamic = secundary_dinamic
+    .addBands(secundary_dinamic_year);
+});
+
+print('secundary_dinamic',secundary_dinamic);
+print('secVeg',secVeg);
+
+var secundary_dinamic_final = secundary_dinamic
+  .where(secVeg.eq(5),5)
+  .where(secVeg.eq(6),6)
+  .slice(26);
+
+Map.addLayer(secundary_dinamic_final,{},'secundary_dinamic_final');
+
+
+var secundary_dinamic_2012 = secundary_dinamic_final.slice(0,1);
+
+secundary_dinamic_2012 = secundary_dinamic_2012
+  .where(prodes_adpt.select('classification_2012').eq(4).selfMask(),secundary_dinamic.select('classification_2012').eq(3).selfMask().multiply(3))
+  .updateMask(prodes_adpt.select('classification_2012').eq(4))
+
+secundary_dinamic_final = secundary_dinamic_2012
+  .addBands(
+    secundary_dinamic_final.slice(1)
+      .updateMask(prodes_adpt.slice(1).eq(1))
+    );
+
+// -passo 2.1 calculando a idade da vegetação secundaria;
+
+
+
+
+// --- Passo 3: união dos dados de dinamica da vegetação primaria e secundaria
+var prodes_dinamica = prodes_adpt
+  .where(secundary_dinamic_final,secundary_dinamic_final);
+
+
+// A questão do samba do pixel, no 
+// --- --- PRINT E PLOT
+
+var ano = 2015;
+
+var visParams = {
+  secVeg:{
+    palette:['ffffff','fff6bf','127622','56d117','ea1c1c','6fc4b7','ffb66c','8c8c8c'],
+    min:0,
+    max:7,
+    bands: 'classification_'+ano
+  },
+  prodes:{
+    palette:['ff8000'],
+    min:0,
+    max:1,
+    bands: 'desmatamento_'+ano
+    
+  },
+  cover:{
+    'min': 0,
+    'max': 62,
+    'palette': require('users/mapbiomas/modules:Palettes.js').get('classification8'),
+    bands: 'classification_'+ano
+
+  },
+};
+
+
+
+var bbox_br = ee.Geometry.Polygon(
+  [[[-74.34040691705002, 5.9630086351511690],
+  [-74.34040691705002, -34.09134700746099],
+  [-33.64704754205002, -34.09134700746099],
+  [-33.64704754205002, 5.9630086351511690]]]);
+//Map.addLayer(bbox_br)
+
+
+print('prodes_raw',prodes_raw,'prodes',prodes);
+print('prodes_adpt',prodes_adpt);
+print('secVeg_cover',secVeg_cover);
+Map.addLayer(secVeg,visParams.secVeg,'secVeg');
+Map.addLayer(cover,visParams.cover,'Cover_secVeg'); // Match - Mapbiomas_c8
+// Map.addLayer(cover.select('classification_2012'),vis,'Cover_secVeg'); // Match - Mapbiomas_c8
+Map.addLayer(prodes_adpt,visParams.secVeg,'prodes_adpt');
+
+Map.addLayer(regrowth_secDeforest,visParams.secVeg,'regrowth_secDeforest');
+
+Map.addLayer(secundary_dinamic,visParams.secVeg,'secundary_dinamic');
+Map.addLayer(secundary_dinamic_final,visParams.secVeg,'secundary_dinamic_final');
+Map.addLayer(prodes_dinamica,visParams.secVeg,'prodes_dinamica');
+
+
+
+Map.addLayer(prodes.gte(1),visParams.prodes,'prodes');
+
+// --- --- 
+var description = 'auxiliar_prodes_dinamico_2012_2022';
+var assetId = 'projects/mapbiomas-workspace/CCAL/MODELOS/' + description;
+Export.image.toAsset({
+  image:prodes_dinamica,
+  description:description,
+  assetId:assetId,
+  pyramidingPolicy:'mode',
+  // dimensions:,
+  region:bounds,
+  scale:30,
+  // crs:,
+  // crsTransform:,
+  maxPixels:1e13,
+  // shardSize:
+});

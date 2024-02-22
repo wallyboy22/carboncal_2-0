@@ -456,7 +456,7 @@ Map.addLayer(biomass_stock_tC_ha,{},'biomass_stock_tC_ha');
 // --- Path
 
 // --- Exporting
-var version = 'QCN_MapBiomas8-1986_2022-v027';
+var version = 'QCN_MapBiomas8-1986_2021-v027';
 var description = 'biomass_stock_tC_ha-'+version;
 var assetId = 'projects/mapbiomas-workspace/CCAL/MODELOS/';
 
@@ -589,7 +589,7 @@ Map.addLayer(finalImageCCAL,{},'finalImageCCAL');
 /// ----------------------------------------------------------------------------------------
 
 // --- Path your output
-var version = 'QCN_MapBiomas8-1986_2022-v027';
+var version = 'QCN_MapBiomas8-1986_2021-v027';
 var description = 'biomass_balance_tC_ha-'+version;
 var assetId = 'projects/mapbiomas-workspace/CCAL/MODELOS/';
 

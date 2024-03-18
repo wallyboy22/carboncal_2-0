@@ -1,0 +1,118 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = 
+    /* color: #d63000 */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[-76.54780555077535, 6.702549891783329],
+          [-76.54780555077535, -36.49659065368281],
+          [-28.735305550775358, -36.49659065368281],
+          [-28.735305550775358, 6.702549891783329]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var legend = [
+  ['CS',"Floresta",	"Corte seletivo",2,[3,4,5,49]],
+  ['FM',"Floresta",	"Floresta manejada",3,[3,4,5,49]],
+  ['FNM',"Floresta",	"Floresta não manejada",4,[3,4,5,49]],
+  ['FSec',  "Floresta",	"Floresta secundária",5,[3,4,5,49]],
+  ['Ref',"Floresta",	"Reflorestamento",6,[9]],
+  
+  ['GM',"Campo","Campo manejado",12,[11,12,13,50]],
+  ['GNM',"Campo",	"Campo não manejado",13,[11,12,13,50]],
+  ['GSec',"Campo",	"Campo secundário",14,[11,12,13,50]],
+
+  ['Ap',"Campo",	"Pastagem",15,[15]],
+  ['APD',"Campo",	"Pastagem degradada",16,[15]],
+
+  ['OFLM',"Campo",	"Outras formações lenhosas manejadas",17,[11,12,13]],
+  ['OFLNM',"Campo",	"Outras formações lenhosas não manejadas",18,[11,12,13]],
+  ['OFLSec',"Campo",	"Outras formações lenhosas secundárias",19,[11,12,13]],
+
+  ['DnM',"Outras terras",	"Dunas manejadas",22,[23]],
+  ['DnNM',"Outras terras",	"Dunas não manejadas",23,[23]],
+  ['Min',"Outras terras",	"Mineração",24,[30]],
+  ['SE',"Outras terras",	"Solo exposto",25,[25]],
+  ['NO',"Outras terras",	"Áreas não observadas",27,[27]],
+  ['ArM',"Outras terras",	"Afloramento rochoso manejado",28,[29]],
+  ['ArNM',"Outras terras",	"Afloramento rochoso não manejado",29,[29]],
+
+  ['A',"Áreas Alagadas","Água",33,[31,33]],
+  ['Res',"Áreas Alagadas","Reservatório",31,[31,33]],
+  
+  ['Ac', "Agricultura","Agricultura anual",41,[39,40,41,62]],
+  ['PER', "Agricultura",	"Agricultura perene",42,[35,46,47,48]],
+  ['CANA', "Agricultura",	"Agricultura semiperene",43,[20]],
+  
+  ['S',"Assentamento","Assentamento",52,[24]],
+];
+
+var dictionary = {};
+legend.forEach(function(list){
+  dictionary[list[0]] = list[3];
+});
+
+
+var qcn_path = 'projects/mapbiomas-workspace/CCAL/DATASETS/QCN';
+
+var qcn_assets = ee.data.listAssets(qcn_path).assets
+  .map(function(obj){
+    obj.shortName = obj.id.split('/').slice(-1)[0];
+    return obj;
+  });
+
+var qcn_produtos = qcn_assets.filter(function(obj){ return obj.shortName.split('_')[0] === 'produtos';});
+
+// qcn_produtos = qcn_produtos.filter(function(obj){ return obj.shortName.split('_').slice(-1)[0] === 'cerrado';});
+print('qcn_produtos',qcn_produtos);
+var recipe_1994 = ee.Image().rename('produtos_1994');
+var recipe_2002 = ee.Image().rename('produtos_2002');
+var recipe_2010 = ee.Image().rename('produtos_2010');
+var recipe_2016 = ee.Image().rename('produtos_2016');
+
+qcn_produtos.forEach(function(obj){
+  var fc = ee.FeatureCollection(obj.id)
+    .map(function(ft){
+      return ft
+        .set('classId_1994',ee.Dictionary(dictionary).getNumber(ft.get('cagr_1994')).int())
+        .set('classId_2002',ee.Dictionary(dictionary).getNumber(ft.get('cagr_2002')).int())
+        .set('classId_2010',ee.Dictionary(dictionary).getNumber(ft.get('cagr_2010')).int())
+        .set('classId_2016',ee.Dictionary(dictionary).getNumber(ft.get('cagr_2016')).int());
+    });
+  recipe_1994 = recipe_1994.blend(ee.Image().paint(fc,'classId_1994'));
+  recipe_2002 = recipe_2002.blend(ee.Image().paint(fc,'classId_2002'));
+  recipe_2010 = recipe_2010.blend(ee.Image().paint(fc,'classId_2010'));
+  recipe_2016 = recipe_2016.blend(ee.Image().paint(fc,'classId_2016'));
+  
+  print(obj.shortName,obj,'fc',fc.limit(10));
+  
+  
+});
+
+var produtos = ee.Image().select()
+  .addBands(recipe_1994)
+  .addBands(recipe_2002)
+  .addBands(recipe_2010)
+  .addBands(recipe_2016);
+  
+print('produtos',produtos);
+
+Map.addLayer(produtos.select(0).randomVisualizer(),{},'produtos');
+
+var description = 'qcn-produtos_cagr-raster_stack';
+var assetId = 'projects/mapbiomas-workspace/CCAL/DATASETS/QCN/dados_tratados/' + description;
+
+Export.image.toAsset({
+  image:produtos,
+  description:description,
+  assetId:assetId,
+  pyramidingPolicy:'mode',
+  // dimensions, 
+  region:geometry,
+  scale:30,
+  // crs, crsTransform, 
+  maxPixels:1e11, 
+  // shardSize:,
+  // priority:
+})

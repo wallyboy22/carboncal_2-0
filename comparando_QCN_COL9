@@ -1,0 +1,583 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry_ = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-75.5859593542602, 8.421940683829648],
+          [-75.4541234167602, -34.14946064530846],
+          [-33.6181859167602, -34.14946064530846],
+          [-34.1894749792602, 8.378466825928149]]], null, false),
+    test_geometry = /* color: #0800d6 */ee.Geometry.Polygon(
+        [[[-48.31581919756238, -15.601119422109141],
+          [-48.31581919756238, -15.926242868524081],
+          [-47.07985728349988, -15.926242868524081],
+          [-47.07985728349988, -15.601119422109141]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Importar imagens
+var qcn_lulc = ee.Image('projects/mapbiomas-workspace/CCAL/DATASETS/QCN/QCN-lulc_maps');
+var mb_lulc =  ee.ImageCollection('projects/mapbiomas-workspace/COLECAO9/integracao')
+    .filter(ee.Filter.eq('version','0-24'))
+    .mosaic();
+
+// Exibir informações sobre as imagens
+// print('qcn_lulc', qcn_lulc);
+
+// Criar lista para vincular os mapas
+var mapLinker = [];
+
+// Importar paleta de cores
+var mb_vis = {
+  min:0,
+  max:62,
+  palette:require('users/mapbiomas/modules:Palettes.js').get('classification8'),
+};
+
+var qcn_vis = {
+  min:0,
+  max:52,
+  palette:["#000000","#000000","#ad975a","#04381d","#1f8d49","#7dc975","#7a5900","#000000","#000000","#000000","#000000","#000000","#ad5100","#d6bc74","#cd9100","#edde8e","#edb060","#d89f5c","#a0602c","#806050","#000000","#000000","#ffa07a","#cc805a","#9c0027","#ffefc3","#000000","#ffffff","#ffaa5f","#cc883f","#000000","#091077","#000000","#2532e4","#000000","#000000","#000000","#000000","#000000","#000000","#000000","#E974ED","#d082de","#C27BA0","#000000","#000000","#000000","#000000","#000000","#000000","#000000","#000000","#db4d4f"]
+};
+
+var simple_vis = {
+  min:0,
+  max:8,
+  palette:["#000000","1f8d49","d6bc74","7dc975","db7093","edde8e","7a6c00","0000ff","aaaaaa"]
+};
+
+var convergence_vis = {
+  min:0,
+  max:1,
+  palette:['#F48FB1','#81D4FA']
+};
+
+// listas para remapear os valores da QCN e do MapBiomas em grandes grupos, segundo a seguinte orientção
+// 1: floresta,
+// 2: campos 
+// 3: outros natural
+// 4: agricultura 
+// 5: pastagem
+// 6: outros antropico
+// 7: agua
+// 8: não observado
+
+var qcn_remap =[
+  [1, 2],// (CS) Antropico - Floresta - Corte seletivo
+  [1, 3],// (FM) Natural - Floresta - Floresta manejada
+  [1, 4],// (FNM) Natural - Floresta - Floresta não manejada
+  [1, 5],// (FSec) Natural - Floresta - Floresta secundária
+  [6, 6],// (Ref) Antropico - Floresta - Reflorestamento
+  [2, 12],// (GM) Natural - Campo - Campo manejado
+  [2, 13],// (GNM) Natural - Campo - Campo não manejado
+  [2, 14],// (GSec) Natural - Campo - Campo secundário
+  [5, 15],// (Ap) Antropico - Campo - Pastagem
+  [5, 16],// (APD) Antropico - Campo - Pastagem degradada
+  [2, 17],// (OFLM) Natural - Campo - Outras formações lenhosas manejadas
+  [2, 18],// (OFLNM) Natural - Campo - Outras formações lenhosas não manejadas
+  [2, 19],// (OFLSec) Natural - Campo - Outras formações lenhosas secundárias
+  [3, 22],// (DnM) Natural - Outras terras - Dunas manejadas
+  [3, 23],// (DnNM) Natural - Outras terras - Dunas não manejadas
+  [6, 24],// (Min) Antropico - Outras terras - Mineração
+  [6, 25],// (SE) Antropico - Outras terras - Solo exposto
+  [8, 27],// (NO) Áreas não observadas - Áreas não observadas - Áreas não observadas
+  [3, 28],// (ArM) Natural - Outras terras - Afloramento rochoso manejado
+  [3, 29],// (ArNM) Natural - Outras terras - Afloramento rochoso não manejado
+  [7, 31],// (Res) Antropico - Áreas Alagadas - Reservatório
+  [7, 33],// (A) Natural - Áreas Alagadas - Água
+  [4, 41],// (Ac) Antropico - Agricultura - Agricultura anual
+  [4, 42],// (PER) Antropico - Agricultura - Agricultura perene
+  [4, 43],// (CANA) Antropico - Agricultura - Agricultura semiperene
+  [6, 52],// (S) Antropico - Assentamento - Assentamento
+];
+var mb_remap = [
+  [1, 3],  //Natural - Floresta
+  [1, 4],  //Natural - Formação Savânica
+  [1, 5],  //Natural - Mangue
+  [1, 6],  //Natural - Floresta Alagável
+  [1, 49], // Natural - Restinga Arbórea
+  [2, 11], // Natural - Formação Campestre
+  [2, 12], // Natural - Formação Campestre
+  [3, 32], // Natural - Apicum
+  [3, 29], // Natural - Afloramento Rochoso
+  [2, 50], // Natural - Restinga herbácea
+  [2, 13], // Natural - Outras Formações não Florestais
+  [5, 15], // Antrópico - Pastagem
+  [4, 39], // Antrópico - Lavoura Temporária
+  [4, 20], // Antrópico - Cana
+  [4, 40], // Antrópico - Arroz
+  [4, 62], // Antrópico - Algodão
+  [4, 41], // Antrópico - Outras Lavouras Temporárias
+  [4, 46], // Antrópico - Café
+  [4, 47], // Antrópico - Citrus
+  [4, 35], // Antrópico - Dendê
+  [4, 48], // Antrópico - Outras Lavouras Perenes
+  [6, 9],  //Antrópico - Silvicultura
+  [5, 21], // Antrópico - Mosaico de usos
+  [3, 23], // Antrópico - Praia e Duna
+  [6, 24], // Antrópico - Área Urbanizada
+  [6, 30], // Antrópico - Mineração
+  [6, 25], // Antrópico - Outras Áreas não Vegetadas
+  [7, 33], // Antrópico - Rios, Lagos e Oceano
+  [7, 31], // Antrópico - Aquicultura
+  [8, 27], // Natural - Não observado
+  [8, 0], // Natural - Não observado
+];
+
+
+var qcn_oldValues = qcn_remap.map(function(list){return list[1]});
+var qcn_newValues = qcn_remap.map(function(list){return list[0]});
+
+var mb_oldValues = mb_remap.map(function(list){return list[1]});
+var mb_newValues = mb_remap.map(function(list){return list[0]});
+
+/////////////////////////////////
+// Função para remapear mapas de uso e cobertura
+function convertToNewValues(img_lulc, oldValues, newValues) {
+  var new_img = img_lulc.multiply(0);
+  oldValues.forEach(function(classe, i) {
+    new_img = new_img.where(img_lulc.eq(classe), newValues[i]);
+  });
+  return new_img;
+}
+
+// --- Lidando com a classe de "Não Observado" ---
+function handleUnobserved(img_lulc,class_un_observed) {
+  return ee.Image(
+    img_lulc.bandNames().iterate(function(current, previous) {
+      var bandName = ee.String(current);
+      var img_year = img_lulc.select(bandName);
+      var position = img_lulc.bandNames().indexOf(bandName);
+      var img_prevYear = ee.Image().addBands(img_lulc).select(position);
+      img_year = img_year.where(img_year.eq(class_un_observed), img_prevYear);
+      return ee.Image(previous).addBands(img_year);
+    }, ee.Image().select())
+  );
+}
+
+/////////////////////////////////
+
+var qcn_lulc_adapt = convertToNewValues(qcn_lulc,qcn_oldValues,qcn_newValues);
+qcn_lulc_adapt = handleUnobserved(qcn_lulc_adapt,8);
+
+var mb_lulc_adapt = convertToNewValues(mb_lulc,mb_oldValues,mb_newValues)
+  .select(['classification_1994', 'classification_2002', 'classification_2010', 'classification_2016']);
+
+mb_lulc_adapt = handleUnobserved(mb_lulc_adapt,8);
+mb_lulc_adapt = handleUnobserved(mb_lulc_adapt,0);
+/////////////////////////////////
+
+var years = [
+  1994, 2002, 2010, 2016
+];
+
+var container_layers = {};
+
+// Criar um mapa painel para cada ano
+var panel = years.map(function(year, i) {
+  
+  container_layers[year] = {};
+
+  // Criar dois mapas para comparar
+  var map_1 = ui.Map();
+  mapLinker.push(map_1);
+  var map_2 = ui.Map(null, null, { stretch: 'both' });
+  mapLinker.push(map_2);
+  var map_3 = ui.Map(null, null, { stretch: 'both' });
+  mapLinker.push(map_3);
+
+  var qcn_lulc_year = qcn_lulc_adapt.select('classification_' + year);
+
+  var mb_lulc_year = mb_lulc_adapt.select('classification_' + year);
+  // Adicionar camadas aos mapas
+  var layer_1 = ui.Map.Layer(qcn_lulc_year, simple_vis, 'qcn lulc ' + year);
+  map_1.add(layer_1);
+  container_layers[year]['qcn_lulc'] = layer_1;
+  
+  var layer_2 = ui.Map.Layer(mb_lulc_year, simple_vis, 'mb lulc ' + year);
+  map_2.add(layer_2);
+  container_layers[year]['mb_lulc'] = layer_2;
+  
+  var layer_3 = ui.Map.Layer(qcn_lulc_year.eq(mb_lulc_year), convergence_vis, 'convergence ' + year);
+  map_3.add(layer_3);
+  container_layers[year]['convergence'] = layer_3;
+  
+  // Configurar mapas
+  map_1
+  .setOptions('Satellite')
+  .setControlVisibility({all:false, layerList:true}).add(ui.Label('QCN LULC - ' + year,{position:'top-left'}));
+  
+  map_2
+  .setOptions('Satellite')
+  .setControlVisibility({all:false, layerList:true}).add(ui.Label('MB LULC - ' + year,{position:'top-left'}));
+
+  map_3
+  .setOptions('Satellite')
+  .setControlVisibility({all:false, layerList:true}).add(ui.Label('Convergence - ' + year,{position:'top-left'}));
+
+  return ui.Panel([
+    map_1,
+    map_2,
+    map_3
+  ],
+  ui.Panel.Layout.Flow('vertical'), { stretch: 'both' });
+});
+
+// print('cn(ontainer_layers',container_layers);
+
+// Adicionar painel ao root
+ui.root.widgets().reset([ui.Panel(panel, ui.Panel.Layout.Flow('horizontal'), { stretch: 'both' })]);
+
+// Vincular mapas
+ui.Map.Linker(mapLinker);
+
+// Centralizar o primeiro mapa no objeto de interesse
+ee.Number(1).evaluate(function(a){
+  // ee.Number(1).evaluate(function(b){
+    mapLinker[0].centerObject(geometry_,3);
+  // });
+});
+// Criar legenda para QCN LULC
+
+// Importar legendas
+var auxiliar_legend = [
+  [1, 'Floresta'],
+  [2, 'Campos'],
+  [3, 'Outros natural'],
+  [4, 'Agricultura'],
+  [5, 'Pastagem'],
+  [6, 'Outros antropico'],
+  [7, 'Água'],
+  [8, 'Não observado'],
+];
+
+var convergence_legend = [
+  [0, 'Não converge'],
+  [1, 'Converge'],
+];
+
+var checks_lulc = [];
+var checks_convergence = [];
+
+var check_source_1 = ui.Checkbox({value:true,label:'APENAS QCN', style:{fontSize: 10, margin:'1px'}});
+var check_source_2 = ui.Checkbox({value:true,label:'APENAS MAPBIOMAS', style:{fontSize: 10, margin:'1px'}});
+
+var inverse_boolean = {
+  true:false,
+  false:true
+};
+
+function source_onChange (value){
+  checks_lulc[0].setValue(inverse_boolean[checks_lulc[0].getValue()]);
+  ee.Number(1).evaluate(function(a){checks_lulc[0].setValue(inverse_boolean[checks_lulc[0].getValue()]);});
+}
+
+check_source_1.onChange(source_onChange);
+check_source_2.onChange(source_onChange);
+
+var pn_source = ui.Panel([
+  check_source_1,check_source_2
+], ui.Panel.Layout.Flow('horizontal'), {margin: '1px', stretch: 'both', border: '0.5px solid red' });
+
+
+var auxiliar_subtitle = auxiliar_legend.map(function(list) {
+  var check = ui.Checkbox({value:true,label:list[0] + ': ' + list[1], style:{fontSize: 10, margin:'1px'}});
+  var pn = ui.Panel([
+    ui.Label("O", { backgroundColor: simple_vis.palette[list[0]], margin: '1px' }),
+    check
+  ], ui.Panel.Layout.Flow('horizontal'), { margin: '1px' });
+  
+  checks_lulc.push(check);
+  
+  check.onChange(function(value){
+    // print('container_layers',container_layers);
+    
+    var false_values_lulc = checks_lulc
+    .filter(function(c){return c.getValue() === false})
+    .map(function(c){ return ee.Number.parse(ee.String(c.getLabel()).split(':').get(0));});
+    
+    var false_values_convergence = checks_convergence
+    .filter(function(c){return c.getValue() === false})
+    .map(function(c){ return ee.Number.parse(ee.String(c.getLabel()).split(':').get(0));});
+    
+      var mb_lulc_mask = mb_lulc_adapt;
+      var qcn_lulc_mask = qcn_lulc_adapt;
+      // var convergence_year_mask = convergence.select('classification_' + year);
+
+      ee.List(false_values_lulc).evaluate(function(values_lulc){
+        values_lulc.forEach(function(value){
+          mb_lulc_mask = mb_lulc_mask.where(mb_lulc_adapt.eq(value).selfMask(),0);
+          qcn_lulc_mask = qcn_lulc_mask.where(qcn_lulc_adapt.eq(value).selfMask(),0);
+        });
+
+      if (check_source_1.getValue() !== check_source_2.getValue()){
+        if (check_source_1.getValue()){
+          mb_lulc_mask = mb_lulc_adapt.multiply(qcn_lulc_mask.gte(1)).selfMask();
+        }
+        if (check_source_2.getValue()){
+          qcn_lulc_mask = qcn_lulc_adapt.multiply(mb_lulc_mask.gte(1).selfMask());
+        }
+      }
+
+
+      var convergence_mask = mb_lulc_mask.eq(qcn_lulc_mask);
+
+
+        ee.List(false_values_convergence).evaluate(function(values_convergence){
+  
+          values_convergence.forEach(function(value){
+            mb_lulc_mask = mb_lulc_mask.where(convergence_mask.eq(value).selfMask(),0);
+            qcn_lulc_mask = qcn_lulc_mask.where(convergence_mask.eq(value).selfMask(),0);
+          });
+
+          mb_lulc_mask = mb_lulc_mask.selfMask();
+          qcn_lulc_mask = qcn_lulc_mask.selfMask();
+          
+          convergence_mask = mb_lulc_mask.eq(qcn_lulc_mask);
+                  
+  
+          Object.keys(container_layers).forEach(function(year){
+            // print('year',year,container_layers[year]);
+            container_layers[year]['mb_lulc'].setEeObject(mb_lulc_mask.select('classification_'+year));
+            container_layers[year]['qcn_lulc'].setEeObject(qcn_lulc_mask.select('classification_'+year));
+            container_layers[year]['convergence'].setEeObject(convergence_mask.select('classification_'+year));
+          });
+        });
+    });
+  });
+  
+  return pn;
+});
+
+
+var convergence_subtitle = convergence_legend.map(function(list) {
+  var check = ui.Checkbox({value:true,label:list[0] + ': ' + list[1], style:{fontSize: 10, margin:'1px'}});
+  var pn = ui.Panel([
+    ui.Label("O", { backgroundColor: convergence_vis.palette[list[0]], margin: '1px' }),
+    check
+  ], ui.Panel.Layout.Flow('horizontal'), { margin: '1px' });
+  
+  checks_convergence.push(check);
+
+  check.onChange(function(value){
+    // print('container_layers',container_layers);
+    
+    var false_values_lulc = checks_lulc
+    .filter(function(c){return c.getValue() === false})
+    .map(function(c){ return ee.Number.parse(ee.String(c.getLabel()).split(':').get(0));});
+    
+    var false_values_convergence = checks_convergence
+    .filter(function(c){return c.getValue() === false})
+    .map(function(c){ return ee.Number.parse(ee.String(c.getLabel()).split(':').get(0));});
+    
+    
+      var mb_lulc_mask = mb_lulc_adapt;
+      var qcn_lulc_mask = qcn_lulc_adapt;
+      // var convergence_year_mask = convergence.select('classification_' + year);
+      
+      ee.List(false_values_lulc).evaluate(function(values_lulc){
+        values_lulc.forEach(function(value){
+          mb_lulc_mask = mb_lulc_mask.where(mb_lulc_adapt.eq(value).selfMask(),0);
+          qcn_lulc_mask = qcn_lulc_mask.where(qcn_lulc_adapt.eq(value).selfMask(),0);
+        });
+
+      mb_lulc_mask = mb_lulc_mask.selfMask();
+      qcn_lulc_mask = qcn_lulc_mask.selfMask();
+
+      if (check_source_1.getValue() !== check_source_2.getValue()){
+        if (check_source_1.getValue()){
+          mb_lulc_mask = mb_lulc_adapt.multiply(qcn_lulc_mask.gte(1)).selfMask();
+        }
+        if (check_source_2.getValue()){
+          qcn_lulc_mask = qcn_lulc_adapt.multiply(mb_lulc_mask.gte(1).selfMask());
+        }
+      }
+
+
+          
+      var convergence_mask = mb_lulc_mask.eq(qcn_lulc_mask);
+
+
+      ee.List(false_values_convergence).evaluate(function(values_convergence){
+
+        values_convergence.forEach(function(value){
+          mb_lulc_mask = mb_lulc_mask.where(convergence_mask.eq(value).selfMask(),0);
+          qcn_lulc_mask = qcn_lulc_mask.where(convergence_mask.eq(value).selfMask(),0);
+        });
+
+        mb_lulc_mask = mb_lulc_mask.selfMask();
+        qcn_lulc_mask = qcn_lulc_mask.selfMask();
+        
+        convergence_mask = mb_lulc_mask.eq(qcn_lulc_mask);
+                
+
+        Object.keys(container_layers).forEach(function(year){
+          // print('year',year,container_layers[year]);
+          container_layers[year]['mb_lulc'].setEeObject(mb_lulc_mask.select('classification_'+year));
+          container_layers[year]['qcn_lulc'].setEeObject(qcn_lulc_mask.select('classification_'+year));
+          container_layers[year]['convergence'].setEeObject(convergence_mask.select('classification_'+year));
+        });
+      });
+    });
+  });
+
+  
+  return pn;
+});
+
+// Criar painel de legendas
+var subtitle = ui.Panel([
+  // ui.Panel(qcn_subtitle, ui.Panel.Layout.Flow('vertical'), { margin: '1px', stretch: 'both', border: '0.5px solid red' }).insert(0, ui.Label('LEGENDA QCN')),
+  ui.Panel(auxiliar_subtitle, ui.Panel.Layout.Flow('vertical'), { margin: '1px', stretch: 'both', border: '0.5px solid red' }).insert(0, ui.Label('LEGENDA USO E COBERTURA'))
+], ui.Panel.Layout.Flow('vertical'), { margin: '1px' });
+
+var subtitle2 = ui.Panel([
+  // ui.Panel(qcn_subtitle, ui.Panel.Layout.Flow('vertical'), { margin: '1px', stretch: 'both', border: '0.5px solid red' }).insert(0, ui.Label('LEGENDA QCN')),
+  ui.Panel(convergence_subtitle, ui.Panel.Layout.Flow('vertical'), { margin: '1px', stretch: 'both', border: '0.5px solid red' }).insert(0, ui.Label('LEGENDA CONVERGÊNCIA'))
+], ui.Panel.Layout.Flow('vertical'), { margin: '1px' });
+
+// Adicionar painel de legendas ao início do root
+ui.root.widgets().insert(0, ui.Panel([pn_source,subtitle,subtitle2]));
+
+//////////////////////// estatisticas
+
+var observed = qcn_lulc_adapt.multiply(100).add(mb_lulc_adapt);
+
+var area_ha = ee.Image.pixelArea().divide(10000);
+
+
+var legend = {
+  0:'pixel 0',
+  1:'Floresta',
+  2:'Campos',
+  3:'Outros natural',
+  4:'Agricultura',
+  5:'Pastagem',
+  6:'Outros antropico',
+  7:'Água',
+  8:'Não observado',
+};
+
+var legend_convergence = {
+  0:'Não Converge',
+  1:'Converge',
+};
+
+var biomas = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
+
+years.forEach(function(year){
+  var img_year = observed.select('classification_'+year);
+  
+  var table = area_ha
+    .addBands(img_year)
+    .reduceRegions({
+      collection:biomas,
+      reducer:ee.Reducer.sum().group(1,'classe'),
+      scale:1000,
+    }).map(function(feature){
+      
+      feature = ee.Feature(feature);
+      var subtable = ee.List(feature.get('groups'))
+        .map(function(obj){
+          return ee.Feature(null)
+            .set(obj)
+            .select(['classe','sum'],['int classe','Área ha']);
+        })
+        .map(function(feat){
+          
+          feat = ee.Feature(feat);
+          var int_classe = feat.getNumber('int classe');
+          var int_qcn = int_classe.divide(100).int();
+          var int_mb = int_classe.mod(100).int();
+          var int_convergence = int_qcn.eq(int_mb); 
+          
+          return feat.set({
+            'int QCN':int_qcn,
+            'int MB':int_mb,
+            'Classe QCN':ee.Dictionary(legend).get(int_qcn),
+            'Classe MB':ee.Dictionary(legend).get(int_mb),
+            'int Convergência':int_convergence,
+            'Convergência':ee.Dictionary(legend_convergence).get(int_convergence),
+            'Ano':year,
+            'Bioma':feature.get('Bioma')
+          });
+        });
+      
+      return ee.FeatureCollection(subtable);
+    });
+    
+    table = table.flatten();
+    // print('table',table.limit(10));
+    
+    var description = 'v5-simple_comparation_qcn_mb-'+year;
+    var selectors = [
+      'Classe MB',
+      'Classe QCN',
+      'Convergência',
+      'int Convergência',
+      'int MB',
+      'int QCN',
+      'int classe',
+      'Área ha',
+      'Ano',
+      'Bioma'
+    ];
+    
+    Export.table.toDrive({
+      collection:table,
+      description:description,
+      folder:'SIMPLE COMPARATION QCN MB',
+      fileNamePrefix:description,
+      fileFormat:'CSV',
+      selectors:selectors,
+      // maxVertices:,
+      // priority:
+    });
+
+});
+
+
+//////////////////////////
+// Cria a thumbnail
+
+var text = require('users/gena/packages:text');
+
+
+
+function createThumbnail(image, region, title, position,lateral, vertical) {
+  var title_point = text.getLocation(region, position, lateral, vertical);
+  var txt_scale = 10000; // tambem alterar o tamanho da letra
+  var txt_params = {
+    fontSize:24, // tambem alterar o tamanho da letra
+    textColor: '000000',
+    outlineColor: 'fefefe', 
+    outlineWidth: 2, 
+    outlineOpacity: 0.6
+  };
+  var thumbnailParams = {
+    dimensions: 800,
+    region: region,
+    format: 'png',
+  };
+
+  var thumbnail = ui.Thumbnail({
+    image: image.blend(text.draw(title, title_point, txt_scale, txt_params)),
+    params: thumbnailParams,
+    style: {
+      position: 'bottom-left',
+      width: '300px'
+    }
+  });
+
+  print(title, thumbnail);
+}
+ee.Number(1).evaluate(function(a){
+  years.forEach(function(year){
+    
+    var qcn_lulc_year = qcn_lulc_adapt.select('classification_'+year);
+    var mb_lulc_year = mb_lulc_adapt.select('classification_'+year);
+    
+    createThumbnail(qcn_lulc_year.set({'system:footprint':geometry_}).visualize(simple_vis),geometry_,'QCN - ' + year, 'top',  '60%', '8%');
+    
+    createThumbnail(mb_lulc_year.set({'system:footprint':geometry_}).visualize(simple_vis),geometry_,'MB - ' + year, 'top',  '60%', '8%');
+    
+    createThumbnail(qcn_lulc_year.eq(mb_lulc_year).set({'system:footprint':geometry_}).visualize(convergence_vis),geometry_,'Convergence ' + year, 'top',  '60%', '8%');
+  
+  
+  });
+});

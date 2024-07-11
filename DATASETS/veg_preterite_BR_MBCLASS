@@ -122,8 +122,8 @@ var mod_palette = [
   '#c71585', '#f54ca9', '#cca0d4', '#dbd26b', '#807a40', '#e04cfa', '#d68fe2', '#9932cc',
   '#e6ccff', '#02d659', '#ad5100', '#000000', '#000000', '#000000', '#000000', '#000000',
   '#000000', '#CC66FF', '#FF6666', '#006400', '#8d9e8b', '#f5d5d5', '#ff69b4', '#ebf8b5',
-  '#000000', '#000000', '#91ff36', '#7dc975', '#aee37f', '#008000', '#ff8000', '#80ffaa',
-  '#0080aa', '#aa8000', '#808000', '#008080', '#aaffaa'
+  '#000000', '#000000', '#91ff36', '#7dc975', '#aee37f', '#008000', '#aaffaa', '#004000',
+  '#0080aa', '#aa8000', '#ff8000', '#008080', '#7dc975'
 ];
 var visParams = {
   min:0,
@@ -165,31 +165,61 @@ var panel = ui.Panel({style:{'stretch':'horizontal','width':'350px'}});
 ui.root.widgets().insert(0,panel);
 
 
-Object.keys(matrix).forEach(function(key){
-  var list = matrix[key];
+// Object.keys(matrix).forEach(function(key){
+//   var list = matrix[key];
 
-  var subpanel = ui.Panel({style:{'stretch':'horizontal',border:'solid red 1px'}});
+//   var subpanel = ui.Panel({style:{'stretch':'horizontal',border:'solid red 1px'}});
 
-  panel.add(subpanel);
+//   panel.add(subpanel);
 
-  // print(mod_palette[obj.newPixel],obj.newPixel,obj)
+//   // print(mod_palette[obj.newPixel],obj.newPixel,obj)
 
 
-  matrix_columns.forEach(function(column,i){
+//   matrix_columns.forEach(function(column,i){
     
-    var str = i === 0 ? key : list[i-1];
+//     var str = i === 0 ? key : list[i-1];
     
-    var panel_label = ui.Panel({layout:ui.Panel.Layout.Flow('horizontal')});
-    panel_label.add(ui.Label(column + ': '),{margin:'0px', fontSize:'11px','stretch':'horizontal'});
-    panel_label.add(ui.Label(str),{margin:'0px', fontWeight: 'bold', fontSize:'11px',fontColor:'red','stretch':'horizontal'});
+//     var panel_label = ui.Panel({layout:ui.Panel.Layout.Flow('horizontal')});
+//     panel_label.add(ui.Label(column + ': '),{margin:'0px', fontSize:'11px','stretch':'horizontal'});
+//     panel_label.add(ui.Label(str),{margin:'0px', fontWeight: 'bold', fontSize:'11px',fontColor:'red','stretch':'horizontal'});
     
-    subpanel.add(panel_label);
-  });
+//     subpanel.add(panel_label);
+//   });
   
-  var color = ui.Label({value:'- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ',style:{'stretch':'horizontal','backgroundColor':mod_palette[list.slice(-1)[0]] || 'aaaaaa'}});
-  subpanel.add(color);
-});
+//   var color = ui.Label({value:'- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ',style:{'stretch':'horizontal','backgroundColor':mod_palette[list.slice(-1)[0]] || 'aaaaaa'}});
+//   subpanel.add(color);
+// });
 
+ee.List(Object.keys(matrix).map(function(key){return matrix[key].slice(-1)[0]})).distinct()
+  .evaluate(function(mapbiomas_classes){
+    mapbiomas_classes.forEach(function(mapbiomas_classe){
+      var strings = '';
+      
+      var classe_name = matrix[Object.keys(matrix).filter(function(key){return matrix[key].slice(-1)[0] === mapbiomas_classe})[0]][2];
+
+      Object.keys(matrix)
+        .filter(function(key){return matrix[key].slice(-1)[0] === mapbiomas_classe})
+        .forEach(function(key){
+          var list = matrix[key];
+          strings = strings + ' '+key+':'+''+list[1]+'; ';
+        });
+      
+      var subpanel = ui.Panel({style:{'stretch':'vertical',border:'solid red 1px'}});
+    
+      print('strings',strings)
+    
+      panel.add(subpanel);
+    
+      // print(mod_palette[obj.newPixel],obj.newPixel,obj)
+        var color = ui.Label({value:'- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ',style:{'stretch':'horizontal','backgroundColor':mod_palette[mapbiomas_classe] || 'aaaaaa'}});
+        subpanel.add(color);
+        subpanel.add(ui.Label('Classe MapBiomas: ',{margin:'4px',fontWeight: 'bold', fontSize:'14px','stretch':'horizontal'}));
+        subpanel.add(ui.Label('('+mapbiomas_classe+') '+classe_name,{margin:'2px', fontSize:'14px','stretch':'horizontal'}));
+        subpanel.add(ui.Label('Classes IBGE: ',{margin:'2px', fontWeight: 'bold',fontSize:'14px','stretch':'horizontal'}));
+        subpanel.add(ui.Label(strings,{margin:'2px', fontSize:'12px','stretch':'horizontal'}));
+        
+      });
+  });
 
 /*
 ### Descrição da Imagem: Vegetação Pré-existente Remapeada do Brasil

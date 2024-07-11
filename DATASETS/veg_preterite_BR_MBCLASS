@@ -1,0 +1,164 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-76.54780555077535, 6.702549891783329],
+          [-76.54780555077535, -36.49659065368281],
+          [-28.735305550775358, -36.49659065368281],
+          [-28.735305550775358, 6.702549891783329]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var preterita = ee.Image('projects/mapbiomas-workspace/CCAL/DATASETS/QCN/veg_preterita_BR');
+
+// 
+var matrix_columns = ["code", "originalPixel", "classe_ibge", "classe_mapbiomas", "mapbiomas_correspondence", "newPixel"];
+var matrix = {
+"Aa":[ 10, "Floresta Ombrófila Aberta Aluvial", "Formação Florestal", "[3]", 3],
+"Ab":[ 28, "Floresta Ombrófila Aberta Terras Baixas", "Formação Florestal", "[3]", 3],
+"Am":[ 41, "Floresta Ombrófila Aberta Montana", "Formação Florestal", "[3]", 3],
+"Ar":[ 45, "Afloramento Rochoso", "Afloramento Rochoso", "[29]", 29],
+"As":[ 1, "Floresta Ombrófila Aberta Submontana", "Formação Florestal", "[3]", 3],
+"Ca":[ 37, "Floresta Estacional Decidual Aluvial", "Formação Florestal", "[3]", 3],
+"Cb":[ 34, "Floresta Estacional Decidual Terras Baixas", "Formação Florestal", "[3]", 3],
+"Cm":[ 46, "Floresta Estacional Decidual Montana", "Formação Florestal", "[3]", 3],
+"Cs":[ 32, "Floresta Estacional Decidual Submontana", "Formação Florestal", "[3]", 3],
+"D":[ 87, "Floresta Ombrófila Densa", "Formação Florestal", "[3]", 3],
+"Da":[ 4, "Floresta Ombrófila Densa Aluvial", "Formação Florestal", "[3]", 3],
+"Db":[ 3, "Floresta Ombrófila Densa Terras Baixas", "Formação Florestal", "[3]", 3],
+"Dl":[ 84, "Floresta Ombrófila Densa Alto-Montana", "Formação Florestal", "[3]", 3],
+"Dm":[ 21, "Floresta Ombrófila Densa Montana", "Formação Florestal", "[3]", 3],
+"Dn":[ 47, "Dunas", "Praia, Duna e Areal", "[23]", 23],
+"Ds":[ 2, "Floresta Ombrófila Densa Submontana", "Formação Florestal", "[3]", 3],
+"E":[ 77, "Estepe", "Formação Savânica e Formação Campestre", "[4, 12]", 76],
+"Ea":[ 89, "Estepe Arborizada", "Formação Savânica e Formação Campestre", "[4, 12]", 76],
+"Eg":[ 51, "Estepe Gramíneo-Lenhosa", "Formação Campestre", "[12]", 12],
+"Ep":[ 90, "Estepe Parque", "Formação Campestre", "[12]", 12],
+"EM":[ 85, "Estepe com Floresta Ombrófila", "Formação Florestal, Formação Savânica e Formação Campestre", "[3, 4, 12]", 71],
+"EN":[ 86, "Estepe com Floresta Estacional", "Formação Florestal, Formação Savânica e Formação Campestre", "[3, 4, 12]", 71],
+"EP":[ 91, "Estepe com Formações Pioneiras", "Formação Florestal, Formação Savânica e Formação Campestre", "[3, 4, 12]", 71],
+"F":[ 76, "Floresta Estacional Semidecidual", "Formação Florestal", "[3]", 3],
+"Fa":[ 11, "Floresta Estacional Semidecidual Aluvial", "Formação Florestal", "[3]", 3],
+"Fb":[ 33, "Floresta Estacional Semidecidual Terras Baixas", "Formação Florestal", "[3]", 3],
+"Fm":[ 22, "Floresta Estacional Semidecidual Montana", "Formação Florestal", "[3]", 3],
+"Fs":[ 12, "Floresta Estacional Semidecidual Submontana", "Formação Florestal", "[3]", 3],
+"L":[ 30, "Campinarana", "Formação Florestal, Formação Savânica e Formação Campestre", "[3, 4, 12]", 71],
+"La":[ 7, "Campinarana Arborizada", "Formação Florestal, Formação Savânica", "[3, 4]", 70],
+"Lb":[ 9, "Campinarana Arbustiva", "Formação Campestre", "[12]", 12],
+"Ld":[ 5, "Campinarana Florestada", "Formação Florestal, Formação Savânica", "[3, 4]", 70],
+"Lg":[ 29, "Campinarana Gramíneo-Lenhosa", "Formação Campestre", "[12]", 12],
+"LO":[ 8, "Contatos Campinarana / Floresta Ombrófila", "Formação Florestal", "[3]", 3],
+"M":[ 82, "Floresta Ombrófila Mista", "Formação Florestal", "[3]", 3],
+"Ma":[ 52, "Floresta Ombrófila Mista Aluvial", "Formação Florestal", "[3]", 3],
+"Ml":[ 50, "Floresta Ombrófila Mista Alto-Montana", "Formação Florestal", "[3]", 3],
+"Mm":[ 53, "Floresta Ombrófila Mista Montana", "Formação Florestal", "[3]", 3],
+"Ms":[ 78, "Floresta Ombrófila Mista Submontana", "Formação Florestal", "[3]", 3],
+"NM":[ 79, "Contatos Floresta Estacional / Floresta Ombrófila Mista", "Formação Florestal", "[3]", 3],
+"NP":[ 81, "Contatos Floresta Estacional / Formações Pioneiras", "Formação Florestal", "[3]", 3],
+"OM":[ 80, "Contatos Floresta Ombrófila Densa / Floresta Ombrófila Mista", "Formação Florestal", "[3]", 3],
+"ON":[ 13, "Contatos Floresta Ombrófila / Floresta Estacional", "Formação Florestal", "[3]", 3],
+"ONm":[ 57, "Contatos Floresta Ombrófila / Floresta Estacional", "Formação Florestal", "[3]", 3],
+"ONs":[ 69, "Contatos Floresta Ombrófila / Floresta Estacional", "Formação Florestal", "[3]", 3],
+"ONts":[ 54, "Contatos Floresta Ombrófila / Floresta Estacional (ecótono)", "Formação Florestal", "[3]", 3],
+"OP":[ 83, "Contatos Floresta Ombrófila / Formações Pioneiras", "Formação Florestal", "[3]", 3],
+"P":[ 39, "Restinga", "Formação Florestal, Campo Alagado e Área Pantanosa e Formação Campestre", "[3, 11, 12]", 72],
+"Pa":[ 14, "Palmeiral", "Formação Florestal, Campo Alagado e Área Pantanosa e Formação Campestre", "[3, 11, 12]", 72],
+"Pf":[ 38, "Manguezal", "Formação Florestal, Mangue, Campo Alagado e Área Pantanosa e Outras Formações não Florestais", "[3, 5, 11, 13]", 73],
+"Pm":[ 42, "Restinga Arbórea", "Formação Florestal, Restinga Arbórea, Restinga Herbácea, Campo Alagado e Área Pantanosa, Formação Campestre e Outras Formações não Florestais", "[3, 49, 50, 11, 12, 13]", 74],
+"Rl":[ 44, "Refúgios Vegetacionais", "Formação Campestre", "[12]", 12],
+"Rm":[ 6, "Refúgios Vegetacionais Montanos", "Formação Campestre", "[12]", 12],
+"Rs":[ 40, "Refúgios Vegetacionais Submontanos", "Formação Campestre", "[12]", 12],
+"S":[ 24, "Savana", "Formação Savânica e Formação Campestre", "[4, 12]", 76],
+"Sa":[ 15, "Savana Arborizada", "Formação Savânica e Formação Campestre", "[4, 12]", 76],
+"Sd":[ 31, "Savana Florestada", "Formação Florestal, Formação Savânica", "[3, 4]", 70],
+"Sg":[ 16, "Savana Gramíneo-Lenhosa", "Formação Savânica e Formação Campestre", "[4, 12]", 76],
+"Sp":[ 19, "Savana Parque", "Formação Savânica, Campo Alagado e Área Pantanosa e Formação Campestre", "[4, 11, 12]", 75],
+"SM":[ 88, "Contatos Savana / Floresta Ombrófila Mista", "Formação Florestal, Formação Savânica", "[3, 4]", 70],
+"SMl":[ 58, "Contatos Savana / Floresta Ombrófila Mista", "Formação Florestal, Formação Savânica", "[3, 4]", 70],
+"SMm":[ 59, "Contatos Savana / Floresta Ombrófila Mista", "Formação Florestal, Formação Savânica", "[3, 4]", 70],
+"SN":[ 17, "Contatos Savana / Floresta Estacional", "Formação Florestal, Formação Savânica", "[3, 4]", 70],
+"SNb":[ 72, "Contatos Savana / Floresta Estacional", "Formação Florestal, Formação Savânica", "[3, 4]", 70],
+"SNm":[ 48, "Contatos Savana / Floresta Estacional", "Formação Florestal, Formação Savânica", "[3, 4]", 70],
+"SNs":[ 49, "Contatos Savana / Floresta Estacional", "Formação Florestal, Formação Savânica", "[3, 4]", 70],
+"SNtm":[ 64, "Contatos Savana / Floresta Estacional (ecótono)", "Formação Florestal, Formação Savânica", "[3, 4]", 70],
+"SNts":[ 55, "Contatos Savana / Floresta Estacional (ecótono)", "Formação Florestal, Formação Savânica", "[3, 4]", 70],
+"SO":[ 18, "Contatos Savana / Floresta Ombrófila", "Formação Florestal, Formação Savânica", "[3, 4]", 70],
+"SOs":[ 70, "Contatos Savana / Floresta Ombrófila", "Formação Florestal, Formação Savânica", "[3, 4]", 70],
+"SOts":[ 71, "Contatos Savana / Floresta Ombrófila (ecótono)", "Formação Florestal, Formação Savânica", "[3, 4]", 70],
+"SP":[ 43, "Contatos Savana / Formações Pioneiras", "Formação Florestal, Formação Savânica", "[3, 4]", 70],
+"ST":[ 36, "Contatos Savana / Savana-Estépica", "Formação Savânica e Formação Campestre", "[4, 12]", 76],
+"STb":[ 75, "Contatos Savana / Savana-Estépica", "Formação Savânica e Formação Campestre", "[4, 12]", 76],
+"STs":[ 56, "Contatos Savana / Savana-Estépica", "Formação Savânica e Formação Campestre", "[4, 12]", 76],
+"STtm":[ 65, "Contatos Savana / Savana-Estépica (ecótono)", "Formação Savânica e Formação Campestre", "[4, 12]", 76],
+"STts":[ 63, "Contatos Savana / Savana-Estépica (ecótono)", "Formação Savânica e Formação Campestre", "[4, 12]", 76],
+"STNm":[ 73, "Contatos Savana / Savana-Estépica / Floresta estacional", "Formação Florestal, Formação Savânica e Formação Campestre", "[3, 4, 12]", 71],
+"STNs":[ 74, "Contatos Savana / Savana-Estépica / Floresta estacional", "Formação Florestal, Formação Savânica e Formação Campestre", "[3, 4, 12]", 71],
+"STNtm":[ 62, "Contatos Savana / Savana-Estépica / Floresta estacional (ecótono)", "Formação Florestal, Formação Savânica e Formação Campestre", "[3, 4, 12]", 71],
+"STNts":[ 60, "Contatos Savana / Savana-Estépica / Floresta estacional (ecótono)", "Formação Florestal, Formação Savânica e Formação Campestre", "[3, 4, 12]", 71],
+"T":[ 26, "Savana-Estépica", "Formação Florestal, Formação Savânica e Formação Campestre", "[3, 4, 12]", 71],
+"Ta":[ 27, "Savana-Estépica Arborizada", "Formação Savânica e Formação Campestre", "[4, 12]", 76],
+"Td":[ 23, "Savana-Estépica Florestada", "Formação Florestal, Formação Savânica", "[3, 4]", 70],
+"Tg":[ 25, "Savana-Estépica Gramíneo-Lenhosa", "Campo Alagado e Área Pantanosa e Formação Campestre", "[11, 12]", 75],
+"Tp":[ 20, "Savana-Estépica Parque", "Formação Savânica, Campo Alagado e Área Pantanosa e Formação Campestre", "[4, 11, 12]", 75],
+"TN":[ 35, "Contatos Savana-Estépica / Floresta Estacional", "Formação Florestal, Formação Savânica e Formação Campestre", "[3, 4, 12]", 71],
+"TNm":[ 61, "Contatos Savana-Estépica / Floresta Estacional", "Formação Florestal, Formação Savânica e Formação Campestre", "[3, 4, 12]", 71],
+"TNs":[ 66, "Contatos Savana-Estépica / Floresta Estacional", "Formação Florestal, Formação Savânica e Formação Campestre", "[3, 4, 12]", 71],
+"TNtm":[ 67, "Contatos Savana-Estépica / Floresta Estacional (ecótono)", "Formação Florestal, Formação Savânica e Formação Campestre", "[3, 4, 12]", 71],
+"TNts":[ 68, "Contatos Savana-Estépica / Floresta Estacional (ecótono)", "Formação Florestal, Formação Savânica e Formação Campestre", "[3, 4, 12]", 71],
+};
+var preterita_remapeada = preterita.multiply(0);
+
+Object.keys(matrix).forEach(function(key){
+  var list = matrix[key];
+  preterita_remapeada = preterita_remapeada.where(preterita.eq(list[0]),list.slice(-1)[0]);
+});
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+var mod_palette =  palettes.get('classification9').slice(0,-1).concat(['#008000', '#aaff80', '#80ffaa', '#0080aa', '#aa8000', '#808000', '#008080','#800080']);
+var visParams = {
+  min:0,
+  max:76,
+  palette:mod_palette
+};
+// preterita_remapeada = preterita_remapeada.selfMask()
+print(visParams);
+Map.addLayer(preterita,{},'preterita',false);
+Map.addLayer(preterita.randomVisualizer(),{},'preterita randomVisualizer',false);
+Map.addLayer(preterita_remapeada,visParams,'preterita_remapeada');
+Map.addLayer(preterita_remapeada.eq([70,71,72,73,74,75,76]).reduce('sum').selfMask(),{palette:['red']},'ecotones',false);
+
+
+Export.image.toAsset({
+  image:preterita_remapeada,
+  description:'veg_preterita_BR_MBCLASS',
+  assetId:'projects/mapbiomas-workspace/CCAL/DATASETS/QCN/veg_preterita_BR_MBCLASS',
+  pyramidingPolicy:'mode',
+  // dimensions:,
+  region:preterita.geometry().bounds(),
+  scale:30,
+  // crs:,
+  // crsTransform:,
+  maxPixels:1e13,
+  // shardSize:,
+  // priority:
+});
+  
+var panel = ui.Panel({style:{'stretch':'horizontal','width':'350px'}});
+ui.root.widgets().insert(0,panel);
+
+
+Object.keys(matrix).forEach(function(key){
+  var list = matrix[key];
+
+  var subpanel = ui.Panel({style:{'stretch':'horizontal',border:'solid red 1px'}});
+
+  panel.add(subpanel);
+
+  // print(mod_palette[obj.newPixel],obj.newPixel,obj)
+
+  matrix_columns.forEach(function(column,i){
+    var panel_label = ui.Panel({layout:ui.Panel.Layout.Flow('horizontal')});
+    panel_label.add(ui.Label(column + ': '),{margin:'0px', fontSize:'11px','stretch':'horizontal'});
+    panel_label.add(ui.Label(list[i]),{margin:'0px', fontWeight: 'bold', fontSize:'11px',color:'red','stretch':'horizontal'});
+    
+    subpanel.add(panel_label);
+  });
+  
+  var color = ui.Label({value:'- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ',style:{'stretch':'horizontal','backgroundColor':mod_palette[list.slice(-1)[0]] || 'aaaaaa'}});
+  subpanel.add(color);
+});

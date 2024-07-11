@@ -194,6 +194,48 @@ ee.List(Object.keys(matrix).map(function(key){return matrix[key].slice(-1)[0]}))
       });
   });
 
+var label_click = ui.Label('clique no mapa para investigar a classe.',{margin:'2px', fontSize:'12px','stretch':'horizontal'});
+var panel_click = ui.Panel({
+  widgets:label_click,
+  // layout:,
+  style:{position:'bottom-left'}
+});
+
+Map.add(panel_click);
+var ui_layer = ui.Map.Layer({
+  eeObject:ee.Image(),
+  visParams:{palette:['aaaaaa']},
+  name:'clique no mapa',
+  shown:true,
+  opacity:0.5
+  });
+Map.add(ui_layer);
+Map.onClick(function(obj){
+  
+  var point = ee.Geometry.Point([obj.lon,obj.lat]);
+  
+  // var value = asset_preterito.reduceRegion({
+  preterita.reduceRegion({
+    reducer:ee.Reducer.first(),
+    geometry:point, 
+    scale:30,
+    // crs, crsTransform, bestEffort, 
+    maxPixels:1e13,
+    // tileScale
+  }).getNumber('b1')
+  .evaluate(function(value){
+    var key = Object.keys(matrix).filter(function(key){return matrix[key][0] === value})[0];
+    var list = matrix[key];
+    var name = 'IBGE: ('+list[0]+') '+ key+': '+list[1]+'; MAPBIOMAS: ('+list[4]+') '+list[2]+'.';
+    label_click.setValue(name);
+    
+    ui_layer.setEeObject(preterita.neq(list[0]).selfMask());
+    ui_layer.setName(name);
+    
+  
+  });
+});
+
 /*
 ### Descrição da Imagem: Vegetação Pré-existente Remapeada do Brasil
 

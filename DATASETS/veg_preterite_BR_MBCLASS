@@ -159,36 +159,11 @@ var asset_preterito = ee.Image('projects/mapbiomas-workspace/CCAL/DATASETS/QCN/v
 Map.addLayer(asset_preterito,visParams,'asset_preterita_remapeada');
 Map.addLayer(asset_preterito.eq([70,71,72,73,74,75,76]).reduce('sum').selfMask(),{palette:['red']},'multiples asset_preterita_remapeada',false);
 
-var panel = ui.Panel({style:{'stretch':'horizontal','width':'350px'}});
+var panel = ui.Panel({style:{'stretch':'horizontal','width':'400px'}});
 
 
 ui.root.widgets().insert(0,panel);
 
-
-// Object.keys(matrix).forEach(function(key){
-//   var list = matrix[key];
-
-//   var subpanel = ui.Panel({style:{'stretch':'horizontal',border:'solid red 1px'}});
-
-//   panel.add(subpanel);
-
-//   // print(mod_palette[obj.newPixel],obj.newPixel,obj)
-
-
-//   matrix_columns.forEach(function(column,i){
-    
-//     var str = i === 0 ? key : list[i-1];
-    
-//     var panel_label = ui.Panel({layout:ui.Panel.Layout.Flow('horizontal')});
-//     panel_label.add(ui.Label(column + ': '),{margin:'0px', fontSize:'11px','stretch':'horizontal'});
-//     panel_label.add(ui.Label(str),{margin:'0px', fontWeight: 'bold', fontSize:'11px',fontColor:'red','stretch':'horizontal'});
-    
-//     subpanel.add(panel_label);
-//   });
-  
-//   var color = ui.Label({value:'- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ',style:{'stretch':'horizontal','backgroundColor':mod_palette[list.slice(-1)[0]] || 'aaaaaa'}});
-//   subpanel.add(color);
-// });
 
 ee.List(Object.keys(matrix).map(function(key){return matrix[key].slice(-1)[0]})).distinct()
   .evaluate(function(mapbiomas_classes){
@@ -197,16 +172,7 @@ ee.List(Object.keys(matrix).map(function(key){return matrix[key].slice(-1)[0]}))
       
       var classe_name = matrix[Object.keys(matrix).filter(function(key){return matrix[key].slice(-1)[0] === mapbiomas_classe})[0]][2];
 
-      Object.keys(matrix)
-        .filter(function(key){return matrix[key].slice(-1)[0] === mapbiomas_classe})
-        .forEach(function(key){
-          var list = matrix[key];
-          strings = strings + ' '+key+':'+''+list[1]+'; ';
-        });
-      
       var subpanel = ui.Panel({style:{'stretch':'vertical',border:'solid red 1px'}});
-    
-      print('strings',strings)
     
       panel.add(subpanel);
     
@@ -216,7 +182,14 @@ ee.List(Object.keys(matrix).map(function(key){return matrix[key].slice(-1)[0]}))
         subpanel.add(ui.Label('Classe MapBiomas: ',{margin:'4px',fontWeight: 'bold', fontSize:'14px','stretch':'horizontal'}));
         subpanel.add(ui.Label('('+mapbiomas_classe+') '+classe_name,{margin:'2px', fontSize:'14px','stretch':'horizontal'}));
         subpanel.add(ui.Label('Classes IBGE: ',{margin:'2px', fontWeight: 'bold',fontSize:'14px','stretch':'horizontal'}));
-        subpanel.add(ui.Label(strings,{margin:'2px', fontSize:'12px','stretch':'horizontal'}));
+
+        Object.keys(matrix)
+          .filter(function(key){return matrix[key].slice(-1)[0] === mapbiomas_classe})
+          .forEach(function(key){
+            var list = matrix[key];
+            subpanel.add(ui.Label('('+list[0]+') '+ key+': '+list[1]+'; ',{margin:'2px', fontSize:'12px','stretch':'horizontal'}));
+          });
+
         
       });
   });

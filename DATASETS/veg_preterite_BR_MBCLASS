@@ -123,7 +123,7 @@ print(visParams);
 Map.addLayer(preterita,{},'preterita',false);
 Map.addLayer(preterita.randomVisualizer(),{},'preterita randomVisualizer',false);
 Map.addLayer(preterita_remapeada,visParams,'preterita_remapeada');
-Map.addLayer(preterita_remapeada.eq([70,71,72,73,74,75,76]).reduce('sum').selfMask(),{palette:['red']},'ecotones',false);
+Map.addLayer(preterita_remapeada.eq([70,71,72,73,74,75,76]).reduce('sum').selfMask(),{palette:['red']},'multiples',false);
 
 
 Export.image.toAsset({
@@ -154,10 +154,14 @@ Object.keys(matrix).forEach(function(key){
 
   // print(mod_palette[obj.newPixel],obj.newPixel,obj)
 
+
   matrix_columns.forEach(function(column,i){
+    
+    var str = i === 0 ? key : list[i-1];
+    
     var panel_label = ui.Panel({layout:ui.Panel.Layout.Flow('horizontal')});
     panel_label.add(ui.Label(column + ': '),{margin:'0px', fontSize:'11px','stretch':'horizontal'});
-    panel_label.add(ui.Label(list[i]),{margin:'0px', fontWeight: 'bold', fontSize:'11px',color:'red','stretch':'horizontal'});
+    panel_label.add(ui.Label(str),{margin:'0px', fontWeight: 'bold', fontSize:'11px',fontColor:'red','stretch':'horizontal'});
     
     subpanel.add(panel_label);
   });

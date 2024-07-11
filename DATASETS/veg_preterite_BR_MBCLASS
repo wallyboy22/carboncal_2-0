@@ -224,14 +224,20 @@ Map.onClick(function(obj){
     // tileScale
   }).getNumber('b1')
   .evaluate(function(value){
-    var key = Object.keys(matrix).filter(function(key){return matrix[key][0] === value})[0];
-    var list = matrix[key];
-    var name = 'IBGE: ('+list[0]+') '+ key+': '+list[1]+'; MAPBIOMAS: ('+list[4]+') '+list[2]+'.';
-    label_click.setValue(name);
-    
-    ui_layer.setEeObject(preterita.neq(list[0]).selfMask());
-    ui_layer.setName(name);
-    
+    if (value !== null){
+        
+      var key = Object.keys(matrix).filter(function(key){return matrix[key][0] === value})[0];
+      var list = matrix[key];
+      var name = 'IBGE: ('+list[0]+') '+ key+': '+list[1]+'; MAPBIOMAS: ('+list[4]+') '+list[2]+'.';
+      label_click.setValue(name);
+      
+      ui_layer.setEeObject(preterita.neq(list[0]).selfMask());
+      ui_layer.setName(name);
+    } else {
+      ui_layer.setEeObject(ee.Image());
+      ui_layer.setName('clique no mapa');
+    }
+  
   
   });
 });

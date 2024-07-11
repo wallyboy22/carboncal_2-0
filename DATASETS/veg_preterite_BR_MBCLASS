@@ -122,7 +122,7 @@ var visParams = {
 print(visParams);
 Map.addLayer(preterita,{},'preterita',false);
 Map.addLayer(preterita.randomVisualizer(),{},'preterita randomVisualizer',false);
-Map.addLayer(preterita_remapeada,visParams,'preterita_remapeada');
+Map.addLayer(preterita_remapeada,visParams,'preterita_remapeada',false);
 Map.addLayer(preterita_remapeada.eq([70,71,72,73,74,75,76]).reduce('sum').selfMask(),{palette:['red']},'multiples',false);
 
 
@@ -140,8 +140,16 @@ Export.image.toAsset({
   // shardSize:,
   // priority:
 });
-  
+
+// 
+var asset_preterito = ee.Image('projects/mapbiomas-workspace/CCAL/DATASETS/QCN/veg_preterita_BR_MBCLASS');
+
+Map.addLayer(asset_preterito,visParams,'asset_preterita_remapeada');
+Map.addLayer(asset_preterito.eq([70,71,72,73,74,75,76]).reduce('sum').selfMask(),{palette:['red']},'multiples asset_preterita_remapeada',false);
+
 var panel = ui.Panel({style:{'stretch':'horizontal','width':'350px'}});
+
+
 ui.root.widgets().insert(0,panel);
 
 

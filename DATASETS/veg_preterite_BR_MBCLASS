@@ -162,3 +162,71 @@ Object.keys(matrix).forEach(function(key){
   var color = ui.Label({value:'- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ',style:{'stretch':'horizontal','backgroundColor':mod_palette[list.slice(-1)[0]] || 'aaaaaa'}});
   subpanel.add(color);
 });
+
+
+/*
+### Descrição da Imagem: Vegetação Pré-existente Remapeada do Brasil
+
+## Visão Geral
+Esta imagem representa a vegetação pré-existente no Brasil, remapeada utilizando a matriz de correspondência de classes do projeto MapBiomas. A remapeação foi realizada para facilitar a análise e visualização das diferentes classes de vegetação no país.
+
+## Fonte de Dados
+- **Imagem Original:** `projects/mapbiomas-workspace/CCAL/DATASETS/QCN/veg_preterita_BR`
+- **Projeto:** MapBiomas
+
+## Processo de Remapeação
+A remapeação foi realizada utilizando uma matriz de correspondência que mapeia os valores de pixel originais para novas classes de vegetação, conforme definido pelas legendas do MapBiomas. 
+
+### Matriz de Correspondência
+A matriz de correspondência utilizada no processo de remapeação contém informações sobre:
+- **Código da Classe:** Código alfanumérico que identifica a classe de vegetação.
+- **Pixel Original:** Valor de pixel na imagem original.
+- **Classe IBGE:** Nome da classe de vegetação segundo o IBGE.
+- **Classe MapBiomas:** Nome da classe de vegetação segundo o MapBiomas.
+- **Correspondência MapBiomas:** Lista de valores de pixel que correspondem à nova classe.
+- **Novo Pixel:** Novo valor de pixel atribuído após a remapeação.
+
+#### Exemplo da Matriz
+```javascript
+var matrix = {
+  "Aa": [10, "Floresta Ombrófila Aberta Aluvial", "Formação Florestal", "[3]", 3],
+  "Ab": [28, "Floresta Ombrófila Aberta Terras Baixas", "Formação Florestal", "[3]", 3],
+  // Outras classes...
+};
+```
+
+## Parâmetros de Visualização
+A imagem remapeada foi visualizada utilizando a seguinte paleta de cores:
+
+```javascript
+var palette = [
+  '#ffffff', '#32a65e', '#32a65e', '#1f8d49', '#7dc975', '#04381d', '#026975', '#000000',
+  '#000000', '#7a6c00', '#ad975a', '#519799', '#d6bc74', '#d89f5c', '#FFFFB2', '#edde8e',
+  '#000000', '#000000', '#f5b3c8', '#C27BA0', '#db7093', '#ffefc3', '#db4d4f', '#ffa07a',
+  '#d4271e', '#db4d4f', '#0000FF', '#000000', '#000000', '#ffaa5f', '#9c0027', '#091077',
+  '#fc8114', '#2532e4', '#93dfe6', '#9065d0', '#d082de', '#000000', '#000000', '#f5b3c8',
+  '#c71585', '#f54ca9', '#cca0d4', '#dbd26b', '#807a40', '#e04cfa', '#d68fe2', '#9932cc',
+  '#e6ccff', '#02d659', '#ad5100', '#000000', '#000000', '#000000', '#000000', '#000000',
+  '#000000', '#CC66FF', '#FF6666', '#006400', '#8d9e8b', '#f5d5d5', '#ff69b4', '#ebf8b5',
+  '#000000', '#000000', '#91ff36', '#7dc975', '#aee37f', '#008000', '#aaff80', '#80ffaa',
+  '#0080aa', '#aa8000', '#808000', '#008080', '#800080'
+];
+var visParams = {
+  min: 0,
+  max: 76,
+  palette: palette
+};
+```
+
+## Exportação
+A imagem remapeada foi exportada para o asset do Google Earth Engine com os seguintes parâmetros:
+- **Asset ID:** `projects/mapbiomas-workspace/CCAL/DATASETS/QCN/veg_preterita_BR_MBCLASS`
+- **Política de Pyramiding:** `mode`
+- **Região:** Brasil
+- **Escala:** 30 metros
+
+## Notas
+- Esta imagem é uma ferramenta importante para a análise e monitoramento da vegetação no Brasil, especialmente para estudos relacionados à mudança de uso da terra e cobertura vegetal.
+- A remapeação permite uma melhor compreensão das diferentes classes de vegetação e suas distribuições.
+
+*/

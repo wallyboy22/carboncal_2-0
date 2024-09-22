@@ -14,7 +14,8 @@ var geometry =
           [-28.735305550775358, 6.702549891783329]]], null, false);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 // Carrega o asset com as bandas de 1985 a 2023
-var fireCollection = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection3/mapbiomas_fire_collection3_monthly_burned_v1');
+// var fireCollection = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection3/mapbiomas_fire_collection3_monthly_burned_v1');
+var fireCollection = ee.Image('projects/mapbiomas-workspace/FOGO_COL3/2-Subprodutos/mapbiomas-fire-collection3-monthly-burned-v1');
 
 // Gera a sequência de anos de 1986 a 2023
 ee.List.sequence(1986, 2023, 1).evaluate(function(years) {

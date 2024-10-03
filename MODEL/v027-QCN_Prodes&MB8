@@ -162,7 +162,7 @@ lulc = lulc.addBands(lulc.select('classification_2022').rename('classification_2
 
 // --- Deforestation dynamics (Prodes, 2023 and updateMask with mapbiomas coleção 8 (+em: )
 // --- dinamica do desmatameto segundo o prodes e mapbiomas coleção 8 (+em: inserir código intemediário)
-var dinamica = ee.Image('projects/mapbiomas-workspace/CCAL/MODELOS/prodes_mb8-dinamica_da_vegetacao_primaria_e_secundaria-2012_2022');
+var dinamica = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/prodes_mb8-dinamica_da_vegetacao_primaria_e_secundaria-2012_2022');
 
 var years = [
   1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,
@@ -389,7 +389,7 @@ model = model.select(oldbands,newbands)
 print('model',model);
 
 /*var description = 'biomass_stock_tC_ha/QCN_Prodes_MB8-2012_2022-v024';
-var assetId = 'projects/mapbiomas-workspace/CCAL/MODELOS/';
+var assetId = 'projects/ee-ipam/assets/CCAL/MODELOS/';
 
 Export.image.toAsset({
   image:model,
@@ -495,7 +495,7 @@ Map.addLayer(degradation_accumulated,{},'degradation_accumulated');
 // --- Prepare assets to apply degradation to the model and export
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// var carbon_total_anual = ee.Image('projects/mapbiomas-workspace/SEEG/2023/CCAL/biomass_stock-v5-1986_2022-raster_stack');
+// var carbon_total_anual = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/biomass_stock-v5-1986_2022-raster_stack');
 var biomass_stock_tC_ha = model
   .subtract(degradation_accumulated);
 print('biomass_stock_tC_ha',biomass_stock_tC_ha);
@@ -510,7 +510,7 @@ Map.addLayer(biomass_stock_tC_ha,{},'biomass_stock_tC_ha');
 
 // --- Path
 var description = 'biomass_stock_tC_ha-QCN_Prodes_MB8-2012_2022-v027';
-var assetId = 'projects/mapbiomas-workspace/CCAL/MODELOS/';
+var assetId = 'projects/ee-ipam/assets/CCAL/MODELOS/';
 
 // --- Exporting
 Export.image.toAsset({
@@ -646,7 +646,7 @@ Map.addLayer(finalImageCCAL,{},'finalImageCCAL');
 // --- Path your output
 var version = 'QCN_MapBiomas';
 var description = 'biomass_balance_tC_ha-QCN_Prodes_MB8-2012_2022-v027';
-var assetId = 'projects/mapbiomas-workspace/CCAL/MODELOS/';
+var assetId = 'projects/ee-ipam/assets/CCAL/MODELOS/';
 
 // --- Exporting
 Export.image.toAsset({

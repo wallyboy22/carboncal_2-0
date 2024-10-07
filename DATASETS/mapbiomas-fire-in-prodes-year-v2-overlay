@@ -66,7 +66,7 @@ ee.List.sequence(1986, 2023, 1).evaluate(function(years) {
     maxPixels: 1e13
   });
   
-  // stop
+  stop
   
   // Visualiza a banda correspondente ao ano de 2023 no mapa
   Map.addLayer(annualFireImages, 

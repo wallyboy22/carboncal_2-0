@@ -2,11 +2,6 @@
 var geometry = 
     /* color: #d63000 */
     /* shown: false */
-    /* displayProperties: [
-      {
-        "type": "rectangle"
-      }
-    ] */
     ee.Geometry.Polygon(
         [[[-76.54780555077535, 6.702549891783329],
           [-76.54780555077535, -36.49659065368281],
@@ -32,13 +27,13 @@ ee.List.sequence(1986, 2023, 1).evaluate(function(years) {
     var selectedBands = fireCollection.select([bandPreviousYear, bandCurrentYear]);
     
     // Cria a máscara para os meses de agosto a dezembro do ano anterior
-    var maskedPreviousYear = selectedBands.select(bandPreviousYear).gte(8);
+    var maskedPreviousYear = selectedBands.select(bandPreviousYear).gte(8).unmask();
     
     // Cria a máscara para os meses de janeiro a julho do ano atual
-    var maskedCurrentYear = selectedBands.select(bandCurrentYear).lte(7);
+    var maskedCurrentYear = selectedBands.select(bandCurrentYear).lte(7).unmask();
     
     // Combina as máscaras e considera uma única ocorrência de fogo
-    var mergedImage = maskedPreviousYear.add(maskedCurrentYear).reduce(ee.Reducer.min());
+    var mergedImage = maskedPreviousYear.add(maskedCurrentYear);
     
     // Transforma todas as ocorrências de fogo em 1
     var binaryImage = mergedImage.gt(0).selfMask();
@@ -54,13 +49,13 @@ ee.List.sequence(1986, 2023, 1).evaluate(function(years) {
   print('Imagem Final com Múltiplas Bandas:', annualFireImages);
   
   // Define a descrição para a imagem exportada
-  var annualBurnedDescription = 'MapBiomas Fire Collection 3 - Imagens anuais de áreas queimadas (1986-2023).';
+  var annualBurnedDescription = 'MapBiomas Fire Collection 31 - Imagens anuais de áreas queimadas (1986-2023).';
 
   // Exporta a imagem anual de queimadas concatenada para um asset
   Export.image.toAsset({
     image: annualFireImages.set('description', annualBurnedDescription),
-    description: 'mapbiomas_fire_collection3_annual_burned_areas_v1',
-    assetId: 'projects/ee-ipam/assets/CCAL/DATASETS/MAPBIOMAS/mapbiomas_fire_monthly_burned_areas_v1_prodes_year',
+    description: 'mapbiomas_fire_collection31_annual_burned_areas_v2',
+    assetId: 'projects/ee-ipam/assets/CCAL/DATASETS/MAPBIOMAS/mapbiomas_fire_collection31_annual_burned_areas_v2_prodes_year',
     scale: 30,
     region: fireCollection.geometry(),
     maxPixels: 1e13
@@ -116,8 +111,8 @@ ee.List.sequence(1986, 2023, 1).evaluate(function(years) {
   // Exporta a imagem de Tempo Após o Fogo (TAF)
   Export.image.toAsset({
     image: timeAfterFireImage.set('description', tafDescription),
-    description: 'mapbiomas_fire_collection3_time_after_fire_v1',
-    assetId: 'projects/ee-ipam/assets/CCAL/DATASETS/MAPBIOMAS/mapbiomas_fmonthlyme_after_fire_v1_prodes_year',
+    description: 'mapbiomas_fire_collection31_time_after_fire_v2_prodes_year',
+    assetId: 'projects/ee-ipam/assets/CCAL/DATASETS/MAPBIOMAS/mapbiomas_fire_collection31_time_after_fire_v2_prodes_year',
     scale: 30,
     region: fireCollection.geometry(),
     maxPixels: 1e13
@@ -143,8 +138,8 @@ ee.List.sequence(1986, 2023, 1).evaluate(function(years) {
   // Exporta a imagem de Recorrência de Fogo
   Export.image.toAsset({
     image: fireRecurrenceImage.set('description', recurrenceDescription),
-    description: 'mapbiomas_fire_collection3_fire_recurrence_v1',
-    assetId: 'projects/ee-ipam/assets/CCAL/DATASETS/MAPBIOMAS/mapbiomonthlyre_recurrence_v1_prodes_year',
+    description: 'mapbiomas_fire_collection3_fire_recurrence_v2_prodes_year',
+    assetId: 'projects/ee-ipam/assets/CCAL/DATASETS/MAPBIOMAS/mapbiomas_fire_collection3_fire_recurrence_v2_prodes_year',
     scale: 30,
     region: fireCollection.geometry(),
     maxPixels: 1e13

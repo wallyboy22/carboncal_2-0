@@ -67,11 +67,14 @@ print('incrementos',incrementos);
 // 1100; 1200; 1300;
 // 11;  12; 13; 20;  21; 3; 36;  39; 4; 40;  41; 46;  47; 48;  49; 5; 50;  62; 9
 
+var biomas = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
+
 // --- --- IMAGENS
-// --- Carbono total no tempo preterito, {QCN/MCTI}
-var qcn = ee.ImageCollection('projects/mapbiomas-workspace/SEEG/2023/QCN/1_Asset_v0-1').mosaic();
-//Map.addLayer(qcn,{},'qcn');
-var carbon_total = qcn.select('total'); // QCN_total = AGB+ BGB + DW + LI 
+// --- Carbono total no tempo preterito
+var past_carbon = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/RETIFICACAO/c_rect_col9');
+print('past_carbon',past_carbon);
+Map.addLayer(past_carbon,{},'past_carbon');
+var carbon_total = past_carbon.select('TOTAL'); // QCN_total = AGB+ BGB + DW + LI 
 
 /*
 Asset Legend 
@@ -181,7 +184,7 @@ var ocorrencia_areas_submersas = lulc_original.eq(33)
   .blend(lulc_original.eq(31).selfMask())
   .reduce('sum');
 
-var sempre_submersas = ocorrencia_areas_submersas.gte(36).selfMask();
+var sempre_submersas = ocorrencia_areas_submersas.gte(37).selfMask();
 
 carbon_total_regrowth = carbon_total_regrowth.slice(2);
 //print(carbon_total_regrowth, 'carbon_total_regrowth_2')
@@ -230,6 +233,9 @@ Asset Legend
     7:'Outras transições',
 */
 Map.addLayer(desf_reg,[],'// SecVeg_Mapbiomas Collection 9');
+
+
+
   var model = desf_reg.multiply(0)                // imagem em branco
   .where(desf_reg.eq(1),0)                          // 1: Antropico = 0
   .where(desf_reg.eq(2),carbon_total)               // 2:'Veg. Primária' = QCN_Total
@@ -238,7 +244,7 @@ Map.addLayer(desf_reg,[],'// SecVeg_Mapbiomas Collection 9');
   .where(desf_reg.eq(5),carbon_total_regrowth)      // 5:'Recrescimento de Veg. Secundária'  = QCN_Total & Incremento
   .where(desf_reg.eq(6),0)                          // 6:'Supressão Veg. Secundária' = 0
   //.where(desf_reg.eq(7),carbon_total)               // 7:'Outras transições' = QCN_Total
-  .where(sempre_submersas,0)                        // Water = 0 
+  .where(sempre_submersas,0);                        // Water = 0 
   //.subtract(degradacao_primaria);
   
 
@@ -265,15 +271,13 @@ Map.addLayer(ocorrencia_areas_submersas,{min:0,max:10},'ocorrencia_areas_submers
 Map.addLayer(sempre_submersas,{palette:'000080'},'sempre_submersas');
 
 // --- ---- EXPORT
-
-
 var Mapp = require('users/joaovsiqueira1/packages:Mapp.js');
 Map.setOptions({ 'styles': { 'Dark': Mapp.getStyle('Dark'), 'Dark2':Mapp.getStyle('Dark2'), 'Aubergine':Mapp.getStyle('Aubergine'), 'Silver':Mapp.getStyle('Silver'), 'Night':Mapp.getStyle('Night'), } });
 // The most recent zoom is the one the view will have.
 
 var bounds = lulc_original.geometry().bounds();
 
-var oldbands = model.bandNames().slice(0,-1);
+var oldbands = model.bandNames();
 print(oldbands);
 var newbands = oldbands.iterate(function(current,previous){
   var newname = ee.String(current).replace('classification','biomass_stock');
@@ -308,83 +312,82 @@ print('model',model);
 
 // --- Balanço de Carbono, organizando asset para a plataforma do CCAL
 
-var biomas = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
-/// - 'Carbon stock' in native vegetation of Brazil - Our asset is the official map of the Fourth National Communication, MCTI, 2020;
-// var carbon_total_preterito = ee.ImageCollection('projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1').mosaic().select('total');
-var carbon_total_preterito = carbon_total;
-print('carbon_total_preterito',carbon_total_preterito);
+// /// - 'Carbon stock' in native vegetation of Brazil - Our asset is the official map of the Fourth National Communication, MCTI, 2020;
+// // var carbon_total_preterito = ee.ImageCollection('projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1').mosaic().select('total');
+// var carbon_total_preterito = carbon_total;
+// print('carbon_total_preterito',carbon_total_preterito);
 
-Map.addLayer(desf_reg,{bands:['classification_2016'],min:0,max:7},'desf_secVeg');
-Map.addLayer(lulc,{bands:['classification_2016'],min:0,max:62},'lulc desf_secVeg');
-
-
-// var carbon_total_anual = ee.Image('projects/mapbiomas-workspace/SEEG/2023/CCAL/biomass_stock-v5-1986_2022-raster_stack');
-var carbon_total_anual = model;
+// Map.addLayer(desf_reg,{bands:['classification_2016'],min:0,max:7},'desf_secVeg');
+// Map.addLayer(lulc,{bands:['classification_2016'],min:0,max:62},'lulc desf_secVeg');
 
 
-print('carbon_total_anual',carbon_total_anual);
-// Ano atual - Ano anterior, no primeiro ano é considerado o carbono preterito como anteiror
-
-var gain_loss = carbon_total_anual
-  .subtract(carbon_total_preterito.addBands(carbon_total_anual.slice(0,-1)));
-
-// listas com nomes antidos e novos;
-var stock_bands = gain_loss.bandNames();
+// // var carbon_total_anual = ee.Image('projects/mapbiomas-workspace/SEEG/2023/CCAL/biomass_stock-v5-1986_2022-raster_stack');
+// var carbon_total_anual = model;
 
 
-var gain_bands = stock_bands.iterate(function(curr, prev){ return ee.List(prev).add(ee.String(curr).replace('biomass_stock','gain_secondary_vegetation'))},[]);
-var secVeg_bands = stock_bands.iterate(function(curr, prev){ return ee.List(prev).add(ee.String(curr).replace('biomass_stock','loss_secondary_vegetation'))},[]);
-var natVeg_bands = stock_bands.iterate(function(curr, prev){ return ee.List(prev).add(ee.String(curr).replace('biomass_stock','loss_deforestation'))},[]);
+// print('carbon_total_anual',carbon_total_anual);
+// // Ano atual - Ano anterior, no primeiro ano é considerado o carbono preterito como anteiror
 
-// print('stock_bands',stock_bands);
-// print('gain_bands',gain_bands);
-// print('loss_bands',loss_bands);
+// var gain_loss = carbon_total_anual
+//   .subtract(carbon_total_preterito.addBands(carbon_total_anual.slice(0,-1)));
 
-var gain = gain_loss.updateMask(gain_loss.gt(0)).select(stock_bands,gain_bands); //gt é maior 0 
-var loss = gain_loss.updateMask(gain_loss.lt(0)).select(stock_bands); //lt é menor que 0
-
-print(loss,'LOSSS');
-
-var mask_pri = desf_reg.select(0)
-  .remap([1,3,4],[4,4,4])
-  .addBands(desf_reg.slice(1,-1).eq(4));
-
-var loss_pri = loss.updateMask(mask_pri).select(stock_bands,natVeg_bands);
-
-var loss_sec = loss.updateMask(desf_reg.slice(0,-1).eq(6)).select(stock_bands,secVeg_bands);
-
-// loss_sec = loss.updateMask(desf_reg.slice(0,-1).eq(1)).select(stock_bands,secVeg_bands).blend(loss_sec);
-
-var stable = gain_loss.updateMask(gain_loss.eq(0));
-
-var finalImageCCAL = gain
-  //.addBands(loss)
-  .addBands(loss_pri)
-  .addBands(loss_sec)
-  .addBands(carbon_total_anual.slice(-1).rename('stock'))
-  .float()
-  .set({
-    //description:'https://code.earthengine.google.com/?scriptPath=users%2Fwallacesilva%2Fseeg%3ACCAL%2FBIOMASS_STOCK%2FMODEL%2Fv023-QCN_MapBiomas8'
-  });
-
-print('gain_loss',gain_loss);
-print('gain',gain);
-print('loss',loss);
-print('loss_pri',loss_pri);
-print('loss_sec',loss_sec); 
+// // listas com nomes antidos e novos;
+// var stock_bands = gain_loss.bandNames();
 
 
-print('finalImageCCAL',finalImageCCAL);
+// var gain_bands = stock_bands.iterate(function(curr, prev){ return ee.List(prev).add(ee.String(curr).replace('biomass_stock','gain_secondary_vegetation'))},[]);
+// var secVeg_bands = stock_bands.iterate(function(curr, prev){ return ee.List(prev).add(ee.String(curr).replace('biomass_stock','loss_secondary_vegetation'))},[]);
+// var natVeg_bands = stock_bands.iterate(function(curr, prev){ return ee.List(prev).add(ee.String(curr).replace('biomass_stock','loss_deforestation'))},[]);
 
-Map.addLayer(carbon_total_preterito,{/*palette:'800000'*/},'carbon_total_preterito');
-Map.addLayer(carbon_total_anual,{/*palette:'00ffff'*/},'carbon_total_anual');
-Map.addLayer(gain_loss,{/*palette:'ff00ff'*/},'gain_loss');
-Map.addLayer(gain_loss.updateMask(gain_loss.neq(0)),{},'gain_loss not 0');
-Map.addLayer(gain,{/*palette:'ffff00'*/},'gain');
-Map.addLayer(loss,{/*palette:'0000ff'*/},'loss');
-Map.addLayer(loss_pri,{/*palette:'00ff00'*/},'loss_pri');
-Map.addLayer(loss_sec,{/*palette:'ff0000'*/},'loss_sec');
-Map.addLayer(stable,{},'stable');
+// // print('stock_bands',stock_bands);
+// // print('gain_bands',gain_bands);
+// // print('loss_bands',loss_bands);
+
+// var gain = gain_loss.updateMask(gain_loss.gt(0)).select(stock_bands,gain_bands); //gt é maior 0 
+// var loss = gain_loss.updateMask(gain_loss.lt(0)).select(stock_bands); //lt é menor que 0
+
+// print(loss,'LOSSS');
+
+// var mask_pri = desf_reg.select(0)
+//   .remap([1,3,4],[4,4,4])
+//   .addBands(desf_reg.slice(1,-1).eq(4));
+
+// var loss_pri = loss.updateMask(mask_pri).select(stock_bands,natVeg_bands);
+
+// var loss_sec = loss.updateMask(desf_reg.slice(0,-1).eq(6)).select(stock_bands,secVeg_bands);
+
+// // loss_sec = loss.updateMask(desf_reg.slice(0,-1).eq(1)).select(stock_bands,secVeg_bands).blend(loss_sec);
+
+// var stable = gain_loss.updateMask(gain_loss.eq(0));
+
+// var finalImageCCAL = gain
+//   //.addBands(loss)
+//   .addBands(loss_pri)
+//   .addBands(loss_sec)
+//   .addBands(carbon_total_anual.slice(-1).rename('stock'))
+//   .float()
+//   .set({
+//     //description:'https://code.earthengine.google.com/?scriptPath=users%2Fwallacesilva%2Fseeg%3ACCAL%2FBIOMASS_STOCK%2FMODEL%2Fv023-QCN_MapBiomas8'
+//   });
+
+// print('gain_loss',gain_loss);
+// print('gain',gain);
+// print('loss',loss);
+// print('loss_pri',loss_pri);
+// print('loss_sec',loss_sec); 
+
+
+// print('finalImageCCAL',finalImageCCAL);
+
+// Map.addLayer(carbon_total_preterito,{/*palette:'800000'*/},'carbon_total_preterito');
+// Map.addLayer(carbon_total_anual,{/*palette:'00ffff'*/},'carbon_total_anual');
+// Map.addLayer(gain_loss,{/*palette:'ff00ff'*/},'gain_loss');
+// Map.addLayer(gain_loss.updateMask(gain_loss.neq(0)),{},'gain_loss not 0');
+// Map.addLayer(gain,{/*palette:'ffff00'*/},'gain');
+// Map.addLayer(loss,{/*palette:'0000ff'*/},'loss');
+// Map.addLayer(loss_pri,{/*palette:'00ff00'*/},'loss_pri');
+// Map.addLayer(loss_sec,{/*palette:'ff0000'*/},'loss_sec');
+// Map.addLayer(stable,{},'stable');
 
 ////////////////////////////////////////////
 /*
@@ -392,21 +395,65 @@ Map.addLayer(stable,{},'stable');
 */
 // --- perda de carbono acima do solo em floresta por fogo
 // --- carbon loss in forest due to fire
-var fire = ee.ImageCollection([
+var fire_forest_balance = ee.ImageCollection([
     ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/amazonia-CO2_Mg_ha_balance-SEEG12'),
     ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/caatinga-CO2_Mg_ha_balance-SEEG12'),
     ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/cerrado-CO2_Mg_ha_balance-SEEG12'),
     ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/mata_atlantica-CO2_Mg_ha_balance-SEEG12'),
     ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/pampa-CO2_Mg_ha_balance-SEEG12'),
     ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/pantanal-CO2_Mg_ha_balance-SEEG12'),
-  ]).mosaic();
+  ]).mosaic().divide(3.67).float();
 
-var fire_bands = fire.bandNames().iterate(function(curr, prev){ return ee.List(prev).add(ee.String(curr).replace('CO2_Mg_ha_','biomass_stock_'))},[]);
-fire = fire.select(fire.bandNames(),fire_bands).divide(3.67);
-print('fire',fire,fire_bands);
-Map.addLayer(fire,{},'fire');
+var fire_savana_balance = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/savanas_fogo_seeg12_v2/brasil_savanas_co2_all_years_v2')
+  .divide(3.67)
+  .multiply(-1)
+  .float();
+////////////////////
+var stable_florest = ee.Image("projects/ee-ipam/assets/SEEG/SEEG12/12_1_3_Stable_cover/SEEG_c12_2023")
+                    .unmask(0)
+                    .eq(3);
+
+///// 2017-2023 ///////////
+// Brazilian Amazon biome delimitation
+var amazonia = biomas
+              .filter(ee.Filter.equals('Bioma', 'Amazônia'));
+var amazonia_img = ee.Image().paint(amazonia).eq(0);
+////////////////////
+
+var agb_selective_logging = past_carbon.select('AGB');
+var selective_logging_balance = ee.Image().select();
+
+[2017,2018,2019,2020,2021,2022,2023].forEach(function(year){
+  
+  
+  /////// Selective Logging emissions ///////
+  var sl_year_dis = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_disordered');
+  var sl_year_geo = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_geometric');
+
+  var sl_year = ee.Image(0)
+        .blend(sl_year_dis)
+        .blend(sl_year_geo)
+        .multiply(stable_florest)
+        .multiply(amazonia_img);
 
 
+  var sl_Cbalance_year = agb_selective_logging.multiply(sl_year).multiply(0.196) // Loss factor from Lapola et al. (2023) | 19.6% of C loss year-1
+    .rename('selective_logging_balance_'+year)
+    .float();
+
+  // Updating carbon stock (Selective Logging)
+  agb_selective_logging = agb_selective_logging.subtract(sl_Cbalance_year.unmask());
+  
+  selective_logging_balance = selective_logging_balance.addBands(sl_Cbalance_year);
+});
+
+
+
+
+var fire_bands = fire_forest_balance.bandNames().iterate(function(curr, prev){ return ee.List(prev).add(ee.String(curr).replace('CO2_Mg_ha_','biomass_stock_'))},[]);
+fire_forest_balance = fire_forest_balance.select(fire_forest_balance.bandNames(),fire_bands)
+print('fire_forest_balance',fire_forest_balance,fire_bands);
+Map.addLayer(fire_forest_balance,{},'fire_forest_balance');
 
 var fire_annual = ee.Image("projects/mapbiomas-public/assets/brazil/fire/collection3_1/mapbiomas_fire_collection31_annual_burned_coverage_v1");
 
@@ -415,7 +462,24 @@ Map.addLayer(fire_annual,{},'fire_annual');
 Map.addLayer(fire_annual.gte(1).reduce('sum'),{min:0,max:38},'fire frequncy');
 
 /// Integration
-var degradation = fire.unmask(0).float().slice(0,-1);
+// var degradation = fire_forest_balance.unmask(0).float().slice(0,-1);
+
+
+
+// print(
+//   'fire_forest_balance',fire_forest_balance,
+//   'fire_savana_balance',fire_savana_balance,
+//   'selective_logging_balance',selective_logging_balance
+  
+//   )
+
+var emptybands = fire_forest_balance.multiply(0).unmask(0).slice(0,31)
+
+var degradation = fire_forest_balance.unmask()
+  .add(fire_savana_balance.unmask())
+  .add(emptybands.addBands(selective_logging_balance).aside(print))
+
+
 
 
 var bandnames = degradation.bandNames();
@@ -464,9 +528,9 @@ Map.addLayer(biomass_stock_tC_ha,{},'biomass_stock_tC_ha');
 // --- Path
 
 // --- Exporting
-var version = 'CIAT-QCN_MapBiomas9-1986_2022-v028';
+var version = 'CIAT-QCN_MapBiomas9-1986_2023-v028';
 var description = 'biomass_stock_tC_ha-'+version;
-var assetId = 'projects/ee-ipam/assets/CCAL/MODELOS/';
+var assetId = 'projects/ee-ipam/assets/SEEG/CIAT/';
 
 Export.image.toAsset({
   image:biomass_stock_tC_ha.float(),

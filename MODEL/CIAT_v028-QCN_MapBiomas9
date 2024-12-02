@@ -236,21 +236,8 @@ Map.addLayer(desf_reg,[],'// SecVeg_Mapbiomas Collection 9');
 
 
 
-  var model = desf_reg.multiply(0)                // imagem em branco
-  .where(desf_reg.eq(1),0)                          // 1: Antropico = 0
-  .where(desf_reg.eq(2),carbon_total)               // 2:'Veg. Primária' = QCN_Total
-  .where(desf_reg.eq(3),carbon_total_regrowth)      // 3:'Veg. Secundária'= QCN_Total & Incremento
-  .where(desf_reg.eq(4),0)                          // 4:'Supressão Veg. Primária' = 0 
-  .where(desf_reg.eq(5),carbon_total_regrowth)      // 5:'Recrescimento de Veg. Secundária'  = QCN_Total & Incremento
-  .where(desf_reg.eq(6),0)                          // 6:'Supressão Veg. Secundária' = 0
-  //.where(desf_reg.eq(7),carbon_total)               // 7:'Outras transições' = QCN_Total
-  .where(sempre_submersas,0);                        // Water = 0 
-  //.subtract(degradacao_primaria);
-  
-
 
 // --- ---- PLOT  
-Map.addLayer(model,{bands:'classification_2023'},'model 2023');
 Map.addLayer(desf_reg,{},'desf_reg');
 Map.addLayer(lulc,{},'lulc');
 
@@ -277,37 +264,6 @@ Map.setOptions({ 'styles': { 'Dark': Mapp.getStyle('Dark'), 'Dark2':Mapp.getStyl
 
 var bounds = lulc_original.geometry().bounds();
 
-var oldbands = model.bandNames();
-print(oldbands);
-var newbands = oldbands.iterate(function(current,previous){
-  var newname = ee.String(current).replace('classification','biomass_stock');
-  return ee.List(previous).add(newname);
-},[]);
-
-model = model.select(oldbands,newbands)
-  .float()
-  .set({
-    //description:'https://code.earthengine.google.com/?scriptPath=users%2Fwallacesilva%2Fseeg%3ACCAL%2FBIOMASS_STOCK%2FMODEL%2Fv023-QCN_MapBiomas8'
-  });
-print('model',model);
-
-
-// var description = 'biomass_stock_tC_ha-QCN_MapBiomas8-1986_2022-v026';
-// var assetId = 'projects/mapbiomas-workspace/CCAL/MODELOS/';
-
-// Export.image.toAsset({
-//   image:model.float(),
-//   description:'W-SEEG_CCAL-'+description,
-//   assetId:assetId + description,
-//   pyramidingPolicy:'median',
-//   // dimensions:,
-//   region:bounds,
-//   scale:30,
-//   // crs:,
-//   // crsTransform:,
-//   maxPixels:1e13,
-//   // shardSize:
-// });
 
 
 // --- Balanço de Carbono, organizando asset para a plataforma do CCAL
@@ -424,22 +380,21 @@ var agb_selective_logging = past_carbon.select('AGB');
 var selective_logging_balance = ee.Image().select();
 
 [2017,2018,2019,2020,2021,2022,2023].forEach(function(year){
-  
-  
   /////// Selective Logging emissions ///////
-  var sl_year_dis = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_disordered');
-  var sl_year_geo = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_geometric');
+  var sl_year_dis = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_disordered').unmask();
+  var sl_year_geo = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_geometric').unmask();
 
   var sl_year = ee.Image(0)
-        .blend(sl_year_dis)
-        .blend(sl_year_geo)
+        .multiply(sl_year_dis)
+        .multiply(sl_year_geo)
         .multiply(stable_florest)
         .multiply(amazonia_img);
-
 
   var sl_Cbalance_year = agb_selective_logging.multiply(sl_year).multiply(0.196) // Loss factor from Lapola et al. (2023) | 19.6% of C loss year-1
     .rename('selective_logging_balance_'+year)
     .float();
+    
+  
 
   // Updating carbon stock (Selective Logging)
   agb_selective_logging = agb_selective_logging.subtract(sl_Cbalance_year.unmask());
@@ -449,7 +404,7 @@ var selective_logging_balance = ee.Image().select();
 
 
 var fire_bands = fire_forest_balance.bandNames().iterate(function(curr, prev){ return ee.List(prev).add(ee.String(curr).replace('CO2_Mg_ha_','biomass_stock_'))},[]);
-fire_forest_balance = fire_forest_balance.select(fire_forest_balance.bandNames(),fire_bands)
+fire_forest_balance = fire_forest_balance.select(fire_forest_balance.bandNames(),fire_bands);
 print('fire_forest_balance',fire_forest_balance,fire_bands);
 Map.addLayer(fire_forest_balance,{},'fire_forest_balance');
 
@@ -471,14 +426,11 @@ Map.addLayer(fire_annual.gte(1).reduce('sum'),{min:0,max:38},'fire frequncy');
   
 //   )
 
-var emptybands = fire_forest_balance.multiply(0).unmask(0).slice(0,31)
+var emptybands = fire_forest_balance.multiply(0).unmask(0).slice(0,31);
 
 var degradation = fire_forest_balance.unmask()
   .add(fire_savana_balance.unmask())
-  .add(emptybands.addBands(selective_logging_balance).aside(print))
-
-
-
+  .add(emptybands.addBands(selective_logging_balance).aside(print));
 
 var bandnames = degradation.bandNames();
 
@@ -509,8 +461,53 @@ Map.addLayer(degradation_accumulated,{},'degradation_accumulated');
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // var carbon_total_anual = ee.Image('projects/mapbiomas-workspace/SEEG/2023/CCAL/biomass_stock-v5-1986_2022-raster_stack');
-var biomass_stock_tC_ha = model
-  .subtract(degradation_accumulated);
+
+var biomass_stock_tC_ha = desf_reg.multiply(0)    // imagem em branco
+.where(desf_reg.eq(1),0)                          // 1: Antropico = 0
+.where(desf_reg.eq(2),carbon_total)               // 2:'Veg. Primária' = Past Vegetation
+  .subtract(degradation_accumulated)              // subtraindo a degradação por fogo em savana e floresta e em florestas de corte seletivo
+.where(desf_reg.eq(3),carbon_total_regrowth)      // 3:'Veg. Secundária'= Past Vegetation & Incremento
+.where(desf_reg.eq(4),0)                          // 4:'Supressão Veg. Primária' = 0 
+.where(desf_reg.eq(5),carbon_total_regrowth)      // 5:'Recrescimento de Veg. Secundária'  = Past Vegetation & Incremento
+.where(desf_reg.eq(6),0)                          // 6:'Supressão Veg. Secundária' = 0
+//.where(desf_reg.eq(7),carbon_total)             // 7:'Outras transições' = Past Vegetation
+.where(sempre_submersas,0);                       // Water = 0 
+//.subtract(degradacao_primaria);
+  
+// --- ---- PLOT  
+Map.addLayer(model,{bands:'classification_2023'},'model 2023');
+
+var oldbands = model.bandNames();
+print(oldbands);
+var newbands = oldbands.iterate(function(current,previous){
+  var newname = ee.String(current).replace('classification','biomass_stock');
+  return ee.List(previous).add(newname);
+},[]);
+
+model = model.select(oldbands,newbands)
+  .float()
+  .set({
+    //description:'https://code.earthengine.google.com/?scriptPath=users%2Fwallacesilva%2Fseeg%3ACCAL%2FBIOMASS_STOCK%2FMODEL%2Fv023-QCN_MapBiomas8'
+  });
+print('model',model);
+
+
+// var description = 'biomass_stock_tC_ha-QCN_MapBiomas8-1986_2022-v026';
+// var assetId = 'projects/mapbiomas-workspace/CCAL/MODELOS/';
+
+// Export.image.toAsset({
+//   image:model.float(),
+//   description:'W-SEEG_CCAL-'+description,
+//   assetId:assetId + description,
+//   pyramidingPolicy:'median',
+//   // dimensions:,
+//   region:bounds,
+//   scale:30,
+//   // crs:,
+//   // crsTransform:,
+//   maxPixels:1e13,
+//   // shardSize:
+// });
 
 print('biomass_stock_tC_ha-2',biomass_stock_tC_ha);
 Map.addLayer(biomass_stock_tC_ha,{},'biomass_stock_tC_ha-2');

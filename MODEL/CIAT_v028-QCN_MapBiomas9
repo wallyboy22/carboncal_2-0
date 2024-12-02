@@ -328,12 +328,10 @@ Map.layers().forEach(function(layer) {
   var visParams = layer.getVisParams();
   var layerName = layer.getName();
   var thumbnail = ui.Thumbnail({
-    image: eeObject.visualize(visParams).blend(biomes_line)
-      .set({
-        'system:footprint':eeObject.get('system:footprint')
-      }),
+    image: eeObject.visualize(visParams).blend(biomes_line),
     params: {
       dimensions: 512,
+      region:biomes.geometry().bounds()
     },
     style: {
       margin: '10px 0',

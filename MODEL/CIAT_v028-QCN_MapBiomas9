@@ -448,8 +448,6 @@ var selective_logging_balance = ee.Image().select();
 });
 
 
-
-
 var fire_bands = fire_forest_balance.bandNames().iterate(function(curr, prev){ return ee.List(prev).add(ee.String(curr).replace('CO2_Mg_ha_','biomass_stock_'))},[]);
 fire_forest_balance = fire_forest_balance.select(fire_forest_balance.bandNames(),fire_bands)
 print('fire_forest_balance',fire_forest_balance,fire_bands);

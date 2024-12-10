@@ -1,0 +1,487 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.MultiPoint(
+        [[-56.788474883614874, -6.8109693313360005],
+         [-56.840892146273625, -6.808312450730985]]),
+    mineracao = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.Point([-56.81055492998406, -6.825727557434225]),
+    wetland_to_water = 
+    /* color: #98ff00 */
+    /* shown: false */
+    ee.Geometry.Point([-57.17734777865693, -18.476332512649037]),
+    geometry2 = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.Point([-51.50586583719637, -8.542557141690569]),
+    final_errado = 
+    /* color: #98ff00 */
+    /* shown: false */
+    ee.Geometry.Point([-46.15384670100403, -12.519427429929886]),
+    incr_floresta_campestre = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.Point([-44.96455500589469, -21.634449753345763]),
+    geometry3 = /* color: #d63000 */ee.Geometry.Point([-64.98044682439816, -8.545859951040317]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+/**
+ * Script to build a biomass stock model for CCAL (Cadastro de Carbono e Água de Longo prazo).
+ * 
+ * Data Inputs:
+ *   - QCN (Natural Carbon Quantification)
+ *   - MapBiomas (Land Use/Land Cover + Deforestation and Secondary Vegetation)
+ * 
+ * Outputs:
+ *   - Biomass stock (tC/ha) images over time
+ * 
+ * Processing Steps:
+ *   1. Calculate Gain and Loss Budget
+ *   2. Compute Total Biomass
+ *   3. Incorporate Degradation (Fire and Selective Logging)
+ * 
+ * Assets Used:
+ *   - Increment Table (Regeneration increments by land cover transitions)
+ *   - Biomass Data (past_carbon)
+ *   - Deforestation and Secondary Vegetation Data (desf_reg_raw)
+ *   - Land Use/Land Cover Data (lulc_original)
+ *   - Biomes Shapefile (biomas)
+ * 
+ * Visualization:
+ *   - A single dictionary for visualization parameters
+ *   - A single dictionary for legends
+ * 
+ * Author: Wallace Silva e Bárbara Zimbres
+ * Date: 2024-12-2024
+ */
+
+// Import required modules
+var Mapp = require('users/joaovsiqueira1/packages:Mapp.js');
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+
+// Visualization parameters dictionary
+var visParams = {
+  lulc: {
+    min: 0,
+    max: 69,
+    palette: palettes.get('classification9'),
+    bands: ['classification_1986']
+  },
+  waterOccurrence: {
+    min: 0,
+    max: 10,
+    palette: ["white",'blue']
+  },
+  alwaysSubmerged: {
+    palette: ['#000080']
+  },
+  regrowthOccurrence: {
+    min: 1,
+    max: 3,
+    palette: ['white','red']
+  },
+  biomassStock: {
+    min: 0,
+    max: 90,
+    palette: ['#ffffcc', '#41ab5d', '#006837'],
+    bands: ['biomass_stock_2023']
+  }
+};
+
+// Legends dictionary
+var legends = {
+  deforestationSecondaryVeg: {
+    1: 'Anthropogenic',
+    2: 'Primary Vegetation',
+    3: 'Secondary Vegetation',
+    4: 'Suppression of Primary Vegetation',
+    5: 'Regrowth of Secondary Vegetation',
+    6: 'Suppression of Secondary Vegetation',
+    7: 'Other Transitions'
+  }
+};
+
+// Load Biomes Shapefile
+var biomes = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
+
+
+// Load Deforestation and Secondary Vegetation Data (MapBiomas Collection 9)
+var deforestationSecondaryVegRaw = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection9/mapbiomas_collection90_deforestation_secondary_vegetation_v1');
+var deforestationSecondaryVeg = deforestationSecondaryVegRaw.divide(100).int();
+var lulc = deforestationSecondaryVegRaw.mod(100).int();
+lulc = lulc.addBands(lulc.select('classification_2022').rename('classification_2023'));
+
+// Load Original LULC Data to Identify Permanently Submerged Areas
+var lulcOriginal = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection9/mapbiomas_collection90_integration_v1');
+
+var waterOccurrence = lulcOriginal.eq(33)
+  .selfMask()
+  .blend(lulcOriginal.eq(31).selfMask())
+  .reduce('sum');
+var alwaysSubmerged = waterOccurrence.gte(37).selfMask();
+
+// Set Map Styles
+Map.setOptions({
+  styles: {
+    Dark: Mapp.getStyle('Dark'),
+    Dark2: Mapp.getStyle('Dark2'),
+    Aubergine: Mapp.getStyle('Aubergine'),
+    Silver: Mapp.getStyle('Silver'),
+    Night: Mapp.getStyle('Night')
+  }
+});
+
+// Add Layers to Map
+Map.addLayer(deforestationSecondaryVeg, {}, 'Deforestation and Secondary Vegetation');
+Map.addLayer(lulc, visParams.lulc, 'LULC Original');
+Map.addLayer(waterOccurrence, visParams.waterOccurrence, 'Water Occurrence');
+// Map.add(getColorBar(visParams.waterOccurrence,'Water Occurrence'));
+Map.addLayer(alwaysSubmerged, visParams.alwaysSubmerged, 'Always Submerged');
+Map.addLayer(deforestationSecondaryVeg.eq(5).reduce('sum').selfMask(), visParams.regrowthOccurrence, 'Regrowth Occurrence');
+// Map.add(getColorBar(visParams.regrowthOccurrence,'Regrowth Occurrence'));
+
+
+/////////////////////////////////////
+// Load Fire-Induced Carbon Emissions CO2 for Forests and Savannas
+var fireForestBalance_co2 = ee.ImageCollection([
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/amazonia-CO2_Mg_ha_balance-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/caatinga-CO2_Mg_ha_balance-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/cerrado-CO2_Mg_ha_balance-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/mata_atlantica-CO2_Mg_ha_balance-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/pampa-CO2_Mg_ha_balance-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/pantanal-CO2_Mg_ha_balance-SEEG12'),
+]).mosaic().float();
+
+// Load Fire-Induced Carbon Emissions CH4 for Forests and Savannas
+var fireForestBalance_ch4 = ee.ImageCollection([
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/amazonia-CH4_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/caatinga-CH4_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/cerrado-CH4_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/mata_atlantica-CH4_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/pampa-CH4_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/pantanal-CH4_g_ha_comb-SEEG12'),
+]).mosaic().float().multiply(28);
+
+var fireForestBalance_n2o = ee.ImageCollection([
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/amazonia-N2O_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/caatinga-N2O_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/cerrado-N2O_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/mata_atlantica-N2O_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/pampa-N2O_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/pantanal-N2O_g_ha_comb-SEEG12'),
+]).mosaic().float().multiply(265);
+
+var fireForestBalance_co2e = fireForestBalance_co2
+.add(fireForestBalance_ch4)
+.add(fireForestBalance_n2o)
+
+
+// Load Fire-Induced Carbon Emissions CH4 for Forests and Savannas
+var fireGrasslandBalance_ch4 = ee.ImageCollection([
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/amazonia-CH4_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/caatinga-CH4_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/cerrado-CH4_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/mata_atlantica-CH4_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/pampa-CH4_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/pantanal-CH4_g_ha_comb-SEEG12'),
+]).mosaic().float().multiply(28);
+
+var fireGrasslandBalance_n2o = ee.ImageCollection([
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/amazonia-N2O_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/caatinga-N2O_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/cerrado-N2O_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/mata_atlantica-N2O_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/pampa-N2O_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/pantanal-N2O_g_ha_comb-SEEG12'),
+]).mosaic().float().multiply(265);
+
+var fireGrasslandBalance_co2e = fireGrasslandBalance_ch4
+  .add(fireGrasslandBalance_n2o);
+
+
+var fireSavannaBalance_co2 = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/savanas_fogo_seeg12_v2/brasil_savanas_co2_all_years_v2')
+  .float();
+
+var fireSavannaBalance_ch4 = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/savanas_fogo_seeg12_v2/brasil_savanas_ch4_all_years_v2')
+  .float().multiply(28);
+
+var fireSavannaBalance_n2o = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/savanas_fogo_seeg12_v2/brasil_savanas_n2o_all_years_v2')
+  .float().multiply(265);
+
+var fireSavannaBalance_co2e = fireSavannaBalance_co2
+.add(fireSavannaBalance_ch4)
+.add(fireSavannaBalance_n2o)
+
+// Load Stable Forest Mask and Amazon Biome Boundary
+var stableForest = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/12_1_3_Stable_cover/SEEG_c12_2023')
+  .unmask(0)
+  .eq(3);
+var amazonBiome = biomes.filter(ee.Filter.equals('Bioma', 'Amazônia'));
+var amazonMask = ee.Image().paint(amazonBiome).eq(0);
+
+// Load Total Past Carbon Data (AGB + BGB + DW + LI)
+var past_biomas_stock = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/RETIFICACAO/c_rect_col9');
+var past_biomas_stock_total = past_biomas_stock.select('TOTAL');
+var past_biomas_stock_agb = past_biomas_stock.select('AGB');
+
+// Initialize Above Ground Biomass (AGB) for Selective Logging
+var agbSelectiveLogging = past_biomas_stock_agb;
+var selectiveLoggingBalance = ee.Image().select();
+
+// Process Selective Logging for Each Year
+[2017, 2018, 2019, 2020, 2021, 2022, 2023].forEach(function (year) {
+  var slYearDis = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_disordered').unmask();
+  var slYearGeo = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_geometric').unmask();
+
+  var slYear = ee.Image(0)
+    .multiply(slYearDis)
+    .multiply(slYearGeo)
+    .multiply(stableForest)
+    .multiply(amazonMask);
+
+  var slCarbonBalanceYear = agbSelectiveLogging.multiply(slYear).multiply(0.196)
+    .rename('selective_logging_balance_' + year)
+    .float();
+
+  agbSelectiveLogging = agbSelectiveLogging.subtract(slCarbonBalanceYear.unmask()).multiply(3.67).multiply(-1);
+
+  selectiveLoggingBalance = selectiveLoggingBalance.addBands(slCarbonBalanceYear);
+});
+
+
+///////////////////////////////////////////////////
+var biomass_stock = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_tC_ha-CIAT-QCN_MapBiomas9-1986_2023-v028');
+
+print('biomass_stock',biomass_stock);
+var biomass_stock_balance = biomass_stock
+  .subtract(past_biomas_stock_total.addBands(biomass_stock.slice(0,-1)))
+  .multiply(-1)
+  .multiply(3.67);
+
+print('biomass_stock_balance',biomass_stock_balance);
+
+Map.addLayer(past_biomas_stock_total.addBands(biomass_stock),{},'biomass_stock',false)
+Map.addLayer(biomass_stock_balance,{},'biomass_stock_balance',false);
+
+
+var fireEmiss = fireForestBalance_co2e.unmask()
+        .add(fireGrasslandBalance_co2e.unmask())
+        .add(fireSavannaBalance_co2e.unmask())
+
+var emiss_co2e = fireEmiss.unmask()
+.addBands(selectiveLoggingBalance.unmask())
+.addBands(biomass_stock_balance.unmask())
+
+var emiss_co2e = fireEmiss.unmask()
+.add(selectiveLoggingBalance.unmask())
+.add(biomass_stock_balance.unmask())
+
+
+var emiss_co2e_final = emiss_co2e
+  .addBands(fireEmiss.unmask())
+  .addBands(selectiveLoggingBalance.unmask())
+  .addBands(biomass_stock_balance.unmask());
+
+
+Map.addLayer(emiss_co2e,{},'emiss_co2e',false);
+Map.addLayer(emiss_co2e,{},'emiss_co2e',false);
+Map.addLayer(emiss_co2e,{},'emiss_co2e',false);
+Map.addLayer(emiss_co2e,{},'emiss_co2e',false);
+
+Map.addLayer(emiss_co2e,{},'emiss_co2e',false);
+
+///////////////////////////////////////////////////
+// var biomes_line = ee.Image().paint(biomes,1,1);
+
+// // Iterar pelas camadas do mapa e exibir informações organizadas
+// Map.layers().forEach(function(layer) {
+//   // Ignorar a camada de fundo branco
+//   if (layer.getName() === 'White Background') {
+//     return;
+//   }
+
+//   // Recuperar informações da camada
+//   var eeObject = layer.getEeObject();
+//   var visParams = layer.getVisParams();
+//   var layerName = layer.getName();
+//   var thumbnail = ui.Thumbnail({
+//     image: eeObject.visualize(visParams).blend(biomes_line),
+//     params: {
+//       dimensions: 512,
+//       region:biomes.geometry().bounds()
+//     },
+//     style: {
+//       margin: '10px 0',
+//       border: '1px solid #ccc'
+//     }
+//   });
+
+//   // Criar um painel para organizar as informações da camada
+//   var layerPanel = ui.Panel({
+//     widgets: [
+//       ui.Label({
+//         value: 'Camada: ' + layerName,
+//         style: {
+//           fontSize: '16px',
+//           fontWeight: 'bold',
+//           color: '#333',
+//           margin: '0 0 10px 0'
+//         }
+//       }),
+//       ui.Label({
+//         value: 'Visual Params: ' + JSON.stringify(visParams, null, 2),
+//         style: {
+//           fontSize: '12px',
+//           color: '#555',
+//           margin: '5px 0'
+//         }
+//       }),
+//       thumbnail,
+//       ui.Label({
+//         value: '⚠️ Raster Virtual. Clique para aprender como adicionar mapas no QGIS',
+//         targetUrl: 'https://brasil.mapbiomas.org/wp-content/uploads/sites/4/2024/06/Adicionar-raster-virtual-no-qgis.pdf',
+//         style: {
+//           fontSize: '12px',
+//           color: '#007bff',
+//           margin: '5px 0',
+//           textDecoration: 'underline'
+//         }
+//       }),
+//       ui.Label({
+//         value: 'URL do MapId: ' + eeObject.visualize(visParams).getMapId().urlFormat,
+//         style: {
+//           fontSize: '12px',
+//           color: '#555',
+//           margin: '5px 0'
+//         }
+//       })
+//     ],
+//     style: {
+//       border: '1px solid #ddd',
+//       // borderRadius: '5px',
+//       backgroundColor: '#f9f9f9',
+//       padding: '10px',
+//       margin: '10px 0'
+//     }
+//   });
+
+//   // Adicionar o painel ao UI principal
+//   // ui.root.add(layerPanel);
+//   print(layerPanel);
+// });
+
+// function getColorBar (visParams,title){
+//   var sty = {
+//     thumb:{
+//       margin:'2px',
+//       backgroundColor:'00000000',
+//       stretch: 'horizontal',
+//       height:'10px'
+//     },
+//     label:{
+//       margin:'0px 0px 0px 0px',
+//       fontSize:'14px',
+//       backgroundColor:'00000000',
+//       stretch: 'horizontal',
+//       textAlign:'center',
+//     },
+//     label2:{
+//       textAlign:'center',
+//       margin:'0px 0px 0px 0px',
+//       fontSize:'14px',
+//       backgroundColor:'00000000',
+//       stretch: 'both'
+//     },
+//     label3:{
+//       textAlign:'right',
+//       margin:'0px 0px 0px 0px',
+//       fontSize:'10px',
+//       backgroundColor:'00000000',
+//       stretch: 'horizontal'
+//     },
+//     title:{
+//       margin:'0px 0px 0px 0px',
+//       fontSize:'12px',
+//       fontWeight:'bold'
+//     },
+//   };
+
+//   var boolean_thumb_palette = true;
+ 
+//   function returnColorBar(palette){
+//       var params = {
+//         bbox: [0, 0, 1, 0.1],
+//         dimensions: '100x10',
+//         format: 'png',
+//         min: 0,
+//         max: 1,
+//         position: 'bottom-left',
+//         palette: palette
+//       };
+    
+//       var thb = ui.Thumbnail({
+//         image: ee.Image.pixelLonLat().select(0),
+//         params: params, 
+//         style:sty.thumb
+//       });
+      
+//       return thb;
+  
+//     }
+    
+//   var params = {
+//       bbox: [0, 0, 1, 0.1],
+//       dimensions: '100x10',
+//       format: 'png',
+//       min: 0,
+//       max: 1,
+//       position: 'bottom-left',
+//       palette: visParams.palette
+//     };
+  
+//   var colorBar = returnColorBar(visParams.palette);
+  
+//   var label_title = ui.Label({value:title,style:sty.title});
+//   var label_init = ui.Label({value:visParams.min,style:sty.label});
+//   var label_mean = ui.Label(((visParams.min+visParams.max)/2),sty.label2);
+//   var label_end = ui.Label({value:visParams.max,style:sty.label});
+  
+//   var legendLabels = ui.Panel({
+//         widgets: [
+//           label_init,
+//           label_mean,
+//           label_end
+//         ],
+//         style:{margin:'0px'},
+//         layout: ui.Panel.Layout.Flow('horizontal')});
+
+//   var widgets = [
+//     label_title,
+//     colorBar,
+//     legendLabels
+//   ];
+    
+//   var panel_legend = ui.Panel({
+//     widgets:widgets,
+//     layout:ui.Panel.Layout.flow('vertical'), 
+//     style:{
+//       backgroundColor:'ffffff80',
+//       stretch: 'horizontal',
+//       minWidth:'200px'
+//     }
+//   });
+  
+//   var panel_body = ui.Panel({
+//     widgets:[panel_legend],
+//     layout:ui.Panel.Layout.flow('horizontal'), 
+//     style:{
+//       margin:'0px',
+//       backgroundColor:'ffffff80',
+//       stretch: 'horizontal',
+//     }
+//   });
+  
+//   return panel_body;
+// }

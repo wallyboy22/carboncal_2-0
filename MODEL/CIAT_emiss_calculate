@@ -214,6 +214,16 @@ var fireSavannaBalance_co2e = fireSavannaBalance_co2
 .add(fireSavannaBalance_ch4)
 .add(fireSavannaBalance_n2o)
 
+
+///////////////////////////////////////////////////
+var fireEmiss_co2e = fireForestBalance_co2e.unmask()
+        .add(fireGrasslandBalance_co2e.unmask())
+        .add(fireSavannaBalance_co2e.unmask())
+        
+var fireEmiss_co2 = fireForestBalance_co2.unmask()
+        .add(fireSavannaBalance_co2.unmask())
+////////////////////////////////////////////////////////
+
 // Load Stable Forest Mask and Amazon Biome Boundary
 var stableForest = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/12_1_3_Stable_cover/SEEG_c12_2023')
   .unmask(0)
@@ -250,13 +260,17 @@ var selectiveLoggingBalance = ee.Image().select();
   selectiveLoggingBalance = selectiveLoggingBalance.addBands(slCarbonBalanceYear);
 });
 
+////////////////////////////////////////////////
 
-///////////////////////////////////////////////////
 var biomass_stock = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_tC_ha-CIAT-QCN_MapBiomas9-1986_2023-v028');
 
+var biomass_stock_updated = biomass_stock
+  .add(fireEmiss_co2.unmask().divide(3.67).multiply(-1))
+  .add(biomass_stock_balance.unmask().divide(3.67).multiply(-1));
+
 print('biomass_stock',biomass_stock);
-var biomass_stock_balance = biomass_stock
-  .subtract(past_biomas_stock_total.addBands(biomass_stock.slice(0,-1)))
+var biomass_stock_balance = biomass_stock_updated
+  .subtract(past_biomas_stock_total.addBands(biomass_stock_updated.slice(0,-1)))
   .multiply(-1)
   .multiply(3.67);
 
@@ -266,21 +280,17 @@ Map.addLayer(past_biomas_stock_total.addBands(biomass_stock),{},'biomass_stock',
 Map.addLayer(biomass_stock_balance,{},'biomass_stock_balance',false);
 
 
-var fireEmiss = fireForestBalance_co2e.unmask()
-        .add(fireGrasslandBalance_co2e.unmask())
-        .add(fireSavannaBalance_co2e.unmask())
+// var emiss_co2e = fireEmiss_co2e.unmask()
+// .addBands(selectiveLoggingBalance.unmask())
+// .addBands(biomass_stock_balance.unmask())
 
-var emiss_co2e = fireEmiss.unmask()
-.addBands(selectiveLoggingBalance.unmask())
-.addBands(biomass_stock_balance.unmask())
-
-var emiss_co2e = fireEmiss.unmask()
+var emiss_co2e = fireEmiss_co2e.unmask()
 .add(selectiveLoggingBalance.unmask())
 .add(biomass_stock_balance.unmask())
 
 
 var emiss_co2e_final = emiss_co2e
-  .addBands(fireEmiss.unmask())
+  .addBands(fireEmiss_co2e.unmask())
   .addBands(selectiveLoggingBalance.unmask())
   .addBands(biomass_stock_balance.unmask());
 
@@ -291,6 +301,11 @@ Map.addLayer(emiss_co2e,{},'emiss_co2e',false);
 Map.addLayer(emiss_co2e,{},'emiss_co2e',false);
 
 Map.addLayer(emiss_co2e,{},'emiss_co2e',false);
+
+
+//
+
+
 
 ///////////////////////////////////////////////////
 // var biomes_line = ee.Image().paint(biomes,1,1);

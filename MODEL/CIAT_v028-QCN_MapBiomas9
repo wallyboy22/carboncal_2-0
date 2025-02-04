@@ -372,6 +372,10 @@ var newBandNames = oldBandNames.map(function (name) {
   return ee.String(name).replace('classification', 'biomass_stock');
 });
 biomassStock = biomassStock.select(oldBandNames, newBandNames).float();
+
+biomassStock = biomassStock
+  .updateMask(lulcOriginal.eq([33]).reduce('sum').gte(37).eq(0));
+
 print('Biomass Stock:', biomassStock);
 
 // Add Biomass Stock Layer to Map

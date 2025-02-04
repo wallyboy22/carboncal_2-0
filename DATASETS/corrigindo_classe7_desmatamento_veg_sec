@@ -1,0 +1,78 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.Polygon(
+        [[[-76.54780555077535, 6.702549891783329],
+          [-76.54780555077535, -36.49659065368281],
+          [-28.735305550775358, -36.49659065368281],
+          [-28.735305550775358, 6.702549891783329]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// 🔹 Importando imagens necessárias
+var deforestation_secundary_vegetation = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection9/mapbiomas_collection90_deforestation_secondary_vegetation_v1');
+var secundary_vegetation = deforestation_secundary_vegetation.divide(100).int();
+
+var lulc = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection9/mapbiomas_collection90_integration_v1');
+lulc = lulc.addBands(lulc.slice(-1));
+// 🔹 Mapeamento de valores para [1] Antropogênico e [2] Vegetação
+var old_values = [3, 4, 5, 6, 49, 11, 12, 29, 50, 13, 15, 19, 39, 20, 40, 62, 41, 46, 47, 35, 48, 9, 21, 23, 24, 30, 25, 33, 31];
+var new_values = [2, 2, 2, 2,  2,  2,  2,  2,  2,  2,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  2,  1,  1,  1,  2,  1];
+
+// 🔹 Aplicando a classificação no LULC
+old_values.forEach(function(value, i) {
+  lulc = lulc.where(lulc.eq(value), new_values[i]);
+});
+
+// 🔹 Função para calcular mudanças temporais
+function processBands(bandnames) {
+  var container = ee.Image().select();
+
+  bandnames.slice(1, -1).forEach(function(bandname) {
+    var index = bandnames.indexOf(bandname);
+    var prev_bands = bandnames.slice(0, index);
+    var post_bands = bandnames.slice(index + 1);
+
+    var sec_veg = secundary_vegetation.select(bandname);
+    var sec_veg_7 = sec_veg.eq(7);
+    var img_bandname = lulc.select(bandname);
+
+    var img_prev_bands = lulc.select(prev_bands).updateMask(sec_veg_7.neq(0)).reduce('first');
+    var img_post_bands = lulc.select(post_bands).updateMask(sec_veg_7.neq(0)).reduce('first');
+
+    var sum = img_prev_bands.unmask().multiply(10).add(img_post_bands.unmask()).selfMask();
+
+    // 🔹 Mapeamento de pixels (remapeando valores)
+    var remap_0 = [0, 1, 2, 10, 11, 12, 20, 21, 22];
+    var remap_1 = [0, 1, 2, 1, 1, 3, 2, 1, 2];
+    var remap = sum.remap(remap_0, remap_1);
+
+    var final_image = sec_veg.where(sec_veg.eq(7), remap);
+    container = container.addBands(final_image);
+  });
+
+  return container;
+}
+
+// 🔹 Executando a função de processamento
+lulc.bandNames().evaluate(function(bandnames) {
+  var final_result = processBands(bandnames);
+  
+  // 🔹 Adicionando camadas ao mapa
+  Map.addLayer(secundary_vegetation, {
+    min: 0, max: 7,
+    palette: ['ffffff', 'fff6bf', '127622', '56d117', 'ea1c1c', '6fc4b7', 'ffb66c', '8c8c8c'],
+    bands: ['classification_2009']
+  }, 'secundary_vegetation');
+
+  Map.addLayer(lulc, {
+    min: 0, max: 2,
+    palette: ['808080', 'ffff80', '80ff80'],
+    bands: ['classification_2009']
+  }, 'lulc',false);
+
+  Map.addLayer(final_result, {
+    min: 0, max: 7,
+    palette: ['ffffff', 'fff6bf', '127622', '56d117', 'ea1c1c', '6fc4b7', 'ffb66c', '8c8c8c'],
+    bands: ['classification_2009']
+  }, 'final_result');
+});

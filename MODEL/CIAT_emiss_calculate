@@ -1,8 +1,5 @@
 /**** Start of imports. If edited, may not auto-convert in the playground. ****/
-var geometry = 
-    /* color: #d63000 */
-    /* shown: false */
-    ee.Geometry.MultiPoint(
+var geometry = /* color: #d63000 */ee.Geometry.MultiPoint(
         [[-56.788474883614874, -6.8109693313360005],
          [-56.840892146273625, -6.808312450730985]]),
     mineracao = 
@@ -269,8 +266,8 @@ var fireGrasslandBalance_n2o = ee.ImageCollection([
 ]).mosaic().float().multiply(265);
 
 var fireGrasslandBalance_co2e = fireGrasslandBalance_ch4
-  .add(fireGrasslandBalance_n2o);
-
+  .add(fireGrasslandBalance_n2o)
+  .slice(1);
 
 var fireSavannaBalance_co2 = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/savanas_fogo_seeg12_v2/brasil_savanas_co2_all_years_v2')
   .float();
@@ -283,14 +280,21 @@ var fireSavannaBalance_n2o = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/savan
 
 var fireSavannaBalance_co2e = fireSavannaBalance_co2
 .add(fireSavannaBalance_ch4)
-.add(fireSavannaBalance_n2o)
+.add(fireSavannaBalance_n2o);
 
-
+print('fireSavannaBalance_co2',fireSavannaBalance_co2);
+print('fireSavannaBalance_ch4',fireSavannaBalance_ch4);
+print('fireSavannaBalance_n2o',fireSavannaBalance_n2o);
 ///////////////////////////////////////////////////
+
 var fireEmiss_co2e = fireForestBalance_co2e.unmask()
         .add(fireGrasslandBalance_co2e.unmask())
         .add(fireSavannaBalance_co2e.unmask())
         
+print('fireForestBalance_co2e',fireForestBalance_co2e);
+print('fireGrasslandBalance_co2e',fireGrasslandBalance_co2e);
+print('fireSavannaBalance_co2e',fireSavannaBalance_co2e);        
+
 var fireEmiss_co2 = fireForestBalance_co2.unmask()
         .add(fireSavannaBalance_co2.unmask())
 ////////////////////////////////////////////////////////
@@ -354,17 +358,23 @@ Map.addLayer(biomass_stock_balance,{},'biomass_stock_balance',false);
 // .addBands(selectiveLoggingBalance.unmask())
 // .addBands(biomass_stock_balance.unmask())
 
+print('--- fireEmiss_co2e',fireEmiss_co2e);
+print('--- selectiveLoggingBalance',selectiveLoggingBalance);
+print('--- biomass_stock_balance',biomass_stock_balance);
+
 var emiss_co2eLiqui = fireEmiss_co2e.unmask()
-.add(selectiveLoggingBalance.unmask())
+.add(fireEmiss_co2e.slice(0,31).multiply(0).unmask().addBands(selectiveLoggingBalance.unmask()))
 .add(biomass_stock_balance.unmask());
+
+
 
 // ajustar nome das bandas
 var emiss_co2e_final = emiss_co2eLiqui
   .addBands(fireEmiss_co2e.unmask())
   .addBands(selectiveLoggingBalance.unmask())
   .addBands(biomass_stock_balance.unmask().updateMask(biomass_stock_balance.lt(0))) // remoção
-  .addBands(biomass_stock_balance.unmask().updateMask(biomass_stock_balance.gt(0))); // emissão
-
+  .addBands(biomass_stock_balance.unmask().updateMask(biomass_stock_balance.gt(0))) // emissão
+  .float();
 
 print("emiss_co2e_final",emiss_co2e_final);
 

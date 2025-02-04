@@ -373,6 +373,7 @@ var newBandNames = oldBandNames.map(function (name) {
 });
 biomassStock = biomassStock.select(oldBandNames, newBandNames).float();
 
+// edição nova
 biomassStock = biomassStock
   .updateMask(lulcOriginal.eq([33]).reduce('sum').gte(37).eq(0));
 

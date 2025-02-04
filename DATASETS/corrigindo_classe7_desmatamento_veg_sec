@@ -24,7 +24,7 @@ old_values.forEach(function(value, i) {
 });
 
 // 🔹 Função para calcular mudanças temporais
-function processBands(bandnames) {
+function defining_other_transitions(bandnames) {
   var container = ee.Image().select();
 
   bandnames.slice(1, -1).forEach(function(bandname) {
@@ -55,7 +55,7 @@ function processBands(bandnames) {
 
 // 🔹 Executando a função de processamento
 lulc.bandNames().evaluate(function(bandnames) {
-  var final_result = processBands(bandnames);
+  var final_result = defining_other_transitions(bandnames);
   
   // 🔹 Adicionando camadas ao mapa
   Map.addLayer(secundary_vegetation, {

@@ -40,7 +40,6 @@ function defining_other_transitions(bandnames) {
     var img_post_bands = lulc.select(post_bands).updateMask(sec_veg_7.neq(0)).reduce('first');
 
     var sum = img_prev_bands.unmask().multiply(10).add(img_post_bands.unmask()).selfMask();
-    
         
     // var pixel_map = {
     //   0:  'Ausência',

@@ -80,10 +80,12 @@ Map.addLayer(landCover_original, {
 
 
 // Nova coleção de carbono na biomassa
-var carbonStack = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/biomass_stock_tC_ha-CIAT-QCN_MapBiomas9-1986_2022-v029');
+var carbonStack = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_tC_ha-CIAT-QCN_MapBiomas9-1986_2023-v029');
 var emiss_co2e = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/emiss_co2e_ha-CIAT-QCN_MapBiomas9-1986_2023-v029');
 
 var stack_observad = carbonStack.addBands(emiss_co2e);
+
+print('bandnames',stack_observad.bandNames().map(function(s){return ee.String(s).slice(0,-5);}).distinct());
 
 // Cálculo da área em hectares
 var pixelAreaHa = ee.Image.pixelArea().divide(1e4); // Converter m² para hectares
@@ -319,12 +321,12 @@ pixelTonelada.bandNames().evaluate(function(bandnames){
       'UF',
       'Unidade Federativa',
       'Área ha',
-      'co2e_liquid',
-      'co2e_fire',
-      'co2e_logging',
-      'co2e_removal',
-      'co2e_emission',
-      'co2e_emission',
+      'tons_co2e_liquid',
+      'tons_co2e_fire',
+      'tons_co2e_logging',
+      'tons_co2e_removal',
+      'tons_co2e_emission',
+      'tons_biomass_stock',
       // classe_int	territory_int	
       ]
   });

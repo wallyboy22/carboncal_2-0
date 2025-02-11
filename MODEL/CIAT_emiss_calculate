@@ -1,5 +1,8 @@
 /**** Start of imports. If edited, may not auto-convert in the playground. ****/
-var geometry = /* color: #d63000 */ee.Geometry.MultiPoint(
+var geometry = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.MultiPoint(
         [[-56.788474883614874, -6.8109693313360005],
          [-56.840892146273625, -6.808312450730985]]),
     mineracao = 
@@ -22,7 +25,22 @@ var geometry = /* color: #d63000 */ee.Geometry.MultiPoint(
     /* color: #d63000 */
     /* shown: false */
     ee.Geometry.Point([-44.96455500589469, -21.634449753345763]),
-    geometry3 = /* color: #d63000 */ee.Geometry.Point([-64.98044682439816, -8.545859951040317]);
+    geometry3 = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.Point([-64.98044682439816, -8.545859951040317]),
+    bounds = 
+    /* color: #d63000 */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[-74.45221176416808, 6.576093206358085],
+          [-74.45221176416808, -34.76049836143761],
+          [-32.37437013122656, -34.76049836143761],
+          [-32.37437013122656, 6.576093206358085]]], null, false);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 /**
  * Script to build a biomass stock model for CCAL (Cadastro de Carbono e Água de Longo prazo).
@@ -367,17 +385,31 @@ var emiss_co2eLiqui = fireEmiss_co2e.unmask()
 .add(biomass_stock_balance.unmask());
 
 
-
 // ajustar nome das bandas
-var emiss_co2e_final = emiss_co2eLiqui
-  .addBands(fireEmiss_co2e.unmask())
-  .addBands(selectiveLoggingBalance.unmask())
-  .addBands(biomass_stock_balance.unmask().updateMask(biomass_stock_balance.lt(0))) // remoção
-  .addBands(biomass_stock_balance.unmask().updateMask(biomass_stock_balance.gt(0))) // emissão
+var emiss_co2e_final = emiss_co2eLiqui.rename(emiss_co2eLiqui.bandNames().map(function(s){return ee.String('co2e_liquid').cat(ee.String(s).slice(-5))}))
+  .addBands(fireEmiss_co2e.unmask().rename(fireEmiss_co2e.bandNames().map(function(s){return ee.String('co2e_fire').cat(ee.String(s).slice(-5))})))
+  .addBands(selectiveLoggingBalance.unmask().rename(selectiveLoggingBalance.bandNames().map(function(s){return ee.String('co2e_logging').cat(ee.String(s).slice(-5))})))
+  .addBands(biomass_stock_balance.unmask().updateMask(biomass_stock_balance.lt(0)).rename(biomass_stock_balance.bandNames().map(function(s){return ee.String('co2e_removal').cat(ee.String(s).slice(-5))}))) // remoção
+  .addBands(biomass_stock_balance.unmask().updateMask(biomass_stock_balance.gt(0)).rename(biomass_stock_balance.bandNames().map(function(s){return ee.String('co2e_emission').cat(ee.String(s).slice(-5))}))) // emissão
   .float();
 
 print("emiss_co2e_final",emiss_co2e_final);
 
+
+// Export the Biomass Stock Image to an Asset
+var version = 'CIAT-QCN_MapBiomas9-1986_2023-v029';
+var description = 'emiss_co2e_ha-' + version;
+var assetId = 'projects/ee-ipam/assets/SEEG/CIAT/';
+
+Export.image.toAsset({
+  image: emiss_co2e_final.float(),
+  description: 'W-SEEG_CCAL-' + description,
+  assetId: assetId + description,
+  pyramidingPolicy: 'median',
+  region: bounds,
+  scale: 30,
+  maxPixels: 1e13
+});
 // Map.addLayer(emiss_co2e,{},'emiss_co2e',false);
 // Map.addLayer(emiss_co2e,{},'emiss_co2e',false);
 // Map.addLayer(emiss_co2e,{},'emiss_co2e',false);

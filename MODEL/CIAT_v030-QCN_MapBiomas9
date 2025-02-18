@@ -7,7 +7,8 @@ var geometry = /* color: #d63000 */ee.Geometry.MultiPoint(
     geometry2 = /* color: #d63000 */ee.Geometry.Point([-51.50586583719637, -8.542557141690569]),
     sempre_antorpico = /* color: #8000ff */ee.Geometry.Point([-46.15384670100403, -12.519427429929886]),
     flo_past_outras_transicoes = /* color: #8900d6 */ee.Geometry.Point([-44.96455500589469, -21.634449753345763]),
-    geometry3 = /* color: #d63000 */ee.Geometry.Point([-64.98044682439816, -8.545859951040317]);
+    geometry3 = /* color: #d63000 */ee.Geometry.Point([-64.98044682439816, -8.545859951040317]),
+    floresta_secundaria_acima_do_teto = /* color: #d63000 */ee.Geometry.Point([-52.32448711876253, -6.943041844847409]);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 /** 
  * Script to build a biomass stock model for CCAL (Cadastro de Carbono e Água de Longo prazo).
@@ -50,6 +51,22 @@ var visParams = {
     max: 69,
     palette: palettes.get('classification9'),
     bands: ['classification_1986']
+  },
+  lulc_qcn:{
+    min:0,
+    max:76,
+    palette:[
+      '#ffffff', '#32a65e', '#32a65e', '#1f8d49', '#7dc975', '#04381d', '#026975', '#000000',
+      '#000000', '#7a6c00', '#ad975a', '#519799', '#d6bc74', '#d89f5c', '#FFFFB2', '#edde8e',
+      '#000000', '#000000', '#f5b3c8', '#C27BA0', '#db7093', '#ffefc3', '#db4d4f', '#ffa07a',
+      '#d4271e', '#db4d4f', '#0000FF', '#000000', '#000000', '#ffaa5f', '#9c0027', '#091077',
+      '#fc8114', '#2532e4', '#93dfe6', '#9065d0', '#d082de', '#000000', '#000000', '#f5b3c8',
+      '#c71585', '#f54ca9', '#cca0d4', '#dbd26b', '#807a40', '#e04cfa', '#d68fe2', '#9932cc',
+      '#e6ccff', '#02d659', '#ad5100', '#000000', '#000000', '#000000', '#000000', '#000000',
+      '#000000', '#CC66FF', '#FF6666', '#006400', '#8d9e8b', '#f5d5d5', '#ff69b4', '#ebf8b5',
+      '#000000', '#000000', '#91ff36', '#7dc975', '#aee37f', '#008000', '#aaffaa', '#004000',
+      '#0080aa', '#aa8000', '#ff8000', '#008080', '#7dc975'
+    ]
   },
   vegSec: {
     min: 0,
@@ -198,9 +215,10 @@ bandnames.slice(2,-1).forEach(function(bandname){
   
 });
 
-var container = veg_sec_age.unmask().multiply(0);
+var container_increment_gte20 = veg_sec_age.unmask().multiply(0);
+var container_increment_lt20 = veg_sec_age.unmask().multiply(0);
 
-print('container',container);
+// print('container',container);
 print('grass_forest',grass_forest);
 
 [
@@ -208,11 +226,10 @@ print('grass_forest',grass_forest);
   ].forEach(function(biome_str){
     
     var biome_img = ee.Image().paint(biomes.filter(ee.Filter.eq('Bioma',biome_str))).eq(0);
-    
-    
+
     [
       'G','F'
-      ].forEach(function(class_str){
+    ].forEach(function(class_str){
         
         var increment_table = increment
           .filter(ee.Filter.equals('Bioma',biome_str))
@@ -221,44 +238,41 @@ print('grass_forest',grass_forest);
           
           // print('increment_table',increment_table);
           
-        var increment_gte20 = increment_table.getNumber('Ctotal_mais20')
-        var increment_lt20 = increment_table.getNumber('Ctotal_ate20')
+        var increment_gte20 = increment_table.getNumber('Ctotal_mais20');
+        var increment_lt20 = increment_table.getNumber('Ctotal_ate20');
         
         var switchs = {
           'G':1,
           'F':2
         };
         
-        var increment_img_gte20 = grass_forest.eq(switchs[class_str]) 
-          .multiply(increment_gte20)
-          .multiply(biome_img);
-        
-        var increment_img_lt20 = grass_forest.eq(switchs[class_str]) 
-          .multiply(increment_lt20)
-          .multiply(biome_img);
-        
-        container = container
-          .where(increment_img_gte20.gt(0),increment_img_gte20)
-          .where(increment_img_lt20.gt(0),increment_img_lt20);
+        container_increment_gte20 = container_increment_gte20
+          .where(grass_forest.eq(switchs[class_str]),biome_img.multiply(increment_gte20));
+
+        container_increment_lt20 = container_increment_lt20
+          .where(grass_forest.eq(switchs[class_str]),biome_img.multiply(increment_lt20));
       });
   });
 
 print('veg_sec_age',veg_sec_age);
 print('container',container);
 
-// var veg_sec_age_gte20 = veg_sec_age.gte(20);
-// var veg_sec_age_lt20 = veg_sec_age.lt(20);
+var increment_veg_sec_age_gte20 = veg_sec_age.gte(20).multiply(container_increment_gte20);
+var increment_veg_sec_age_lt20 = veg_sec_age.lt(20).multiply(container_increment_lt20);
 
 // biomas_img
 // grass_forest
 
-var increment_veg_sec = veg_sec_age.multiply(container);
+var increment_veg_sec = veg_sec_age_gte20.where(veg_sec_age_lt20.gt(0),veg_sec_age_lt20);
 
 Map.addLayer(grass_forest,{bands:['classification_2015']},'grass_forest');
 Map.addLayer(deforestationSecondaryVeg_corrected,{bands:['classification_2015']},'deforestationSecondaryVeg_corrected');
 Map.addLayer(veg_sec,{bands:['classification_2015']},'veg_sec');
 Map.addLayer(veg_sec_age,{bands:['classification_2015']},'veg_sec_age');
-Map.addLayer(container,{bands:['classification_2015']},'container');
+Map.addLayer(container_increment_gte20,{bands:['classification_2015']},'container_increment_gte20');
+Map.addLayer(container_increment_lt20,{bands:['classification_2015']},'container_increment_lt20');
+Map.addLayer(increment_veg_sec_age_gte20,{bands:['classification_2015']},'increment_veg_sec_age_gte20');
+Map.addLayer(increment_veg_sec_age_lt20,{bands:['classification_2015']},'increment_veg_sec_age_lt20');
 Map.addLayer(increment_veg_sec,{bands:['classification_2015']},'increment_veg_sec');
 
 // Load Original LULC Data to Identify Permanently Submerged Areas
@@ -396,6 +410,11 @@ biomassStock = biomassStock
 
 print('Biomass Stock:', biomassStock);
 
+
+var veg_preterita_BR = ee.Image('projects/ee-ipam/assets/IPAM/QCN/veg_preterita_BR');
+Map.addLayer(veg_preterita_BR,visParams.lulc_qcn,'veg_preterita_BR');
+var veg_preterita_BR_MBCLASS = ee.Image('projects/ee-ipam/assets/IPAM/QCN/veg_preterita_BR_MBCLASS');
+Map.addLayer(veg_preterita_BR_MBCLASS.rename('classification_1986'),visParams.lulc,'veg_preterita_BR_MBCLASS');
 // Add Biomass Stock Layer to Map
 Map.addLayer(biomassStock, visParams.biomassStock, 'Biomass Stock 2023');
 Map.add(getColorBar(visParams.biomassStock,'Biomass Stock tC/ha'));

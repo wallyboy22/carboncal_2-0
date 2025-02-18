@@ -255,15 +255,15 @@ print('grass_forest',grass_forest);
   });
 
 print('veg_sec_age',veg_sec_age);
-print('container',container);
+// print('container',container);
 
-var increment_veg_sec_age_gte20 = veg_sec_age.gte(20).multiply(container_increment_gte20);
-var increment_veg_sec_age_lt20 = veg_sec_age.lt(20).multiply(container_increment_lt20);
+var increment_veg_sec_age_gte20 = veg_sec_age.multiply(0).where(veg_sec_age.gte(20),veg_sec_age.multiply(container_increment_gte20));
+var increment_veg_sec_age_lt20 = veg_sec_age.multiply(0).where(veg_sec_age.lt(20),veg_sec_age.multiply(container_increment_lt20));
 
 // biomas_img
 // grass_forest
 
-var increment_veg_sec = veg_sec_age_gte20.where(veg_sec_age_lt20.gt(0),veg_sec_age_lt20);
+var increment_veg_sec = increment_veg_sec_age_gte20.where(increment_veg_sec_age_lt20.gt(0),increment_veg_sec_age_lt20);
 
 Map.addLayer(grass_forest,{bands:['classification_2015']},'grass_forest');
 Map.addLayer(deforestationSecondaryVeg_corrected,{bands:['classification_2015']},'deforestationSecondaryVeg_corrected');

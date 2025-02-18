@@ -222,36 +222,37 @@ var container_increment_lt20 = veg_sec_age.unmask().multiply(0);
 print('grass_forest',grass_forest);
 
 [
-  'Amazônia','Cerrado','Pantanal'
+  'Amazônia',
+  'Cerrado','Pantanal'
   ].forEach(function(biome_str){
     
-    var biome_img = ee.Image().paint(biomes.filter(ee.Filter.eq('Bioma',biome_str))).eq(0);
+      var biome_img = ee.Image().paint(biomes.filter(ee.Filter.equals('Bioma',biome_str))).eq(0);
 
-    [
-      'G','F'
-    ].forEach(function(class_str){
-        
-        var increment_table = increment
+        var grass_increment_table = increment
           .filter(ee.Filter.equals('Bioma',biome_str))
-          .filter(ee.Filter.equals('classe',class_str))
+          .filter(ee.Filter.equals('classe','G'))
           .first();
           
-          // print('increment_table',increment_table);
-          
-        var increment_gte20 = increment_table.getNumber('Ctotal_mais20');
-        var increment_lt20 = increment_table.getNumber('Ctotal_ate20');
+        var grass_increment_gte20 = grass_increment_table.getNumber('Ctotal_mais20');
+        var grass_increment_lt20 = grass_increment_table.getNumber('Ctotal_ate20');
         
-        var switchs = {
-          'G':1,
-          'F':2
-        };
+        var florest_increment_table = increment
+          .filter(ee.Filter.equals('Bioma',biome_str))
+          .filter(ee.Filter.equals('classe','F'))
+          .first();
         
+        var florest_increment_gte20 = florest_increment_table.getNumber('Ctotal_mais20');
+        var florest_increment_lt20 = florest_increment_table.getNumber('Ctotal_ate20');
+        
+
         container_increment_gte20 = container_increment_gte20
-          .where(grass_forest.eq(switchs[class_str]),biome_img.multiply(increment_gte20));
+          .where(grass_forest.eq(1),biome_img.multiply(grass_increment_gte20))
+          .where(grass_forest.eq(2),biome_img.multiply(florest_increment_gte20));
 
         container_increment_lt20 = container_increment_lt20
-          .where(grass_forest.eq(switchs[class_str]),biome_img.multiply(increment_lt20));
-      });
+          .where(grass_forest.eq(1),biome_img.multiply(grass_increment_lt20))
+          .where(grass_forest.eq(2),biome_img.multiply(florest_increment_lt20));
+
   });
 
 print('veg_sec_age',veg_sec_age);

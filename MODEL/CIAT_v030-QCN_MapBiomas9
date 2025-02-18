@@ -128,7 +128,7 @@ var new_values_grass_forest = [2, 2, 2, 2,  2,  1,  1,  1,  1];
 var grass_forest = lulcOriginal.multiply(0);
 
 old_values_grass_forest.forEach(function(value, i) {
-  grass_forest = grass_forest.where(grass_forest.eq(value), new_values_grass_forest[i]);
+  grass_forest = grass_forest.where(lulcOriginal.eq(value), new_values_grass_forest[i]);
 });
 
 grass_forest = grass_forest.selfMask().slice(1,-1);

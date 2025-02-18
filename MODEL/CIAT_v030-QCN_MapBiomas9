@@ -131,7 +131,7 @@ old_values_grass_forest.forEach(function(value, i) {
   grass_forest = grass_forest.where(grass_forest.eq(value), new_values_grass_forest[i]);
 });
 
-grass_forest = grass_forest.selfMask();
+grass_forest = grass_forest.selfMask().slice(1,-1);
 
 
 // 🔹 Função para calcular mudanças temporais
@@ -178,43 +178,20 @@ var bandnames = [
 // 🔹 Executando a função de processamento
 var deforestationSecondaryVeg_corrected = processBands(bandnames).byte();
 
-// Load Increment Table for Regeneration (QCN)
-// var incrementTable = ee.FeatureCollection('users/barbarazimbres/incremento_metodo_SPATIAL')
-//   .map(function (feature) {
-//     return feature.set({
-//       // Rules for Secondary Forests
-//       315: feature.get('AP_FSEC'), // Pasture
-//       319: feature.get('AC-FSEC'), // Temporary Crops
-//       339: feature.get('AC-FSEC'), // Soy
-//       320: feature.get('AC-FSEC'), // Sugar Cane
-//       340: feature.get('AC-FSEC'), // Rice
-//       362: feature.get('AC-FSEC'), // Cotton
-//       341: feature.get('AC-FSEC'), // Other Temporary Crops
-//       336: feature.get('AC-FSEC'), // Permanent Crops
-//       346: feature.get('AC-FSEC'), // Coffee
-//       347: feature.get('AC-FSEC'), // Citrus
-//       335: feature.get('AC-FSEC'), // Oil Palm
-//       348: feature.get('AC-FSEC'), // Other Permanent Crops
-//       321: feature.get('O-FSEC'),  // Mosaic of Uses
-//       309: feature.get('F-FSEC'),  // Silviculture
-//       324: feature.get('O-FSEC'),  // Urban Area
-//       330: feature.get('O-FSEC')   // Mining
-//     });
-//   });
-// print('Increment Table:', incrementTable);
-
-
-var increment = ee.FeatureCollection('projects/ee-ipam/assets/SEEG/CIAT/incrementos');
+// var increment = ee.FeatureCollection('projects/ee-ipam/assets/SEEG/CIAT/incrementos');
+var increment = ee.FeatureCollection('projects/ee-ipam/assets/SEEG/CIAT/incrementos-v2');
 print('increment',increment);
 
-
+print('deforestationSecondaryVeg_corrected',deforestationSecondaryVeg_corrected);
 var veg_sec = deforestationSecondaryVeg_corrected.eq(3).or(deforestationSecondaryVeg_corrected.eq(5));
-
+print('veg_sec',veg_sec);
+Map.addLayer(veg_sec,{},'veg_sec');
 var veg_sec_age = veg_sec.slice(0,1);
+print('veg_sec_age',veg_sec_age);
 
-bandnames.slice(1,-1).forEach(function(bandname){
+bandnames.slice(2,-1).forEach(function(bandname){
   
-  var newImg = veg_sec_age.slice(-1).unmask().add(veg_sec.select(bandname).selfMask()).rename(bandname)
+  var newImg = veg_sec_age.slice(-1).unmask().add(veg_sec.select(bandname).gte(1).selfMask()).rename(bandname)
     
   
   veg_sec_age = veg_sec_age.addBands(newImg)
@@ -223,9 +200,8 @@ bandnames.slice(1,-1).forEach(function(bandname){
 
 var container = veg_sec_age.unmask().multiply(0);
 
-print('teste',increment
-          // .filter(ee.Filter.equals('Bioma',biome_str))
-          .filter(ee.Filter.equals('Classe','F')))
+print('container',container);
+print('grass_forest',grass_forest);
 
 [
   'Amazônia','Cerrado','Pantanal'
@@ -240,9 +216,11 @@ print('teste',increment
         
         var increment_table = increment
           .filter(ee.Filter.equals('Bioma',biome_str))
-          .filter(ee.Filter.equals('Classe',class_str))
+          .filter(ee.Filter.equals('classe',class_str))
           .first();
-          print('increment_table',increment_table);
+          
+          // print('increment_table',increment_table);
+          
         var increment_gte20 = increment_table.getNumber('Ctotal_mais20')
         var increment_lt20 = increment_table.getNumber('Ctotal_ate20')
         
@@ -265,10 +243,11 @@ print('teste',increment
       });
   });
 
-// print(veg_sec_age);
+print('veg_sec_age',veg_sec_age);
+print('container',container);
 
-// veg_sec_age_gte20 = veg_sec_age.gte(20);
-// veg_sec_age_lt20 = veg_sec_age.lt(20);
+// var veg_sec_age_gte20 = veg_sec_age.gte(20);
+// var veg_sec_age_lt20 = veg_sec_age.lt(20);
 
 // biomas_img
 // grass_forest
@@ -281,11 +260,6 @@ Map.addLayer(veg_sec,{bands:['classification_2015']},'veg_sec');
 Map.addLayer(veg_sec_age,{bands:['classification_2015']},'veg_sec_age');
 Map.addLayer(container,{bands:['classification_2015']},'container');
 Map.addLayer(increment_veg_sec,{bands:['classification_2015']},'increment_veg_sec');
-
-
-stop
-
-
 
 // Load Original LULC Data to Identify Permanently Submerged Areas
 lulcOriginal = lulcOriginal.slice(0,-1);
@@ -321,60 +295,6 @@ var bounds = lulcOriginal.geometry().bounds();
 
 // Define the List of Years
 var years = ee.List.sequence(1986, 2023);
-
-// Map Land Cover Codes to Increment Values
-var classCodes = [
-  11, 12, 13, 4, 49, 5, 50, 315, 319, 339, 320, 340, 362, 341,
-  336, 346, 347, 335, 348, 321, 309, 324, 330
-];
-var incrementValues = classCodes.map(function (code) {
-  var codeStr = ee.Number(code).format();
-  if ([11, 12, 13].indexOf(code) !== -1) {
-    codeStr = codeStr.cat('00');
-  }
-  return incrementTable.first().getNumber(codeStr);
-});
-
-// Initialize the Carbon Total Regrowth Image
-var carbonTotalRegrowth = ee.Image().rename('classification_1985')
-  .addBands(ee.Image().rename('classification_2024'));
-
-// Function to Calculate Regrowth for Each Year
-years.getInfo().forEach(function (year, i) {
-  var forestPixels = lulc
-    .where(lulc.eq(5), 3)
-    .where(lulc.eq(6), 3)
-    .eq(3)
-    .slice(0, i + 2)
-    .reduce('max')
-    .selfMask();
-
-  var lulcYear = lulc.select(i + 1)
-    .where(lulc.select(i + 1).eq([3, 5, 6]).reduce('max').selfMask(), 3);
-
-  var lulcForestYear = lulcYear.add(forestPixels);
-
-  // var defRegYear = deforestationSecondaryVeg.select(i)
-  var defRegYear = deforestationSecondaryVeg_corrected.select(i)
-    .remap([3, 5], [1, 1])
-    .selfMask();
-
-  var regrowthYear = lulcYear
-    .where(lulcForestYear.gt(0), lulcForestYear)
-    .remap(classCodes, incrementValues)
-    .updateMask(defRegYear);
-
-  var regrowthPrevYear = carbonTotalRegrowth.select('classification_' + (year-1));
-
-  regrowthYear = regrowthYear
-    .where(regrowthPrevYear.gt(0), regrowthYear.add(regrowthPrevYear))
-    .rename('classification_' + year);
-
-  carbonTotalRegrowth = carbonTotalRegrowth.addBands(regrowthYear);
-});
-
-carbonTotalRegrowth = carbonTotalRegrowth.slice(2);
-print('Carbon Total Regrowth:', carbonTotalRegrowth);
 
 // Load Fire-Induced Carbon Balance for Forests and Savannas
 var fireForestBalance = ee.ImageCollection([
@@ -455,10 +375,10 @@ print('Degradation Accumulated:', degradationAccumulated);
 var biomassStock = deforestationSecondaryVeg_corrected.multiply(0)
   .where(deforestationSecondaryVeg_corrected.eq(1), 0)
   .where(deforestationSecondaryVeg_corrected.eq(2), totalCarbon)
-  .subtract(degradationAccumulated)
-  .where(deforestationSecondaryVeg_corrected.eq(3), carbonTotalRegrowth)
+  .subtract(degradationAccumulated) // descontando perda de carbono em vegetação nativa
+  .where(deforestationSecondaryVeg_corrected.eq(3), increment_veg_sec)
   .where(deforestationSecondaryVeg_corrected.eq(4), 0)
-  .where(deforestationSecondaryVeg_corrected.eq(5), carbonTotalRegrowth)
+  .where(deforestationSecondaryVeg_corrected.eq(5), increment_veg_sec)
   .where(deforestationSecondaryVeg_corrected.eq(6), 0)
   .where(alwaysSubmerged, 0);
 
@@ -495,8 +415,6 @@ Export.image.toAsset({
 });
 
 // adicionar export to drive para a Amazônia legal
-
-
 
 var biomes_line = ee.Image().paint(biomes,1,1);
 

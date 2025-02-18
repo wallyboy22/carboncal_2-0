@@ -243,7 +243,6 @@ print('grass_forest',grass_forest);
         
         var florest_increment_gte20 = florest_increment_table.getNumber('Ctotal_mais20');
         var florest_increment_lt20 = florest_increment_table.getNumber('Ctotal_ate20');
-        
 
         container_increment_gte20 = container_increment_gte20
           .where(grass_forest.eq(1),biome_img.multiply(grass_increment_gte20))

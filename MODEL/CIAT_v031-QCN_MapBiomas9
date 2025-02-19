@@ -290,88 +290,14 @@ bandnames.slice(1,-1).forEach(function(bandname,i){
     container_increment = container_increment.addBands(subcontainer_increment.float());  
 });
 
-container_increment = container_increment.slice(1)
-  .where(container_increment.gt(totalCarbon),totalCarbon);
+container_increment = container_increment.slice(1);
 
+var keep = container_increment.multiply(0).add(totalCarbon);
+  
+container_increment = container_increment  
+  .where(container_increment.gt(keep),keep);
 
 print('container_increment',container_increment);
-
-///
-// var veg_sec_age = veg_sec.slice(0,1);
-// print('veg_sec_age',veg_sec_age);
-
-// bandnames.slice(2,-1).forEach(function(bandname){
-  
-//   var newImg = veg_sec_age.slice(-1).unmask().add(veg_sec.select(bandname).gte(1).selfMask()).rename(bandname);
-    
-  
-//   veg_sec_age = veg_sec_age.addBands(newImg);
-  
-// });
-
-// //
-
-// var container_increment_gte20 = veg_sec_age.unmask().multiply(0);
-// var container_increment_lt20 = veg_sec_age.unmask().multiply(0);
-
-// // print('container',container);
-// print('grass_forest',grass_forest);
-
-// [
-//   'Amazônia',
-//   'Cerrado',
-//   'Pantanal'
-//   ].forEach(function(biome_str){
-    
-//       var biome_img = ee.Image().paint(biomes.filter(ee.Filter.equals('Bioma',biome_str))).eq(0);
-
-//         var grass_increment_table = increment
-//           .filter(ee.Filter.equals('Bioma',biome_str))
-//           .filter(ee.Filter.equals('classe','G'))
-//           .first();
-          
-//         var grass_increment_gte20 = grass_increment_table.getNumber('Ctotal_mais20');
-//         var grass_increment_lt20 = grass_increment_table.getNumber('Ctotal_ate20');
-        
-//         var forest_increment_table = increment
-//           .filter(ee.Filter.equals('Bioma',biome_str))
-//           .filter(ee.Filter.equals('classe','F'))
-//           .first();
-        
-//         var forest_increment_gte20 = forest_increment_table.getNumber('Ctotal_mais20');
-//         var forest_increment_lt20 = forest_increment_table.getNumber('Ctotal_ate20');
-
-//         container_increment_gte20 = container_increment_gte20
-//           .where(grass_forest.eq(1),biome_img.multiply(grass_increment_gte20))
-//           .where(grass_forest.eq(2),biome_img.multiply(forest_increment_gte20));
-
-//         container_increment_lt20 = container_increment_lt20
-//           .where(grass_forest.eq(1),biome_img.multiply(grass_increment_lt20))
-//           .where(grass_forest.eq(2),biome_img.multiply(forest_increment_lt20));
-
-//   });
-
-// print('veg_sec_age',veg_sec_age);
-// // print('container',container);
-
-// var increment_veg_sec_age_lt20 = veg_sec_age.multiply(0).where(veg_sec_age.lt(20),veg_sec_age.multiply(container_increment_lt20));
-
-
-// ////////////////////
-
-//   var increment_veg_sec_age_gte20 = veg_sec_age.multiply(0)
-//     .where(
-//       veg_sec_age.gte(20),
-      
-//       veg_sec_age.multiply(container_increment_gte20)
-      
-//       );
-  
-
-// // biomas_img
-// // grass_forest
-
-// var increment_veg_sec = increment_veg_sec_age_gte20.where(increment_veg_sec_age_lt20.gt(0),increment_veg_sec_age_lt20);
 
 Map.addLayer(grass_forest,{bands:['classification_2015']},'grass_forest');
 Map.addLayer(deforestationSecondaryVeg_corrected,{bands:['classification_2015']},'deforestationSecondaryVeg_corrected');
@@ -527,7 +453,7 @@ Map.addLayer(veg_preterita_BR_MBCLASS.rename('classification_1986'),visParams.lu
 Map.addLayer(biomassStock, visParams.biomassStock, 'Biomass Stock 2023');
 Map.add(getColorBar(visParams.biomassStock,'Biomass Stock tC/ha'));
 // Export the Biomass Stock Image to an Asset
-var version = 'CIAT-QCN_MapBiomas9-1986_2023-v030';
+var version = 'CIAT-QCN_MapBiomas9-1986_2023-v031';
 var description = 'biomass_stock_tC_ha-' + version;
 var assetId = 'projects/ee-ipam/assets/SEEG/CIAT/';
 var image = biomassStock.float();

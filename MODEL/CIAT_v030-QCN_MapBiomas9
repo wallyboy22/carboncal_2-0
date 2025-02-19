@@ -1,30 +1,12 @@
 /**** Start of imports. If edited, may not auto-convert in the playground. ****/
-var geometry = 
-    /* color: #d63000 */
-    /* shown: false */
-    ee.Geometry.MultiPoint(
+var geometry = /* color: #d63000 */ee.Geometry.MultiPoint(
         [[-56.788474883614874, -6.8109693313360005],
          [-56.840892146273625, -6.808312450730985]]),
-    mineracao = 
-    /* color: #d63000 */
-    /* shown: false */
-    ee.Geometry.Point([-56.81055492998406, -6.825727557434225]),
-    wetland_to_water = 
-    /* color: #98ff00 */
-    /* shown: false */
-    ee.Geometry.Point([-57.17213356433198, -18.47303551709034]),
-    geometry2 = 
-    /* color: #d63000 */
-    /* shown: false */
-    ee.Geometry.Point([-51.50586583719637, -8.542557141690569]),
-    sempre_antorpico = 
-    /* color: #8000ff */
-    /* shown: false */
-    ee.Geometry.Point([-46.15384670100403, -12.519427429929886]),
-    flo_past_outras_transicoes = 
-    /* color: #8900d6 */
-    /* shown: false */
-    ee.Geometry.Point([-44.96455500589469, -21.634449753345763]),
+    mineracao = /* color: #d63000 */ee.Geometry.Point([-56.81055492998406, -6.825727557434225]),
+    wetland_to_water = /* color: #98ff00 */ee.Geometry.Point([-57.17213356433198, -18.47303551709034]),
+    geometry2 = /* color: #d63000 */ee.Geometry.Point([-51.50586583719637, -8.542557141690569]),
+    sempre_antorpico = /* color: #8000ff */ee.Geometry.Point([-46.15384670100403, -12.519427429929886]),
+    flo_past_outras_transicoes = /* color: #8900d6 */ee.Geometry.Point([-44.96455500589469, -21.634449753345763]),
     geometry3 = /* color: #d63000 */ee.Geometry.Point([-64.98044682439816, -8.545859951040317]),
     floresta_secundaria_acima_do_teto = /* color: #d63000 */ee.Geometry.Point([-52.32448711876253, -6.943041844847409]);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
@@ -221,163 +203,77 @@ print('deforestationSecondaryVeg_corrected',deforestationSecondaryVeg_corrected)
 var veg_sec = deforestationSecondaryVeg_corrected.eq(3).or(deforestationSecondaryVeg_corrected.eq(5));
 print('veg_sec',veg_sec);
 Map.addLayer(veg_sec,{},'veg_sec');
+var veg_sec_age = veg_sec.slice(0,1);
+print('veg_sec_age',veg_sec_age);
 
-var container_increment = ee.Image(0);//.rename('classification_1985');
-var container_sec_veg_age = ee.Image().select();
-
-bandnames.slice(1,-1).forEach(function(bandname,i){
+bandnames.slice(2,-1).forEach(function(bandname){
   
-  var veg_sec_year = veg_sec.select(bandname);
+  var newImg = veg_sec_age.slice(-1).unmask().add(veg_sec.select(bandname).gte(1).selfMask()).rename(bandname)
+    
   
-  var grass_forest_year = grass_forest.select(bandname);
+  veg_sec_age = veg_sec_age.addBands(newImg)
   
-  container_sec_veg_age = i === 0 ? veg_sec_year : container_sec_veg_age.addBands(container_sec_veg_age.slice(-1).add(veg_sec_year.selfMask()).rename(bandname));
-
-  var container_sec_veg_age_year = container_sec_veg_age.select(bandname);
-  
-  var container_increment_prev_year = container_increment.slice(-1);
-  
-  var subcontainer_increment = ee.Image(0).rename(bandname);
-  
-  [
-    'Amazônia',
-    'Cerrado',
-    'Pantanal'
-  ] .forEach(function(biome_str){
-
-      var biome_img = ee.Image().paint(biomes.filter(ee.Filter.equals('Bioma',biome_str))).eq(0);
-      
-      
-      var grass_increment_table = increment
-        .filter(ee.Filter.equals('Bioma',biome_str))
-        .filter(ee.Filter.equals('classe','G'))
-        .first();
-        
-      var forest_increment_table = increment
-        .filter(ee.Filter.equals('Bioma',biome_str))
-        .filter(ee.Filter.equals('classe','F'))
-        .first();
-      
-      
-      var grass_increment_lt20 = grass_increment_table.getNumber('Ctotal_ate20');
-      var forest_increment_lt20 = forest_increment_table.getNumber('Ctotal_ate20');
-
-      var grass_increment_gte20 = grass_increment_table.getNumber('Ctotal_mais20');
-      var forest_increment_gte20 = forest_increment_table.getNumber('Ctotal_mais20');
-      
-      //
-      var sec_veg_age_year_lt20 = container_sec_veg_age_year.lt(20);
-      var sec_veg_age_year_gte20 = container_sec_veg_age_year.gte(20);
-      
-      //
-      
-      var result_year = veg_sec_year
-        .multiply(biome_img)
-        // onde for vegetação secundaria e formação campestre, com menos de 20 anos
-        .where(grass_forest_year.eq(1).and(sec_veg_age_year_lt20),container_increment_prev_year.add(grass_increment_lt20))
-        .where(grass_forest_year.eq(2).and(sec_veg_age_year_lt20),container_increment_prev_year.add(forest_increment_lt20))
-
-        .where(grass_forest_year.eq(1).and(sec_veg_age_year_gte20),container_increment_prev_year.add(grass_increment_gte20))
-        .where(grass_forest_year.eq(2).and(sec_veg_age_year_gte20),container_increment_prev_year.add(forest_increment_gte20));
-
-      
-      subcontainer_increment = subcontainer_increment
-        .where(result_year.gt(0),result_year);
-
-  });
-  
-    container_increment = container_increment.addBands(subcontainer_increment.float());  
 });
 
-container_increment = container_increment.slice(1);
-print('container_increment',container_increment);
+var container_increment_gte20 = veg_sec_age.unmask().multiply(0);
+var container_increment_lt20 = veg_sec_age.unmask().multiply(0);
 
-///
-// var veg_sec_age = veg_sec.slice(0,1);
-// print('veg_sec_age',veg_sec_age);
+// print('container',container);
+print('grass_forest',grass_forest);
 
-// bandnames.slice(2,-1).forEach(function(bandname){
-  
-//   var newImg = veg_sec_age.slice(-1).unmask().add(veg_sec.select(bandname).gte(1).selfMask()).rename(bandname);
+[
+  'Amazônia',
+  'Cerrado','Pantanal'
+  ].forEach(function(biome_str){
     
-  
-//   veg_sec_age = veg_sec_age.addBands(newImg);
-  
-// });
+      var biome_img = ee.Image().paint(biomes.filter(ee.Filter.equals('Bioma',biome_str))).eq(0);
 
-// //
-
-// var container_increment_gte20 = veg_sec_age.unmask().multiply(0);
-// var container_increment_lt20 = veg_sec_age.unmask().multiply(0);
-
-// // print('container',container);
-// print('grass_forest',grass_forest);
-
-// [
-//   'Amazônia',
-//   'Cerrado',
-//   'Pantanal'
-//   ].forEach(function(biome_str){
-    
-//       var biome_img = ee.Image().paint(biomes.filter(ee.Filter.equals('Bioma',biome_str))).eq(0);
-
-//         var grass_increment_table = increment
-//           .filter(ee.Filter.equals('Bioma',biome_str))
-//           .filter(ee.Filter.equals('classe','G'))
-//           .first();
+        var grass_increment_table = increment
+          .filter(ee.Filter.equals('Bioma',biome_str))
+          .filter(ee.Filter.equals('classe','G'))
+          .first();
           
-//         var grass_increment_gte20 = grass_increment_table.getNumber('Ctotal_mais20');
-//         var grass_increment_lt20 = grass_increment_table.getNumber('Ctotal_ate20');
+        var grass_increment_gte20 = grass_increment_table.getNumber('Ctotal_mais20');
+        var grass_increment_lt20 = grass_increment_table.getNumber('Ctotal_ate20');
         
-//         var forest_increment_table = increment
-//           .filter(ee.Filter.equals('Bioma',biome_str))
-//           .filter(ee.Filter.equals('classe','F'))
-//           .first();
+        var florest_increment_table = increment
+          .filter(ee.Filter.equals('Bioma',biome_str))
+          .filter(ee.Filter.equals('classe','F'))
+          .first();
         
-//         var forest_increment_gte20 = forest_increment_table.getNumber('Ctotal_mais20');
-//         var forest_increment_lt20 = forest_increment_table.getNumber('Ctotal_ate20');
+        var florest_increment_gte20 = florest_increment_table.getNumber('Ctotal_mais20');
+        var florest_increment_lt20 = florest_increment_table.getNumber('Ctotal_ate20');
 
-//         container_increment_gte20 = container_increment_gte20
-//           .where(grass_forest.eq(1),biome_img.multiply(grass_increment_gte20))
-//           .where(grass_forest.eq(2),biome_img.multiply(forest_increment_gte20));
+        container_increment_gte20 = container_increment_gte20
+          .where(grass_forest.eq(1),biome_img.multiply(grass_increment_gte20))
+          .where(grass_forest.eq(2),biome_img.multiply(florest_increment_gte20));
 
-//         container_increment_lt20 = container_increment_lt20
-//           .where(grass_forest.eq(1),biome_img.multiply(grass_increment_lt20))
-//           .where(grass_forest.eq(2),biome_img.multiply(forest_increment_lt20));
+        container_increment_lt20 = container_increment_lt20
+          .where(grass_forest.eq(1),biome_img.multiply(grass_increment_lt20))
+          .where(grass_forest.eq(2),biome_img.multiply(florest_increment_lt20));
 
-//   });
+  });
 
-// print('veg_sec_age',veg_sec_age);
-// // print('container',container);
+print('veg_sec_age',veg_sec_age);
+// print('container',container);
 
-// var increment_veg_sec_age_lt20 = veg_sec_age.multiply(0).where(veg_sec_age.lt(20),veg_sec_age.multiply(container_increment_lt20));
+var increment_veg_sec_age_gte20 = veg_sec_age.multiply(0).where(veg_sec_age.gte(20),veg_sec_age.multiply(container_increment_gte20));
+var increment_veg_sec_age_lt20 = veg_sec_age.multiply(0).where(veg_sec_age.lt(20),veg_sec_age.multiply(container_increment_lt20));
 
+// biomas_img
+// grass_forest
 
-// ////////////////////
-
-//   var increment_veg_sec_age_gte20 = veg_sec_age.multiply(0)
-//     .where(
-//       veg_sec_age.gte(20),
-      
-//       veg_sec_age.multiply(container_increment_gte20)
-      
-//       );
-  
-
-// // biomas_img
-// // grass_forest
-
-// var increment_veg_sec = increment_veg_sec_age_gte20.where(increment_veg_sec_age_lt20.gt(0),increment_veg_sec_age_lt20);
+var increment_veg_sec = increment_veg_sec_age_gte20.where(increment_veg_sec_age_lt20.gt(0),increment_veg_sec_age_lt20);
 
 Map.addLayer(grass_forest,{bands:['classification_2015']},'grass_forest');
 Map.addLayer(deforestationSecondaryVeg_corrected,{bands:['classification_2015']},'deforestationSecondaryVeg_corrected');
 Map.addLayer(veg_sec,{bands:['classification_2015']},'veg_sec');
-Map.addLayer(container_sec_veg_age,{bands:['classification_2015']},'container_sec_veg_age');
-Map.addLayer(container_increment,{bands:['classification_2015']},'container_increment');
-// Map.addLayer(container_increment_lt20,{bands:['classification_2015']},'container_increment_lt20');
-// Map.addLayer(increment_veg_sec_age_gte20,{bands:['classification_2015']},'increment_veg_sec_age_gte20');
-// Map.addLayer(increment_veg_sec_age_lt20,{bands:['classification_2015']},'increment_veg_sec_age_lt20');
-// Map.addLayer(increment_veg_sec,{bands:['classification_2015']},'increment_veg_sec');
+Map.addLayer(veg_sec_age,{bands:['classification_2015']},'veg_sec_age');
+Map.addLayer(container_increment_gte20,{bands:['classification_2015']},'container_increment_gte20');
+Map.addLayer(container_increment_lt20,{bands:['classification_2015']},'container_increment_lt20');
+Map.addLayer(increment_veg_sec_age_gte20,{bands:['classification_2015']},'increment_veg_sec_age_gte20');
+Map.addLayer(increment_veg_sec_age_lt20,{bands:['classification_2015']},'increment_veg_sec_age_lt20');
+Map.addLayer(increment_veg_sec,{bands:['classification_2015']},'increment_veg_sec');
 
 // Load Original LULC Data to Identify Permanently Submerged Areas
 lulcOriginal = lulcOriginal.slice(0,-1);
@@ -494,9 +390,9 @@ var biomassStock = deforestationSecondaryVeg_corrected.multiply(0)
   .where(deforestationSecondaryVeg_corrected.eq(1), 0)
   .where(deforestationSecondaryVeg_corrected.eq(2), totalCarbon)
   .subtract(degradationAccumulated) // descontando perda de carbono em vegetação nativa
-  .where(deforestationSecondaryVeg_corrected.eq(3), container_increment)
+  .where(deforestationSecondaryVeg_corrected.eq(3), increment_veg_sec)
   .where(deforestationSecondaryVeg_corrected.eq(4), 0)
-  .where(deforestationSecondaryVeg_corrected.eq(5), container_increment)
+  .where(deforestationSecondaryVeg_corrected.eq(5), increment_veg_sec)
   .where(deforestationSecondaryVeg_corrected.eq(6), 0)
   .where(alwaysSubmerged, 0);
 

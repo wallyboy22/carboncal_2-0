@@ -291,7 +291,7 @@ bandnames.slice(1,-1).forEach(function(bandname,i){
 });
 
 container_increment = container_increment.slice(1)
-  .where(container_increment.gt(pastCarbon),pastCarbon);
+  .where(container_increment.gt(totalCarbon),totalCarbon);
 
 
 print('container_increment',container_increment);

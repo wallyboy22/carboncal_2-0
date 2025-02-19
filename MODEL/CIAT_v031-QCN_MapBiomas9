@@ -231,7 +231,7 @@ bandnames.slice(1,-1).forEach(function(bandname,i){
   
   var grass_forest_year = grass_forest.select(bandname);
   
-  container_sec_veg_age = i === 0 ? veg_sec_year : container_sec_veg_age.addBands(container_sec_veg_age.slice(-1).add(veg_sec_year.selfMask()).rename(bandname));
+  container_sec_veg_age = i === 0 ? veg_sec_year : container_sec_veg_age.addBands(container_sec_veg_age.slice(-1).unmask().add(veg_sec_year.selfMask()).rename(bandname));
 
   var container_sec_veg_age_year = container_sec_veg_age.select(bandname);
   

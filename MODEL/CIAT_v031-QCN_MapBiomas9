@@ -26,7 +26,8 @@ var geometry =
     /* shown: false */
     ee.Geometry.Point([-44.96455500589469, -21.634449753345763]),
     geometry3 = /* color: #d63000 */ee.Geometry.Point([-64.98044682439816, -8.545859951040317]),
-    floresta_secundaria_acima_do_teto = /* color: #d63000 */ee.Geometry.Point([-52.32448711876253, -6.943041844847409]);
+    floresta_secundaria_acima_do_teto = /* color: #d63000 */ee.Geometry.Point([-52.32448711876253, -6.943041844847409]),
+    veg_sec_age_gte20 = /* color: #d63000 */ee.Geometry.Point([-59.98556740877147, -13.420503991992485]);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 /** 
  * Script to build a biomass stock model for CCAL (Cadastro de Carbono e Água de Longo prazo).
@@ -289,7 +290,10 @@ bandnames.slice(1,-1).forEach(function(bandname,i){
     container_increment = container_increment.addBands(subcontainer_increment.float());  
 });
 
-container_increment = container_increment.slice(1);
+container_increment = container_increment.slice(1)
+  .where(container_increment.gt(pastCarbon),pastCarbon);
+
+
 print('container_increment',container_increment);
 
 ///

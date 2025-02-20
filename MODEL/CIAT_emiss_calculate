@@ -398,9 +398,6 @@ var emiss_co2e_final = emiss_co2eLiqui.rename(emiss_co2eLiqui.bandNames().map(fu
 
 print("emiss_co2e_final",emiss_co2e_final);
 
-
-
-
 Map.addLayer(biomass_stock_updated,{},'biomass_stock_updated',false);
 Map.addLayer(past_biomas_stock_total.addBands(biomass_stock),{},'biomass_stock',false);
 Map.addLayer(def_reg_balance,{},'def_reg_balance',false);
@@ -416,6 +413,13 @@ Map.addLayer(emiss_co2e_final.select('co2e_fire.*'),{},'co2e_fire',false);
 Map.addLayer(emiss_co2e_final.select('co2e_logging.*'),{},'co2e_logging',false);
 Map.addLayer(emiss_co2e_final.select('co2e_removal.*'),{},'co2e_removal',false);
 Map.addLayer(emiss_co2e_final.select('co2e_deforestation.*'),{},'co2e_deforestation',false);
+
+// biomass_stock_updated
+// emiss_co2e_final
+// emiss_co2e_final
+// emiss_co2e_final
+// emiss_co2e_final
+// emiss_co2e_final
 
 // Export the Biomass Stock Image to an Asset
 var version = 'CIAT-QCN_MapBiomas9-1986_2023-v029';

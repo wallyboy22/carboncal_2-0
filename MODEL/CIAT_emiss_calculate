@@ -31,6 +31,7 @@ var geometry =
     ee.Geometry.Point([-64.98044682439816, -8.545859951040317]),
     bounds = 
     /* color: #d63000 */
+    /* shown: false */
     /* displayProperties: [
       {
         "type": "rectangle"
@@ -331,7 +332,7 @@ var past_biomas_stock_agb = past_biomas_stock.select('AGB');
 
 // Initialize Above Ground Biomass (AGB) for Selective Logging
 var agbSelectiveLogging = past_biomas_stock_agb;
-var selectiveLoggingBalance = ee.Image().select();
+var selectiveLoggingBalance = fireEmiss_co2e.slice(0,31).multiply(0).unmask();
 
 // Process Selective Logging for Each Year
 [2017, 2018, 2019, 2020, 2021, 2022, 2023].forEach(function (year) {
@@ -339,10 +340,11 @@ var selectiveLoggingBalance = ee.Image().select();
   var slYearGeo = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_geometric').unmask();
 
   var slYear = ee.Image(0)
-    .multiply(slYearDis)
-    .multiply(slYearGeo)
-    .multiply(stableForest)
-    .multiply(amazonMask);
+    .multiply(slYearDis.unmask())
+    .multiply(slYearGeo.unmask())
+    .multiply(stableForest.unmask())
+    .multiply(amazonMask.unmask())
+    .selfMask();
 
   var slCarbonBalanceYear = agbSelectiveLogging.multiply(slYear).multiply(0.196)
     .rename('selective_logging_balance_' + year)
@@ -353,23 +355,24 @@ var selectiveLoggingBalance = ee.Image().select();
   selectiveLoggingBalance = selectiveLoggingBalance.addBands(slCarbonBalanceYear);
 });
 
+Map.addLayer(selectiveLoggingBalance,{},'selectiveLoggingBalance',false);
+
 ////////////////////////////////////////////////
 
-var biomass_stock = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_tC_ha-CIAT-QCN_MapBiomas9-1986_2023-v029');
+var biomass_stock = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_tC_ha-CIAT-QCN_MapBiomas9-1986_2023-v031');
 
 var biomass_stock_updated = biomass_stock
   .add(fireEmiss_co2.unmask().divide(3.67).multiply(-1))
+  .add(selectiveLoggingBalance.divide(3.67).multiply(-1));
 
 print('biomass_stock',biomass_stock);
-var biomass_stock_balance = biomass_stock_updated
+var def_reg_balance = biomass_stock_updated
   .subtract(past_biomas_stock_total.addBands(biomass_stock_updated.slice(0,-1)))
   .multiply(-1)
   .multiply(3.67);
 
-print('biomass_stock_balance',biomass_stock_balance);
+print('def_reg_balance',def_reg_balance);
 
-Map.addLayer(past_biomas_stock_total.addBands(biomass_stock),{},'biomass_stock',false);
-Map.addLayer(biomass_stock_balance,{},'biomass_stock_balance',false);
 
 
 // var emiss_co2e = fireEmiss_co2e.unmask()
@@ -378,23 +381,41 @@ Map.addLayer(biomass_stock_balance,{},'biomass_stock_balance',false);
 
 print('--- fireEmiss_co2e',fireEmiss_co2e);
 print('--- selectiveLoggingBalance',selectiveLoggingBalance);
-print('--- biomass_stock_balance',biomass_stock_balance);
+print('--- def_reg_balance',def_reg_balance);
 
 var emiss_co2eLiqui = fireEmiss_co2e.unmask()
-.add(fireEmiss_co2e.slice(0,31).multiply(0).unmask().addBands(selectiveLoggingBalance.unmask()))
-.add(biomass_stock_balance.unmask());
+.add(selectiveLoggingBalance.unmask())
+.add(def_reg_balance.unmask());
 
 
 // ajustar nome das bandas
 var emiss_co2e_final = emiss_co2eLiqui.rename(emiss_co2eLiqui.bandNames().map(function(s){return ee.String('co2e_liquid').cat(ee.String(s).slice(-5))}))
   .addBands(fireEmiss_co2e.unmask().rename(fireEmiss_co2e.bandNames().map(function(s){return ee.String('co2e_fire').cat(ee.String(s).slice(-5))})))
-  .addBands(selectiveLoggingBalance.unmask().rename(selectiveLoggingBalance.bandNames().map(function(s){return ee.String('co2e_logging').cat(ee.String(s).slice(-5))})))
-  .addBands(biomass_stock_balance.unmask().updateMask(biomass_stock_balance.lt(0)).rename(biomass_stock_balance.bandNames().map(function(s){return ee.String('co2e_removal').cat(ee.String(s).slice(-5))}))) // remoção
-  .addBands(biomass_stock_balance.unmask().updateMask(biomass_stock_balance.gt(0)).rename(biomass_stock_balance.bandNames().map(function(s){return ee.String('co2e_emission').cat(ee.String(s).slice(-5))}))) // emissão
+  .addBands(selectiveLoggingBalance.unmask().rename(selectiveLoggingBalance.bandNames().map(function(s){return ee.String('co2e_logging').cat(ee.String(s).slice(-5))})).slice(31))
+  .addBands(def_reg_balance.unmask().updateMask(def_reg_balance.lt(0)).rename(def_reg_balance.bandNames().map(function(s){return ee.String('co2e_removal').cat(ee.String(s).slice(-5))}))) // remoção
+  .addBands(def_reg_balance.unmask().updateMask(def_reg_balance.gt(0)).rename(def_reg_balance.bandNames().map(function(s){return ee.String('co2e_deforestation').cat(ee.String(s).slice(-5))}))) // emissão
   .float();
 
 print("emiss_co2e_final",emiss_co2e_final);
 
+
+
+
+Map.addLayer(biomass_stock_updated,{},'biomass_stock_updated',false);
+Map.addLayer(past_biomas_stock_total.addBands(biomass_stock),{},'biomass_stock',false);
+Map.addLayer(def_reg_balance,{},'def_reg_balance',false);
+
+Map.addLayer(emiss_co2eLiqui,{},'emiss_co2eLiqui',false)
+Map.addLayer(fireEmiss_co2e,{},'fireEmiss_co2e',false)
+
+
+
+
+Map.addLayer(emiss_co2e_final.select('co2e_liquid.*'),{},'co2e_liquid',false);
+Map.addLayer(emiss_co2e_final.select('co2e_fire.*'),{},'co2e_fire',false);
+Map.addLayer(emiss_co2e_final.select('co2e_logging.*'),{},'co2e_logging',false);
+Map.addLayer(emiss_co2e_final.select('co2e_removal.*'),{},'co2e_removal',false);
+Map.addLayer(emiss_co2e_final.select('co2e_deforestation.*'),{},'co2e_deforestation',false);
 
 // Export the Biomass Stock Image to an Asset
 var version = 'CIAT-QCN_MapBiomas9-1986_2023-v029';

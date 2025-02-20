@@ -340,17 +340,17 @@ var selectiveLoggingBalance = fireEmiss_co2e.slice(0,31).multiply(0).unmask();
   var slYearGeo = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_geometric').unmask();
 
   var slYear = ee.Image(0)
-    .multiply(slYearDis.unmask())
-    .multiply(slYearGeo.unmask())
-    .multiply(stableForest.unmask())
-    .multiply(amazonMask.unmask())
+    .where(slYearDis.eq(1),1)
+    .where(slYearGeo.eq(1),1)
+    .multiply(stableForest)
+    .multiply(amazonMask)
     .selfMask();
 
   var slCarbonBalanceYear = agbSelectiveLogging.multiply(slYear).multiply(0.196)
     .rename('selective_logging_balance_' + year)
     .float();
 
-  agbSelectiveLogging = agbSelectiveLogging.subtract(slCarbonBalanceYear.unmask()).multiply(3.67).multiply(-1);
+  agbSelectiveLogging = agbSelectiveLogging.subtract(slCarbonBalanceYear.unmask()).multiply(3.67);
 
   selectiveLoggingBalance = selectiveLoggingBalance.addBands(slCarbonBalanceYear);
 });

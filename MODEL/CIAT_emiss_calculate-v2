@@ -12,7 +12,11 @@ var bounds =
           [-74.45221176416808, -34.76049836143761],
           [-32.37437013122656, -34.76049836143761],
           [-32.37437013122656, 6.576093206358085]]], null, false),
-    geometry = /* color: #d63000 */ee.Geometry.Point([-55.62531891171641, -10.204328448756536]);
+    erro_fogo_veg_primaria = /* color: #d63000 */ee.Geometry.Point([-55.62531891171641, -10.204328448756536]),
+    def_and_reg = /* color: #98ff00 */ee.Geometry.MultiPoint(
+        [[-55.63806809566014, -10.205347625641314],
+         [-55.64053572795384, -10.205389862022338]]),
+    teto_baixo_floresta = /* color: #0b4a8b */ee.Geometry.Point([-55.63918389461033, -10.205136443652115]);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 /**
  * Script para construir um modelo de estoque de biomassa para o CCAL 
@@ -43,7 +47,7 @@ var bounds =
 // ======================================
 // 1. Importação de módulos e definição de parâmetros de visualização
 // ======================================
-
+// (100.72232818603516 - 95.26365647069115) = 5.45 * 3.67 = 20.033
 // Importa módulos customizados para estilos de mapa e paletas de cores.
 var Mapp = require('users/joaovsiqueira1/packages:Mapp.js');
 var palettes = require('users/mapbiomas/modules:Palettes.js');
@@ -406,7 +410,7 @@ var biomass_stock = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_tC
 // Atualiza o estoque de biomassa subtraindo as emissões de fogo e extração seletiva
 var biomass_stock_updated = biomass_stock
   .add(fireEmiss_co2.unmask().divide(3.67).multiply(-1))
-  .add(selectiveLoggingBalance.divide(3.67).multiply(-1));
+  .add(selectiveLoggingBalance.unmask().divide(3.67).multiply(-1));
 
 print('biomass_stock', biomass_stock);
 

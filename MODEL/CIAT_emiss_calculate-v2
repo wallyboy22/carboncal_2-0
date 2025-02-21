@@ -1,35 +1,5 @@
 /**** Start of imports. If edited, may not auto-convert in the playground. ****/
-var geometry = 
-    /* color: #d63000 */
-    /* shown: false */
-    ee.Geometry.MultiPoint(
-        [[-56.788474883614874, -6.8109693313360005],
-         [-56.840892146273625, -6.808312450730985]]),
-    mineracao = 
-    /* color: #d63000 */
-    /* shown: false */
-    ee.Geometry.Point([-56.81055492998406, -6.825727557434225]),
-    wetland_to_water = 
-    /* color: #98ff00 */
-    /* shown: false */
-    ee.Geometry.Point([-57.17734777865693, -18.476332512649037]),
-    geometry2 = 
-    /* color: #d63000 */
-    /* shown: false */
-    ee.Geometry.Point([-51.50586583719637, -8.542557141690569]),
-    final_errado = 
-    /* color: #98ff00 */
-    /* shown: false */
-    ee.Geometry.Point([-46.15384670100403, -12.519427429929886]),
-    incr_floresta_campestre = 
-    /* color: #d63000 */
-    /* shown: false */
-    ee.Geometry.Point([-44.96455500589469, -21.634449753345763]),
-    geometry3 = 
-    /* color: #d63000 */
-    /* shown: false */
-    ee.Geometry.Point([-64.98044682439816, -8.545859951040317]),
-    bounds = 
+var bounds = 
     /* color: #d63000 */
     /* shown: false */
     /* displayProperties: [

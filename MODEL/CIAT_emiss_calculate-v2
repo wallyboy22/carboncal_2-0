@@ -154,7 +154,7 @@ var new_values = [2, 2, 2, 2,  2,  2,  2,  2,  2,  2,  1,  1,  1,  1,  1,  1,  1
 
 // Cria uma imagem simples a partir do LULC original e duplica a banda de 2023 para 2024
 var simple_lulc = lulcOriginal;
-simple_lulc = simple_lulc.addBands(simple_lulc.select('classification_2023').rename('classification_2024'));
+simple_lulc = simple_lulc.addBands(simple_lulc.select('classification_2023').rename('classification_2024')); // duplicando dado de 2023 para servir como "img_post_bands" do ultimo ano
 
 // Aplica a reclassificação usando os arrays definidos
 old_values.forEach(function(value, i) {
@@ -185,11 +185,11 @@ function defining_other_transitions() {
     'classification_2006','classification_2007','classification_2008','classification_2009','classification_2010',
     'classification_2011','classification_2012','classification_2013','classification_2014','classification_2015',
     'classification_2016','classification_2017','classification_2018','classification_2019','classification_2020',
-    'classification_2021','classification_2022','classification_2023'
+    'classification_2021','classification_2022','classification_2023','classification_2024'
   ];
 
   // Itera sobre cada banda, exceto a primeira, para verificar a condição de transição
-  bandnames.slice(1).forEach(function(bandname) {
+  bandnames.slice(1,-1).forEach(function(bandname) {
     var index = bandnames.indexOf(bandname);
     var prev_bands = bandnames.slice(0, index);       // bandas anteriores
     var post_bands = bandnames.slice(index + 1);        // bandas posteriores
@@ -198,13 +198,17 @@ function defining_other_transitions() {
     var sec_veg = deforestationSecondaryVeg.select(bandname);
     // Cria uma máscara para os pixels com valor 7 (transição específica)
     var sec_veg_7 = sec_veg.eq(7);
-    // Seleciona a banda correspondente no LULC simples
+    // Seleciona a banda correspondente no LULC - DUVIDA: LULC ORIGINAL OU LULC
     var img_bandname = simple_lulc.select(bandname);
 
     // Agrega os valores das bandas anteriores e posteriores para pixels que não são 7
     var img_prev_bands = simple_lulc.select(prev_bands).updateMask(sec_veg_7.neq(0)).reduce('first');
     var img_post_bands = simple_lulc.select(post_bands).updateMask(sec_veg_7.neq(0)).reduce('first');
-
+    
+    print('img_bandname',img_bandname);
+    print('img_prev_bands',img_prev_bands);
+    print('img_post_bands',img_post_bands);
+    
     // Combina os valores anteriores e posteriores: a multiplicação por 10 cria um código único para remapeamento
     var sum = img_prev_bands.unmask().multiply(10).add(img_post_bands.unmask()).selfMask();
 
@@ -225,7 +229,7 @@ function defining_other_transitions() {
 
 // Executa a função para corrigir as transições no desmatamento/vegetação secundária
 var deforestationSecondaryVeg_corrected = defining_other_transitions();
-
+print("deforestationSecondaryVeg_corrected",deforestationSecondaryVeg_corrected);
 // ======================================
 // 5. Identificação de áreas de água e submersão permanente
 // ======================================
@@ -389,6 +393,12 @@ var selectiveLoggingBalance = fireEmiss_co2e.slice(0,31).multiply(0).unmask();
   // Carrega duas imagens para cada ano: uma com dados desordenados e outra com dados geométricos
   var slYearDis = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_disordered').unmask();
   var slYearGeo = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_geometric').unmask();
+  
+  var stableForest = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/12_1_3_Stable_cover/SEEG_c12_2023')
+    .unmask(0).eq(3);
+
+  var amazonBiome = biomes.filter(ee.Filter.equals('Bioma', 'Amazônia'));
+  var amazonMask = ee.Image().paint(amazonBiome).eq(0);
 
   // Combina as duas fontes para identificar áreas de extração seletiva
   var slYear = ee.Image(0)
@@ -488,11 +498,11 @@ Map.addLayer(emiss_co2e_final.select('co2e_deforestation.*'), {}, 'co2e_deforest
 [
   ['biomass_stock_carbon_degradation_t_ha',biomass_stock_updated.float()],
   // ['biomass_stock_updated_t_ha',biomass_stock_updated.float(],
-  ['co2e_liquid_t_ha',co2e_liquid.float()],
-  ['co2e_fire_t_ha',co2e_fire.float()],
-  ['co2e_logging_t_ha',co2e_logging.float()],
-  ['co2e_removal_t_ha',co2e_removal.float()],
-  ['co2e_deforestation_t_ha',co2e_deforestation.float()],
+  ['co2e_liquid_t_ha',emiss_co2e_final.select('co2e_liquid.*').float()],
+  ['co2e_fire_t_ha',emiss_co2e_final.select('co2e_fire.*').float()],
+  ['co2e_logging_t_ha',emiss_co2e_final.select('co2e_logging.*').float()],
+  ['co2e_removal_t_ha',emiss_co2e_final.select('co2e_removal.*').float()],
+  ['co2e_deforestation_t_ha',emiss_co2e_final.select('co2e_deforestation.*').float()],
 ].forEach(function(list){
   
   // Define a versão e os parâmetros de exportação
@@ -503,7 +513,7 @@ Map.addLayer(emiss_co2e_final.select('co2e_deforestation.*'), {}, 'co2e_deforest
   var image = list[1];
   
   print('description',description);
-  print('asset',asset);
+  print('assetId',assetId);
   print('image',image);
   
   // Exporta a imagem final de emissões líquidas para um asset,
@@ -552,7 +562,10 @@ Map.layers().forEach(function(layer) {
   var eeObject = layer.getEeObject();
   var visParams = layer.getVisParams();
   var layerName = layer.getName();
+  
+  var biomes_line = ee.Image().paint(biomes,1,1);
 
+  
   // Cria uma miniatura para a camada, utilizando o método ui.Thumbnail.
   // A miniatura é gerada a partir da visualização da camada, possivelmente combinada com a linha dos biomas.
   var thumbnail = ui.Thumbnail({

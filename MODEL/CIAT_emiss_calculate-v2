@@ -16,7 +16,8 @@ var bounds =
     def_and_reg = /* color: #98ff00 */ee.Geometry.MultiPoint(
         [[-55.63806809566014, -10.205347625641314],
          [-55.64053572795384, -10.205389862022338]]),
-    teto_baixo_floresta = /* color: #0b4a8b */ee.Geometry.Point([-55.63918389461033, -10.205136443652115]);
+    teto_baixo_floresta = /* color: #0b4a8b */ee.Geometry.Point([-55.63918389461033, -10.205136443652115]),
+    erro_selective_logging = /* color: #ffc82d */ee.Geometry.Point([-54.06653536254875, -9.753862411569255]);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 /**
  * Script para construir um modelo de estoque de biomassa para o CCAL 
@@ -369,7 +370,7 @@ var selectiveLoggingBalance = fireEmiss_co2e.slice(0,31).unmask().multiply(0);
   var slYearGeo = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_geometric').unmask();
   
   var stableForest = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/12_1_3_Stable_cover/SEEG_c12_2023')
-    .unmask(0).eq(3);
+    .unmask().eq(3);
 
   var amazonBiome = biomes.filter(ee.Filter.equals('Bioma', 'Amazônia'));
   var amazonMask = ee.Image().paint(amazonBiome).eq(0);

@@ -205,10 +205,6 @@ function defining_other_transitions() {
     var img_prev_bands = simple_lulc.select(prev_bands).updateMask(sec_veg_7.neq(0)).reduce('first');
     var img_post_bands = simple_lulc.select(post_bands).updateMask(sec_veg_7.neq(0)).reduce('first');
     
-    print('img_bandname',img_bandname);
-    print('img_prev_bands',img_prev_bands);
-    print('img_post_bands',img_post_bands);
-    
     // Combina os valores anteriores e posteriores: a multiplicação por 10 cria um código único para remapeamento
     var sum = img_prev_bands.unmask().multiply(10).add(img_post_bands.unmask()).selfMask();
 

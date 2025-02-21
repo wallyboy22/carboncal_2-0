@@ -239,11 +239,13 @@ Map.addLayer(deforestationSecondaryVeg.eq(5).reduce('sum').selfMask(), visParams
 // --- FOGO ---
 /*
   Carrega coleções de imagens que representam as emissões de carbono (CO₂, CH₄, N₂O) 
-  para florestas e savanas. Cada componente é ajustado com um multiplicador para converter
+  para florestas, savanas e campos. Cada componente é ajustado com um multiplicador para converter
   para a unidade de equivalência em CO₂ (CO₂e).
 */
 
-// Emissões para florestas
+// EMISSÕES PARA FLORESTAS
+
+// Emissões para florestasCO₂
 var fireForestBalance_co2 = ee.ImageCollection([
   ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/amazonia-CO2_Mg_ha_balance-SEEG12'),
   ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/caatinga-CO2_Mg_ha_balance-SEEG12'),
@@ -278,11 +280,22 @@ var fireForestBalance_co2e = fireForestBalance_co2
   .add(fireForestBalance_ch4)
   .add(fireForestBalance_n2o);
 
-// --- CAMPO e SAVANA ---
-/*
-  Processa separadamente os dados para campos e savanas, realizando conversões similares
-  para obter os valores em CO₂e.
-*/
+// EMISSÕES PARA SAVANAS
+
+// Emissões para savanas (CO₂)
+var fireSavannaBalance_co2 = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/savanas_fogo_seeg12_v2/brasil_savanas_co2_all_years_v2').float();
+// Emissões para savanas (CH₄)
+var fireSavannaBalance_ch4 = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/savanas_fogo_seeg12_v2/brasil_savanas_ch4_all_years_v2').float().multiply(28);
+// Emissões para savanas (N₂O)
+var fireSavannaBalance_n2o = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/savanas_fogo_seeg12_v2/brasil_savanas_n2o_all_years_v2').float().multiply(265);
+
+// Combina os componentes para savanas em CO₂e
+var fireSavannaBalance_co2e = fireSavannaBalance_co2
+  .add(fireSavannaBalance_ch4)
+  .add(fireSavannaBalance_n2o);
+
+
+// EMISSÕES PARA CAMPOS
 
 // Emissões para campos (CH₄)
 var fireGrasslandBalance_ch4 = ee.ImageCollection([
@@ -309,15 +322,6 @@ var fireGrasslandBalance_co2e = fireGrasslandBalance_ch4
   .add(fireGrasslandBalance_n2o)
   .slice(1); // Ajuste na dimensão para compatibilidade
 
-// Emissões para savanas
-var fireSavannaBalance_co2 = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/savanas_fogo_seeg12_v2/brasil_savanas_co2_all_years_v2').float();
-var fireSavannaBalance_ch4 = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/savanas_fogo_seeg12_v2/brasil_savanas_ch4_all_years_v2').float().multiply(28);
-var fireSavannaBalance_n2o = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/savanas_fogo_seeg12_v2/brasil_savanas_n2o_all_years_v2').float().multiply(265);
-
-// Combina os componentes para savanas em CO₂e
-var fireSavannaBalance_co2e = fireSavannaBalance_co2
-  .add(fireSavannaBalance_ch4)
-  .add(fireSavannaBalance_n2o);
 
 // Impressões para debug (visualização dos valores)
 print('fireSavannaBalance_co2', fireSavannaBalance_co2);
@@ -350,8 +354,8 @@ var past_biomas_stock_agb = past_biomas_stock.select('AGB');
 
 // Inicializa o AGB para extração seletiva (começa com o estoque passado)
 var agbSelectiveLogging = past_biomas_stock_agb;
-// Inicializa a imagem que acumulará os balanços anuais da extração seletiva
-var selectiveLoggingBalance = fireEmiss_co2e.slice(0,31).multiply(0).unmask();
+// Inicializa a imagem que acumulará os balanços anuais da extração seletiva, essas bandas são descartadas na imagem final de corte seletivo
+var selectiveLoggingBalance = fireEmiss_co2e.slice(0,31).unmask().multiply(0);
 
 // Para cada ano de interesse, processa os dados de desmatamento seletivo
 [2017, 2018, 2019, 2020, 2021, 2022, 2023].forEach(function (year) {
@@ -461,7 +465,7 @@ Map.addLayer(emiss_co2e_final.select('co2e_deforestation.*'), {}, 'co2e_deforest
 // ======================================
 
 [
-  ['biomass_stock_carbon_degradation_t_ha',biomass_stock_updated.float()],
+  ['biomass_stock_carbon_degradation_t_ha',past_biomas_stock_total.rename('biomass_stock_past').addBands(biomass_stock_updated).float()],
   // ['biomass_stock_updated_t_ha',biomass_stock_updated.float(],
   ['co2e_liquid_t_ha',emiss_co2e_final.select('co2e_liquid.*').float()],
   ['co2e_fire_t_ha',emiss_co2e_final.select('co2e_fire.*').float()],
@@ -726,3 +730,11 @@ function getColorBar(visParams, title) {
   
   return panel_body;
 }
+
+// Map.add(getColorBar(visParams.waterOccurrence,'Water Occurrence'));
+// Map.add(getColorBar(visParams.regrowthOccurrence,'Regrowth Occurrence'));
+
+
+//////////////////////////////////////
+
+

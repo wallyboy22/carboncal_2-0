@@ -49,14 +49,13 @@ var geometry =
  * 
  * Objetivos:
  *   - Estimar o estoque de biomassa (tC/ha) ao longo do tempo.
- *   - Integrar dados de Quantificação Natural de Carbono (QCN) e MapBiomas.
+ *   - Integrar dados da Quarta Comunicação Nacional (QCN) e MapBiomas.
  *   - Incorporar efeitos de degradação decorrentes de fogo e extração seletiva.
  *
  * Dados de Entrada:
- *   - QCN (Quantificação Natural de Carbono)
+ *   - QCN (Carbono da biomassa pretérita)
  *   - MapBiomas (Uso da Terra, Desmatamento e Vegetação Secundária)
- *   - Tabelas de Incrementos, Dados de Biomassa (past_carbon), 
- *     dados de desmatamento/vegetação secundária (desf_reg_raw), e LULC Original.
+ *   - Tabelas com regras de incremento na vegetação secundaria
  *
  * Processamento:
  *   1. Cálculo do orçamento de ganhos e perdas (incluindo reclassificação de LULC).

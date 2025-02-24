@@ -432,7 +432,7 @@ var bandnames = [
   'classification_2021','classification_2022','classification_2023'
 ];
 
-var accumulated_degradation = biomass_stock.slice(0,1);
+var accumulated_degradation = ee.Image(0).slice(0,1);
 
 bandnames.forEach(function(bandname,i){
 
@@ -446,6 +446,8 @@ bandnames.forEach(function(bandname,i){
 });
 
 print('accumulated_degradation',accumulated_degradation);
+
+accumulated_degradation = accumulated_degradation.slice(1);
 
 Map.addLayer(accumulated_degradation,{},'accumulated_degradation');
 

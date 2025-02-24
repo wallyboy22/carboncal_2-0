@@ -275,7 +275,7 @@ var fireForestBalance_ch4 = ee.ImageCollection([
   ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/mata_atlantica-CH4_g_ha_comb-SEEG12'),
   ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/pampa-CH4_g_ha_comb-SEEG12'),
   ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/pantanal-CH4_g_ha_comb-SEEG12'),
-]).mosaic().float().multiply(28);
+]).mosaic().float().multiply(28).divide(1000000);
 
 // Emissões de N₂O para florestas, convertendo para CO₂e (multiplicador 265)
 var fireForestBalance_n2o = ee.ImageCollection([
@@ -285,7 +285,7 @@ var fireForestBalance_n2o = ee.ImageCollection([
   ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/mata_atlantica-N2O_g_ha_comb-SEEG12'),
   ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/pampa-N2O_g_ha_comb-SEEG12'),
   ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/pantanal-N2O_g_ha_comb-SEEG12'),
-]).mosaic().float().multiply(265);
+]).mosaic().float().multiply(265).divide(1000000);
 
 // Combina os componentes de emissões para florestas em CO₂e
 var fireForestBalance_co2e = fireForestBalance_co2
@@ -317,7 +317,7 @@ var fireGrasslandBalance_ch4 = ee.ImageCollection([
   ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/mata_atlantica-CH4_g_ha_comb-SEEG12'),
   ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/pampa-CH4_g_ha_comb-SEEG12'),
   ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/pantanal-CH4_g_ha_comb-SEEG12'),
-]).mosaic().float().multiply(28);
+]).mosaic().float().multiply(28).divide(1000000);
 
 // Emissões para campos (N₂O)
 var fireGrasslandBalance_n2o = ee.ImageCollection([
@@ -327,7 +327,7 @@ var fireGrasslandBalance_n2o = ee.ImageCollection([
   ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/mata_atlantica-N2O_g_ha_comb-SEEG12'),
   ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/pampa-N2O_g_ha_comb-SEEG12'),
   ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/pantanal-N2O_g_ha_comb-SEEG12'),
-]).mosaic().float().multiply(265);
+]).mosaic().float().multiply(265).divide(1000000);
 
 // Combina os componentes de emissões para campos em CO₂e
 var fireGrasslandBalance_co2e = fireGrasslandBalance_ch4
@@ -410,6 +410,7 @@ var selectiveLoggingBalance = fireEmiss_co2e.slice(0,31).unmask().multiply(0);
 
 // Adiciona a camada de balanço da extração seletiva ao mapa (opcional, desabilitada por padrão)
 Map.addLayer(selectiveLoggingBalance, {}, 'selectiveLoggingBalance', false);
+Map.addLayer(fireEmiss_co2, {}, 'fireEmiss_co2', false);
 
 // ======================================
 // 8. Cálculo do estoque de biomassa atualizado e balanço de degradação/regeneração
@@ -418,10 +419,43 @@ Map.addLayer(selectiveLoggingBalance, {}, 'selectiveLoggingBalance', false);
 // Carrega a imagem do estoque de biomassa inicial calculado pelo CIAT-QCN
 var biomass_stock = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_tC_ha-CIAT-QCN_MapBiomas9-1986_2023-v031');
 
+
+  // Define os nomes das bandas correspondentes a cada ano (1985 a 2023)
+var bandnames = [
+  'classification_1986','classification_1987','classification_1988','classification_1989','classification_1990',
+  'classification_1991','classification_1992','classification_1993','classification_1994','classification_1995',
+  'classification_1996','classification_1997','classification_1998','classification_1999','classification_2000',
+  'classification_2001','classification_2002','classification_2003','classification_2004','classification_2005',
+  'classification_2006','classification_2007','classification_2008','classification_2009','classification_2010',
+  'classification_2011','classification_2012','classification_2013','classification_2014','classification_2015',
+  'classification_2016','classification_2017','classification_2018','classification_2019','classification_2020',
+  'classification_2021','classification_2022','classification_2023'
+];
+
+var accumulated_degradation = biomass_stock.slice(0,1);
+
+bandnames.forEach(function(bandname,i){
+
+  var accumulated_degradation_year = accumulated_degradation.slice(-1)
+    .add(fireEmiss_co2.select(i).unmask().divide(3.67).multiply(-1))
+    .add(selectiveLoggingBalance.select(i).unmask().divide(3.67).multiply(-1))
+    .rename(bandname);
+    
+  accumulated_degradation = accumulated_degradation.addBands(accumulated_degradation_year);
+  
+});
+
+print('accumulated_degradation',accumulated_degradation);
+
+Map.addLayer(accumulated_degradation,{},'accumulated_degradation');
+
 // Atualiza o estoque de biomassa subtraindo as emissões de fogo e extração seletiva
 var biomass_stock_updated = biomass_stock
-  .add(fireEmiss_co2.unmask().divide(3.67).multiply(-1))
-  .add(selectiveLoggingBalance.unmask().divide(3.67).multiply(-1));
+  .add(accumulated_degradation);
+  
+  
+// // Atualiza o estoque de biomassa subtraindo as emissões de fogo e extração seletiva
+// var biomass_stock_updated = biomass_stock
 
 print('biomass_stock', biomass_stock);
 

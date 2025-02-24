@@ -13,10 +13,16 @@ var bounds =
           [-32.37437013122656, -34.76049836143761],
           [-32.37437013122656, 6.576093206358085]]], null, false),
     erro_fogo_veg_primaria = /* color: #d63000 */ee.Geometry.Point([-55.62531891171641, -10.204328448756536]),
-    def_and_reg = /* color: #98ff00 */ee.Geometry.MultiPoint(
+    def_and_reg = 
+    /* color: #98ff00 */
+    /* shown: false */
+    ee.Geometry.MultiPoint(
         [[-55.63806809566014, -10.205347625641314],
          [-55.64053572795384, -10.205389862022338]]),
-    teto_baixo_floresta = /* color: #0b4a8b */ee.Geometry.Point([-55.63918389461033, -10.205136443652115]),
+    teto_baixo_floresta = 
+    /* color: #0b4a8b */
+    /* shown: false */
+    ee.Geometry.Point([-55.63918389461033, -10.205136443652115]),
     erro_selective_logging = /* color: #ffc82d */ee.Geometry.Point([-54.06653536254875, -9.753862411569255]);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 /**
@@ -357,7 +363,9 @@ var fireEmiss_co2 = fireForestBalance_co2.unmask()
 var past_biomas_stock = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/RETIFICACAO/c_rect_col9');
 var past_biomas_stock_total = past_biomas_stock.select('TOTAL');
 var past_biomas_stock_agb = past_biomas_stock.select('AGB');
+print('past_biomas_stock_agb',past_biomas_stock_agb);
 
+Map.addLayer(past_biomas_stock_agb,{},'past_biomas_stock_agb');
 // Inicializa o AGB para extração seletiva (começa com o estoque passado)
 var agbSelectiveLogging = past_biomas_stock_agb;
 // Inicializa a imagem que acumulará os balanços anuais da extração seletiva, essas bandas são descartadas na imagem final de corte seletivo
@@ -392,10 +400,10 @@ var selectiveLoggingBalance = fireEmiss_co2e.slice(0,31).unmask().multiply(0);
 
   // Atualiza o estoque de AGB subtraindo o balanço do ano corrente
   // e converte a diferença para CO₂ (multiplicador 3.67)
-  agbSelectiveLogging = agbSelectiveLogging.subtract(slCarbonBalanceYear.unmask()).multiply(3.67);
+  agbSelectiveLogging = slCarbonBalanceYear.unmask().multiply(3.67);
 
   // Acumula o balanço da extração seletiva ao longo dos anos
-  selectiveLoggingBalance = selectiveLoggingBalance.addBands(slCarbonBalanceYear);
+  selectiveLoggingBalance = selectiveLoggingBalance.addBands(agbSelectiveLogging);
 });
 
 // Adiciona a camada de balanço da extração seletiva ao mapa (opcional, desabilitada por padrão)

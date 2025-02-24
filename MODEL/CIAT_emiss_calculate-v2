@@ -19,10 +19,7 @@ var bounds =
     ee.Geometry.MultiPoint(
         [[-55.63806809566014, -10.205347625641314],
          [-55.64053572795384, -10.205389862022338]]),
-    teto_baixo_floresta = 
-    /* color: #0b4a8b */
-    /* shown: false */
-    ee.Geometry.Point([-55.63918389461033, -10.205136443652115]),
+    teto_baixo_floresta = /* color: #0b4a8b */ee.Geometry.Point([-55.63918389461033, -10.205136443652115]),
     erro_selective_logging = /* color: #ffc82d */ee.Geometry.Point([-54.06653536254875, -9.753862411569255]);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 /**
@@ -462,8 +459,8 @@ var biomass_stock_updated = biomass_stock
 print('biomass_stock', biomass_stock);
 
 // Calcula o balanço de degradação/regeneração comparando o estoque atualizado com o estoque passado
-var def_reg_balance = biomass_stock_updated
-  .subtract(past_biomas_stock_total.addBands(biomass_stock_updated.slice(0,-1)))
+var def_reg_balance = biomass_stock
+  .subtract(past_biomas_stock_total.addBands(biomass_stock.slice(0,-1)))
   .multiply(-1)
   .multiply(3.67);
 

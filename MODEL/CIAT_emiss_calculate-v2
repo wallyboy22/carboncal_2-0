@@ -400,10 +400,12 @@ var selectiveLoggingBalance = fireEmiss_co2e.slice(0,31).unmask().multiply(0);
 
   // Atualiza o estoque de AGB subtraindo o balanço do ano corrente
   // e converte a diferença para CO₂ (multiplicador 3.67)
-  agbSelectiveLogging = slCarbonBalanceYear.unmask().multiply(3.67);
-
+  agbSelectiveLogging = agbSelectiveLogging.subtract(slCarbonBalanceYear.unmask());
+  
+  
+// 1840.75 / 3.64 = 505
   // Acumula o balanço da extração seletiva ao longo dos anos
-  selectiveLoggingBalance = selectiveLoggingBalance.addBands(agbSelectiveLogging);
+  selectiveLoggingBalance = selectiveLoggingBalance.addBands(slCarbonBalanceYear.multiply(3.67));
 });
 
 // Adiciona a camada de balanço da extração seletiva ao mapa (opcional, desabilitada por padrão)

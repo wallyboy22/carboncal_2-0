@@ -453,7 +453,7 @@ Map.addLayer(veg_preterita_BR_MBCLASS.rename('classification_1986'),visParams.lu
 Map.addLayer(biomassStock, visParams.biomassStock, 'Biomass Stock 2023');
 Map.add(getColorBar(visParams.biomassStock,'Biomass Stock tC/ha'));
 // Export the Biomass Stock Image to an Asset
-var version = 'CIAT-QCN_MapBiomas9-1986_2023-v031';
+var version = 'CIAT-QCN_MapBiomas9-1986_2023-v032';
 var description = 'biomass_stock_tC_ha-' + version;
 var assetId = 'projects/ee-ipam/assets/SEEG/CIAT/';
 var image = biomassStock.float();

@@ -5,13 +5,49 @@ var bounds =
     /* displayProperties: [
       {
         "type": "rectangle"
+      },
+      {
+        "type": "marker"
       }
     ] */
-    ee.Geometry.Polygon(
-        [[[-74.45221176416808, 6.576093206358085],
-          [-74.45221176416808, -34.76049836143761],
-          [-32.37437013122656, -34.76049836143761],
-          [-32.37437013122656, 6.576093206358085]]], null, false),
+    ee.Geometry({
+      "type": "GeometryCollection",
+      "geometries": [
+        {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -74.45221176416808,
+                6.576093206358085
+              ],
+              [
+                -74.45221176416808,
+                -34.76049836143761
+              ],
+              [
+                -32.37437013122656,
+                -34.76049836143761
+              ],
+              [
+                -32.37437013122656,
+                6.576093206358085
+              ]
+            ]
+          ],
+          "geodesic": false,
+          "evenOdd": true
+        },
+        {
+          "type": "Point",
+          "coordinates": [
+            -55.45535187644612,
+            -15.766374636313117
+          ]
+        }
+      ],
+      "coordinates": []
+    }),
     erro_fogo_veg_primaria = /* color: #d63000 */ee.Geometry.Point([-55.62531891171641, -10.204328448756536]),
     def_and_reg = 
     /* color: #98ff00 */
@@ -20,7 +56,8 @@ var bounds =
         [[-55.63806809566014, -10.205347625641314],
          [-55.64053572795384, -10.205389862022338]]),
     teto_baixo_floresta = /* color: #0b4a8b */ee.Geometry.Point([-55.63918389461033, -10.205136443652115]),
-    erro_selective_logging = /* color: #ffc82d */ee.Geometry.Point([-54.06653536254875, -9.753862411569255]);
+    erro_selective_logging = /* color: #ffc82d */ee.Geometry.Point([-54.06653536254875, -9.753862411569255]),
+    padrao_fogo_savana = /* color: #d63000 */ee.Geometry.Point([-55.45535187644612, -15.764887803257123]);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 /**
  * Script para construir um modelo de estoque de biomassa para o CCAL 

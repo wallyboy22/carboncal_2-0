@@ -1,0 +1,664 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.MultiPoint(
+        [[-56.788474883614874, -6.8109693313360005],
+         [-56.840892146273625, -6.808312450730985]]),
+    mineracao = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.Point([-56.81055492998406, -6.825727557434225]),
+    wetland_to_water = 
+    /* color: #98ff00 */
+    /* shown: false */
+    ee.Geometry.Point([-57.17213356433198, -18.47303551709034]),
+    geometry2 = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.Point([-51.50586583719637, -8.542557141690569]),
+    sempre_antorpico = 
+    /* color: #8000ff */
+    /* shown: false */
+    ee.Geometry.Point([-46.15384670100403, -12.519427429929886]),
+    flo_past_outras_transicoes = 
+    /* color: #8900d6 */
+    /* shown: false */
+    ee.Geometry.Point([-44.96455500589469, -21.634449753345763]),
+    geometry3 = /* color: #d63000 */ee.Geometry.Point([-64.98044682439816, -8.545859951040317]),
+    floresta_secundaria_acima_do_teto = /* color: #d63000 */ee.Geometry.Point([-52.32448711876253, -6.943041844847409]),
+    veg_sec_age_gte20 = /* color: #d63000 */ee.Geometry.Point([-59.98556740877147, -13.420503991992485]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+/** 
+ * Script to build a biomass stock model for CCAL (Cadastro de Carbono e Água de Longo prazo).
+ * 
+ * Data Inputs:
+ *   - QCN (Natural Carbon Quantification)
+ *   - MapBiomas (Land Use/Land Cover + Deforestation and Secondary Vegetation)
+ * 
+ * Outputs:
+ *   - Biomass stock (tC/ha) images over time
+ * 
+ * Processing Steps:
+ *   1. Calculate Gain and Loss Budget
+ *   2. Compute Total Biomass
+ *   3. Incorporate Degradation (Fire and Selective Logging)
+ * 
+ * Assets Used:
+ *   - Increment Table (Regeneration increments by land cover transitions)
+ *   - Biomass Data (past_carbon)
+ *   - Deforestation and Secondary Vegetation Data (desf_reg_raw)
+ *   - Land Use/Land Cover Data (lulc_original)
+ *   - Biomes Shapefile (biomas)
+ * 
+ * Visualization:
+ *   - A single dictionary for visualization parameters
+ *   - A single dictionary for legends
+ * 
+ * Author: Wallace Silva e Bárbara Zimbres
+ * Date: 2025-02-04
+ */
+
+// Import required modules
+var Mapp = require('users/joaovsiqueira1/packages:Mapp.js');
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+
+// Visualization parameters dictionary
+var visParams = {
+  lulc: {
+    min: 0,
+    max: 69,
+    palette: palettes.get('classification9'),
+    bands: ['classification_1986']
+  },
+  lulc_qcn:{
+    min:0,
+    max:76,
+    palette:[
+      '#ffffff', '#32a65e', '#32a65e', '#1f8d49', '#7dc975', '#04381d', '#026975', '#000000',
+      '#000000', '#7a6c00', '#ad975a', '#519799', '#d6bc74', '#d89f5c', '#FFFFB2', '#edde8e',
+      '#000000', '#000000', '#f5b3c8', '#C27BA0', '#db7093', '#ffefc3', '#db4d4f', '#ffa07a',
+      '#d4271e', '#db4d4f', '#0000FF', '#000000', '#000000', '#ffaa5f', '#9c0027', '#091077',
+      '#fc8114', '#2532e4', '#93dfe6', '#9065d0', '#d082de', '#000000', '#000000', '#f5b3c8',
+      '#c71585', '#f54ca9', '#cca0d4', '#dbd26b', '#807a40', '#e04cfa', '#d68fe2', '#9932cc',
+      '#e6ccff', '#02d659', '#ad5100', '#000000', '#000000', '#000000', '#000000', '#000000',
+      '#000000', '#CC66FF', '#FF6666', '#006400', '#8d9e8b', '#f5d5d5', '#ff69b4', '#ebf8b5',
+      '#000000', '#000000', '#91ff36', '#7dc975', '#aee37f', '#008000', '#aaffaa', '#004000',
+      '#0080aa', '#aa8000', '#ff8000', '#008080', '#7dc975'
+    ]
+  },
+  vegSec: {
+    min: 0,
+    max: 7,
+    palette: ['ffffff', 'fff6bf', '127622', '56d117', 'ea1c1c', '6fc4b7', 'ffb66c', '8c8c8c'],
+    bands: ['classification_1986']
+  },
+  waterOccurrence: {
+    min: 0,
+    max: 10,
+    palette: ["white",'blue']
+  },
+  alwaysSubmerged: {
+    palette: ['#000080']
+  },
+  regrowthOccurrence: {
+    min: 1,
+    max: 3,
+    palette: ['white','red']
+  },
+  biomassStock: {
+    min: 0,
+    max: 90,
+    palette: ['#ffffcc', '#41ab5d', '#006837'],
+    bands: ['biomass_stock_2023']
+  }
+};
+
+// Legends dictionary
+var legends = {
+  deforestationSecondaryVeg: {
+    1: 'Anthropogenic',
+    2: 'Primary Vegetation',
+    3: 'Secondary Vegetation',
+    4: 'Suppression of Primary Vegetation',
+    5: 'Regrowth of Secondary Vegetation',
+    6: 'Suppression of Secondary Vegetation',
+    7: 'Other Transitions'
+  }
+};
+
+// Load Biomes Shapefile
+var biomes = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
+
+
+// Load Total Past Carbon Data (AGB + BGB + DW + LI)
+var pastCarbon = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/RETIFICACAO/c_rect_col9');
+var totalCarbon = pastCarbon.select('TOTAL');
+print('Total Past Carbon:', totalCarbon);
+
+// Load Deforestation and Secondary Vegetation Data (MapBiomas Collection 9)
+var deforestationSecondaryVegRaw = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection9/mapbiomas_collection90_deforestation_secondary_vegetation_v1');
+var deforestationSecondaryVeg = deforestationSecondaryVegRaw.divide(100).int();
+var lulc = deforestationSecondaryVegRaw.mod(100).int();
+lulc = lulc.addBands(lulc.select('classification_2023').rename('classification_2024'));
+
+
+var lulcOriginal = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection9/mapbiomas_collection90_integration_v1');
+lulcOriginal = lulcOriginal.addBands(lulcOriginal.select('classification_2023').rename('classification_2024'));
+
+// 🔹 Mapeamento de valores para [1] Antropogênico e [2] Vegetação
+var old_values = [3, 4, 5, 6, 49, 11, 12, 29, 50, 13, 15, 19, 39, 20, 40, 62, 41, 46, 47, 35, 48, 9, 21, 23, 24, 30, 25, 33, 31];
+var new_values = [2, 2, 2, 2,  2,  2,  2,  2,  2,  2,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  2,  1,  1,  1,  2,  1];
+
+var simple_lulc = lulcOriginal;
+
+// 🔹 Aplicando a classificação no LULC
+old_values.forEach(function(value, i) {
+  simple_lulc = simple_lulc.where(simple_lulc.eq(value), new_values[i]);
+});
+
+// 🔹 Mapeamento de valores para [1] G - Campo e [2] 2 F - Floresta
+var old_values_grass_forest = [3, 4, 5, 6, 49, 11, 12, 50, 13];
+var new_values_grass_forest = [2, 2, 2, 2,  2,  1,  1,  1,  1];
+
+var grass_forest = lulcOriginal.multiply(0);
+
+old_values_grass_forest.forEach(function(value, i) {
+  grass_forest = grass_forest.where(lulcOriginal.eq(value), new_values_grass_forest[i]);
+});
+
+grass_forest = grass_forest.selfMask().slice(1,-1);
+
+
+// 🔹 Função para calcular mudanças temporais
+function processBands(bandnames) {
+  var container = ee.Image().select();
+
+  bandnames.slice(1, -1).forEach(function(bandname) {
+    var index = bandnames.indexOf(bandname);
+    var prev_bands = bandnames.slice(0, index);
+    var post_bands = bandnames.slice(index + 1);
+
+    var sec_veg = deforestationSecondaryVeg.select(bandname);
+    var sec_veg_7 = sec_veg.eq(7);
+    var img_bandname = simple_lulc.select(bandname);
+
+    var img_prev_bands = simple_lulc.select(prev_bands).updateMask(sec_veg_7.neq(0)).reduce('first');
+    var img_post_bands = simple_lulc.select(post_bands).updateMask(sec_veg_7.neq(0)).reduce('first');
+
+    var sum = img_prev_bands.unmask().multiply(10).add(img_post_bands.unmask()).selfMask();
+
+    // 🔹 Mapeamento de pixels (remapeando valores)
+    var remap_0 = [0, 1, 2, 10, 11, 12, 20, 21, 22];
+    var remap_1 = [0, 1, 2, 1, 1, 3, 2, 1, 2];
+    var remap = sum.remap(remap_0, remap_1);
+
+    var final_image = sec_veg.where(sec_veg.eq(7), remap);
+    container = container.addBands(final_image);
+  });
+
+  return container;
+}
+
+
+var bandnames = [
+  'classification_1985','classification_1986','classification_1987','classification_1988','classification_1989','classification_1990',
+  'classification_1991','classification_1992','classification_1993','classification_1994','classification_1995',
+  'classification_1996','classification_1997','classification_1998','classification_1999','classification_2000',
+  'classification_2001','classification_2002','classification_2003','classification_2004','classification_2005',
+  'classification_2006','classification_2007','classification_2008','classification_2009','classification_2010',
+  'classification_2011','classification_2012','classification_2013','classification_2014','classification_2015',
+  'classification_2016','classification_2017','classification_2018','classification_2019','classification_2020',
+  'classification_2021','classification_2022','classification_2023','classification_2024',
+  ];
+// 🔹 Executando a função de processamento
+var deforestationSecondaryVeg_corrected = processBands(bandnames).byte();
+
+// var increment = ee.FeatureCollection('projects/ee-ipam/assets/SEEG/CIAT/incrementos');
+var increment = ee.FeatureCollection('projects/ee-ipam/assets/SEEG/CIAT/incrementos-v3');
+print('increment',increment);
+
+print('deforestationSecondaryVeg_corrected',deforestationSecondaryVeg_corrected);
+var veg_sec = deforestationSecondaryVeg_corrected.eq(3).or(deforestationSecondaryVeg_corrected.eq(5));
+print('veg_sec',veg_sec);
+Map.addLayer(veg_sec,{},'veg_sec');
+
+var container_increment = ee.Image(0);//.rename('classification_1985');
+var container_sec_veg_age = ee.Image().select();
+
+bandnames.slice(1,-1).forEach(function(bandname,i){
+  
+  var veg_sec_year = veg_sec.select(bandname);
+  
+  var grass_forest_year = grass_forest.select(bandname);
+  
+  container_sec_veg_age = i === 0 ? veg_sec_year : container_sec_veg_age.addBands(container_sec_veg_age.slice(-1).unmask().add(veg_sec_year.selfMask()).rename(bandname));
+
+  var container_sec_veg_age_year = container_sec_veg_age.select(bandname);
+  
+  var container_increment_prev_year = container_increment.slice(-1);
+  
+  var subcontainer_increment = ee.Image(0).rename(bandname);
+  
+  [
+    'Amazônia',
+    'Cerrado',
+    'Pantanal'
+  ] .forEach(function(biome_str){
+
+      var biome_img = ee.Image().paint(biomes.filter(ee.Filter.equals('Bioma',biome_str))).eq(0);
+      
+      
+      var grass_increment_table = increment
+        .filter(ee.Filter.equals('Bioma',biome_str))
+        .filter(ee.Filter.equals('classe','G'))
+        .first();
+        
+      var forest_increment_table = increment
+        .filter(ee.Filter.equals('Bioma',biome_str))
+        .filter(ee.Filter.equals('classe','F'))
+        .first();
+      
+      
+      var grass_increment_lt20 = grass_increment_table.getNumber('Ctotal_ate20');
+      var forest_increment_lt20 = forest_increment_table.getNumber('Ctotal_ate20');
+
+      var grass_increment_gte20 = grass_increment_table.getNumber('Ctotal_mais20');
+      var forest_increment_gte20 = forest_increment_table.getNumber('Ctotal_mais20');
+      
+      //
+      var sec_veg_age_year_lt20 = container_sec_veg_age_year.lt(20);
+      var sec_veg_age_year_gte20 = container_sec_veg_age_year.gte(20);
+      
+      //
+      
+      var result_year = veg_sec_year
+        .multiply(biome_img)
+        // onde for vegetação secundaria e formação campestre, com menos de 20 anos
+        .where(grass_forest_year.eq(1).and(sec_veg_age_year_lt20),container_increment_prev_year.add(grass_increment_lt20))
+        .where(grass_forest_year.eq(2).and(sec_veg_age_year_lt20),container_increment_prev_year.add(forest_increment_lt20))
+
+        .where(grass_forest_year.eq(1).and(sec_veg_age_year_gte20),container_increment_prev_year.add(grass_increment_gte20))
+        .where(grass_forest_year.eq(2).and(sec_veg_age_year_gte20),container_increment_prev_year.add(forest_increment_gte20));
+
+      
+      subcontainer_increment = subcontainer_increment
+        .where(result_year.gt(0),result_year);
+
+  });
+  
+    container_increment = container_increment.addBands(subcontainer_increment.float());  
+});
+
+container_increment = container_increment.slice(1);
+
+var keep = container_increment.multiply(0).add(totalCarbon);
+  
+container_increment = container_increment  
+  .where(container_increment.gt(keep),keep);
+
+print('container_increment',container_increment);
+
+Map.addLayer(grass_forest,{bands:['classification_2015']},'grass_forest');
+Map.addLayer(deforestationSecondaryVeg_corrected,{bands:['classification_2015']},'deforestationSecondaryVeg_corrected');
+Map.addLayer(veg_sec,{bands:['classification_2015']},'veg_sec');
+Map.addLayer(container_sec_veg_age,{bands:['classification_2015']},'container_sec_veg_age');
+Map.addLayer(container_increment,{bands:['classification_2015']},'container_increment');
+// Map.addLayer(container_increment_lt20,{bands:['classification_2015']},'container_increment_lt20');
+// Map.addLayer(increment_veg_sec_age_gte20,{bands:['classification_2015']},'increment_veg_sec_age_gte20');
+// Map.addLayer(increment_veg_sec_age_lt20,{bands:['classification_2015']},'increment_veg_sec_age_lt20');
+// Map.addLayer(increment_veg_sec,{bands:['classification_2015']},'increment_veg_sec');
+
+// Load Original LULC Data to Identify Permanently Submerged Areas
+lulcOriginal = lulcOriginal.slice(0,-1);
+var waterOccurrence = lulcOriginal.eq(33)
+  .selfMask()
+  .blend(lulcOriginal.eq(31).selfMask())
+  .reduce('sum');
+var alwaysSubmerged = waterOccurrence.gte(37).selfMask();
+
+// Set Map Styles
+Map.setOptions({
+  styles: {
+    Dark: Mapp.getStyle('Dark'),
+    Dark2: Mapp.getStyle('Dark2'),
+    Aubergine: Mapp.getStyle('Aubergine'),
+    Silver: Mapp.getStyle('Silver'),
+    Night: Mapp.getStyle('Night')
+  }
+});
+
+// Add Layers to Map
+Map.addLayer(deforestationSecondaryVeg, visParams.vegSec, 'Deforestation and Secondary Vegetation');
+Map.addLayer(deforestationSecondaryVeg_corrected, visParams.vegSec, 'Deforestation and Secondary Vegetation Corrected');
+Map.addLayer(lulc, visParams.lulc, 'LULC Veg Sec');
+Map.addLayer(lulcOriginal, visParams.lulc, 'LULC Original');
+Map.addLayer(waterOccurrence, visParams.waterOccurrence, 'Water Occurrence');
+Map.add(getColorBar(visParams.waterOccurrence,'Water Occurrence'));
+Map.addLayer(alwaysSubmerged, visParams.alwaysSubmerged, 'Always Submerged');
+Map.addLayer(deforestationSecondaryVeg.eq(5).reduce('sum').selfMask(), visParams.regrowthOccurrence, 'Regrowth Occurrence');
+Map.add(getColorBar(visParams.regrowthOccurrence,'Regrowth Occurrence'));
+
+var bounds = lulcOriginal.geometry().bounds();
+
+// Define the List of Years
+var years = ee.List.sequence(1986, 2023);
+
+// Load Fire-Induced Carbon Balance for Forests and Savannas
+var fireForestBalance = ee.ImageCollection([
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/amazonia-CO2_Mg_ha_balance-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/caatinga-CO2_Mg_ha_balance-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/cerrado-CO2_Mg_ha_balance-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/mata_atlantica-CO2_Mg_ha_balance-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/pampa-CO2_Mg_ha_balance-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/pantanal-CO2_Mg_ha_balance-SEEG12'),
+]).mosaic().divide(3.67).float();
+
+var fireSavannaBalance = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/savanas_fogo_seeg12_v2/brasil_savanas_co2_all_years_v2')
+  .divide(3.67)
+  .multiply(-1)
+  .float();
+
+// Load Stable Forest Mask and Amazon Biome Boundary
+var stableForest = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/12_1_3_Stable_cover/SEEG_c12_2023')
+  .unmask(0)
+  .eq(3);
+var amazonBiome = biomes.filter(ee.Filter.equals('Bioma', 'Amazônia'));
+var amazonMask = ee.Image().paint(amazonBiome).eq(0);
+
+// Initialize Above Ground Biomass (AGB) for Selective Logging
+var agbSelectiveLogging = pastCarbon.select('AGB');
+var selectiveLoggingBalance = ee.Image().select();
+
+// Process Selective Logging for Each Year
+[2017, 2018, 2019, 2020, 2021, 2022, 2023].forEach(function (year) {
+  var slYearDis = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_disordered').unmask();
+  var slYearGeo = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_geometric').unmask();
+
+  var slYear = ee.Image(0)
+    .multiply(slYearDis)
+    .multiply(slYearGeo)
+    .multiply(stableForest)
+    .multiply(amazonMask);
+
+  var slCarbonBalanceYear = agbSelectiveLogging.multiply(slYear).multiply(0.196)
+    .rename('selective_logging_balance_' + year)
+    .float();
+
+  agbSelectiveLogging = agbSelectiveLogging.subtract(slCarbonBalanceYear.unmask());
+
+  selectiveLoggingBalance = selectiveLoggingBalance.addBands(slCarbonBalanceYear);
+});
+
+// Prepare Degradation Data
+var fireBandNames = fireForestBalance.bandNames().map(function (name) {
+  return ee.String(name).replace('CO2_Mg_ha_', 'biomass_stock_');
+});
+fireForestBalance = fireForestBalance.select(fireForestBalance.bandNames(), fireBandNames);
+
+var degradation = fireForestBalance.unmask()
+  .add(fireSavannaBalance.unmask())
+  .add(fireForestBalance.slice(0,31).multiply(0).unmask().addBands(selectiveLoggingBalance)); 
+
+var degradationBandNames = degradation.bandNames();
+var degradationAccumulated = ee.Image(degradationBandNames.iterate(function (current, previous) {
+  current = ee.String(current);
+  var index = degradationBandNames.indexOf(current);
+  var accumulated = degradation.slice(0, index.add(1)).reduce('sum');
+  return ee.Image(previous).addBands(accumulated.rename(current));
+}, ee.Image().select()));
+print('Degradation Accumulated:', degradationAccumulated);
+
+// Compute Biomass Stock Applying Degradation
+// var biomassStock = deforestationSecondaryVeg.multiply(0)
+//   .where(deforestationSecondaryVeg.eq(1), 0)
+//   .where(deforestationSecondaryVeg.eq(2), totalCarbon)
+//   .subtract(degradationAccumulated)
+//   .where(deforestationSecondaryVeg.eq(3), carbonTotalRegrowth)
+//   .where(deforestationSecondaryVeg.eq(4), 0)
+//   .where(deforestationSecondaryVeg.eq(5), carbonTotalRegrowth)
+//   .where(deforestationSecondaryVeg.eq(6), 0)
+//   .where(alwaysSubmerged, 0);
+
+var biomassStock = deforestationSecondaryVeg_corrected.multiply(0)
+  .where(deforestationSecondaryVeg_corrected.eq(1), 0)
+  .where(deforestationSecondaryVeg_corrected.eq(2), totalCarbon)
+  .subtract(degradationAccumulated) // descontando perda de carbono em vegetação nativa
+  .where(deforestationSecondaryVeg_corrected.eq(3), container_increment)
+  .where(deforestationSecondaryVeg_corrected.eq(4), 0)
+  .where(deforestationSecondaryVeg_corrected.eq(5), container_increment)
+  .where(deforestationSecondaryVeg_corrected.eq(6), 0)
+  .where(alwaysSubmerged, 0);
+
+biomassStock = biomassStock.where(biomassStock.lte(0), 0);
+
+var oldBandNames = biomassStock.bandNames();
+var newBandNames = oldBandNames.map(function (name) {
+  return ee.String(name).replace('classification', 'biomass_stock');
+});
+biomassStock = biomassStock.select(oldBandNames, newBandNames).float();
+
+// edição nova
+biomassStock = biomassStock
+  .updateMask(lulcOriginal.eq([33]).reduce('sum').gte(37).eq(0));
+
+print('Biomass Stock:', biomassStock);
+
+
+var veg_preterita_BR = ee.Image('projects/ee-ipam/assets/IPAM/QCN/veg_preterita_BR');
+Map.addLayer(veg_preterita_BR,visParams.lulc_qcn,'veg_preterita_BR');
+var veg_preterita_BR_MBCLASS = ee.Image('projects/ee-ipam/assets/IPAM/QCN/veg_preterita_BR_MBCLASS');
+Map.addLayer(veg_preterita_BR_MBCLASS.rename('classification_1986'),visParams.lulc,'veg_preterita_BR_MBCLASS');
+// Add Biomass Stock Layer to Map
+Map.addLayer(biomassStock, visParams.biomassStock, 'Biomass Stock 2023');
+Map.add(getColorBar(visParams.biomassStock,'Biomass Stock tC/ha'));
+// Export the Biomass Stock Image to an Asset
+var version = 'CIAT-QCN_MapBiomas9-1986_2023-v031';
+var description = 'biomass_stock_tC_ha-' + version;
+var assetId = 'projects/ee-ipam/assets/SEEG/CIAT/';
+var image = biomassStock.float();
+print('Export.image.toAsset',description,image,assetId + description);
+Export.image.toAsset({
+  image: image,
+  description: 'W-SEEG_CCAL-' + description,
+  assetId: assetId + description,
+  pyramidingPolicy: 'median',
+  region: bounds,
+  scale: 30,
+  maxPixels: 1e13
+});
+
+// adicionar export to drive para a Amazônia legal
+
+var biomes_line = ee.Image().paint(biomes,1,1);
+
+// Iterar pelas camadas do mapa e exibir informações organizadas
+Map.layers().forEach(function(layer) {
+  // Ignorar a camada de fundo branco
+  if (layer.getName() === 'White Background') {
+    return;
+  }
+
+  // Recuperar informações da camada
+  var eeObject = layer.getEeObject();
+  var visParams = layer.getVisParams();
+  var layerName = layer.getName();
+  var thumbnail = ui.Thumbnail({
+    image: eeObject.visualize(visParams).blend(biomes_line),
+    params: {
+      dimensions: 512,
+      region:biomes.geometry().bounds()
+    },
+    style: {
+      margin: '10px 0',
+      border: '1px solid #ccc'
+    }
+  });
+
+  // Criar um painel para organizar as informações da camada
+  var layerPanel = ui.Panel({
+    widgets: [
+      ui.Label({
+        value: 'Camada: ' + layerName,
+        style: {
+          fontSize: '16px',
+          fontWeight: 'bold',
+          color: '#333',
+          margin: '0 0 10px 0'
+        }
+      }),
+      ui.Label({
+        value: 'Visual Params: ' + JSON.stringify(visParams, null, 2),
+        style: {
+          fontSize: '12px',
+          color: '#555',
+          margin: '5px 0'
+        }
+      }),
+      thumbnail,
+      ui.Label({
+        value: '⚠️ Raster Virtual. Clique para aprender como adicionar mapas no QGIS',
+        targetUrl: 'https://brasil.mapbiomas.org/wp-content/uploads/sites/4/2024/06/Adicionar-raster-virtual-no-qgis.pdf',
+        style: {
+          fontSize: '12px',
+          color: '#007bff',
+          margin: '5px 0',
+          textDecoration: 'underline'
+        }
+      }),
+      ui.Label({
+        value: 'URL do MapId: ' + eeObject.visualize(visParams).getMapId().urlFormat,
+        style: {
+          fontSize: '12px',
+          color: '#555',
+          margin: '5px 0'
+        }
+      })
+    ],
+    style: {
+      border: '1px solid #ddd',
+      // borderRadius: '5px',
+      backgroundColor: '#f9f9f9',
+      padding: '10px',
+      margin: '10px 0'
+    }
+  });
+
+  // Adicionar o painel ao UI principal
+  // ui.root.add(layerPanel);
+  print(layerPanel);
+});
+
+function getColorBar (visParams,title){
+  var sty = {
+    thumb:{
+      margin:'2px',
+      backgroundColor:'00000000',
+      stretch: 'horizontal',
+      height:'10px'
+    },
+    label:{
+      margin:'0px 0px 0px 0px',
+      fontSize:'14px',
+      backgroundColor:'00000000',
+      stretch: 'horizontal',
+      textAlign:'center',
+    },
+    label2:{
+      textAlign:'center',
+      margin:'0px 0px 0px 0px',
+      fontSize:'14px',
+      backgroundColor:'00000000',
+      stretch: 'both'
+    },
+    label3:{
+      textAlign:'right',
+      margin:'0px 0px 0px 0px',
+      fontSize:'10px',
+      backgroundColor:'00000000',
+      stretch: 'horizontal'
+    },
+    title:{
+      margin:'0px 0px 0px 0px',
+      fontSize:'12px',
+      fontWeight:'bold'
+    },
+  };
+
+  var boolean_thumb_palette = true;
+ 
+  function returnColorBar(palette){
+      var params = {
+        bbox: [0, 0, 1, 0.1],
+        dimensions: '100x10',
+        format: 'png',
+        min: 0,
+        max: 1,
+        position: 'bottom-left',
+        palette: palette
+      };
+    
+      var thb = ui.Thumbnail({
+        image: ee.Image.pixelLonLat().select(0),
+        params: params, 
+        style:sty.thumb
+      });
+      
+      return thb;
+  
+    }
+    
+  var params = {
+      bbox: [0, 0, 1, 0.1],
+      dimensions: '100x10',
+      format: 'png',
+      min: 0,
+      max: 1,
+      position: 'bottom-left',
+      palette: visParams.palette
+    };
+  
+  var colorBar = returnColorBar(visParams.palette);
+  
+  var label_title = ui.Label({value:title,style:sty.title});
+  var label_init = ui.Label({value:visParams.min,style:sty.label});
+  var label_mean = ui.Label(((visParams.min+visParams.max)/2),sty.label2);
+  var label_end = ui.Label({value:visParams.max,style:sty.label});
+  
+  var legendLabels = ui.Panel({
+        widgets: [
+          label_init,
+          label_mean,
+          label_end
+        ],
+        style:{margin:'0px'},
+        layout: ui.Panel.Layout.Flow('horizontal')});
+
+  var widgets = [
+    label_title,
+    colorBar,
+    legendLabels
+  ];
+    
+  var panel_legend = ui.Panel({
+    widgets:widgets,
+    layout:ui.Panel.Layout.flow('vertical'), 
+    style:{
+      backgroundColor:'ffffff80',
+      stretch: 'horizontal',
+      minWidth:'200px'
+    }
+  });
+  
+  var panel_body = ui.Panel({
+    widgets:[panel_legend],
+    layout:ui.Panel.Layout.flow('horizontal'), 
+    style:{
+      margin:'0px',
+      backgroundColor:'ffffff80',
+      stretch: 'horizontal',
+    }
+  });
+  
+  return panel_body;
+}

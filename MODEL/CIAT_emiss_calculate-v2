@@ -1,9 +1,6 @@
 /**** Start of imports. If edited, may not auto-convert in the playground. ****/
 var erro_fogo_veg_primaria = /* color: #d63000 */ee.Geometry.Point([-55.62531891171641, -10.204328448756536]),
-    def_and_reg = 
-    /* color: #98ff00 */
-    /* shown: false */
-    ee.Geometry.MultiPoint(
+    def_and_reg = /* color: #98ff00 */ee.Geometry.MultiPoint(
         [[-55.63806809566014, -10.205347625641314],
          [-55.64053572795384, -10.205389862022338]]),
     teto_baixo_floresta = /* color: #0b4a8b */ee.Geometry.Point([-55.63918389461033, -10.205136443652115]),

@@ -451,7 +451,7 @@ Map.addLayer(fireEmiss_co2, {}, 'fireEmiss_co2', false);
 // ======================================
 
 // Carrega a imagem do estoque de biomassa inicial calculado pelo CIAT-QCN
-var biomass_stock = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_tC_ha-CIAT-QCN_MapBiomas9-1986_2023-v031');
+var biomass_stock = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_tC_ha-CIAT-QCN_MapBiomas9-1986_2023-v032');
 
 
   // Define os nomes das bandas correspondentes a cada ano (1985 a 2023)

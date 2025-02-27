@@ -1,0 +1,37 @@
+var bau2024 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2024");
+var bau2025  ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2025");
+var bau2026 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2026");
+var bau2027 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2027");
+var bau2028 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2028");
+var bau2029 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2029");
+var bau2030 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2030");
+var bau2031 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2031");
+var bau2032 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2032");
+var bau2033 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2033");
+var bau2034 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2034");
+var bau2035 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2035");
+var bau2036 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2036");
+var bau2037 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2037");
+var bau2038 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2038");
+var bau2039 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2039");
+var bau2040 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2040");
+var bau2041 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2041");
+var bau2042 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2042");
+var bau2043 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2043");
+var bau2044 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2044");
+var bau2045 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2045");
+var bau2046 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2046");
+var bau2047 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2047");
+var bau2048 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2048");
+var bau2049 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2049");
+var bau2050 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2050");
+
+var stk2023 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_carbon_degradation_t_ha-CIAT-QCN_MapBiomas9-1986_2023-v032");
+
+//Mascarar stk23 pelo BAU de cada ano para obter o estoque em cada ano com desconto do desmatado
+
+//Incrementar veg secundaria em cada ano pela soma dos incrementos anualmente a partir das area que sao veg secundaria em 2023
+
+//Exportar mapas de estoque 2024-2050
+
+//Exportar estatísticas de quanta remoção haverá em cada ano até 2050 (Amz Legal toda e por projeto CIAT)

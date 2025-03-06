@@ -1,36 +1,126 @@
-var bau2024 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2024");
-var bau2025  ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2025");
-var bau2026 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2026");
-var bau2027 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2027");
-var bau2028 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2028");
-var bau2029 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2029");
-var bau2030 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2030");
-var bau2031 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2031");
-var bau2032 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2032");
-var bau2033 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2033");
-var bau2034 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2034");
-var bau2035 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2035");
-var bau2036 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2036");
-var bau2037 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2037");
-var bau2038 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2038");
-var bau2039 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2039");
-var bau2040 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2040");
-var bau2041 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2041");
-var bau2042 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2042");
-var bau2043 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2043");
-var bau2044 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2044");
-var bau2045 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2045");
-var bau2046 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2046");
-var bau2047 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2047");
-var bau2048 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2048");
-var bau2049 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2049");
-var bau2050 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/paisagemBAU2050");
+var bau = ee.ImageCollection("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/BAU");
 
 var stk2023 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_carbon_degradation_t_ha-CIAT-QCN_MapBiomas9-1986_2023-v032");
 
 //Mascarar stk23 pelo BAU de cada ano para obter o estoque em cada ano com desconto do desmatado
+var stk2024 = stk2023.where(bau2024.eq(3), 0);
+var stk2025 = stk2024.where(bau2025.eq(3), 0);
+var stk2026 = stk2025.where(bau2026.eq(3), 0);
+var stk2027 = stk2026.where(bau2027.eq(3), 0);
+var stk2028 = stk2027.where(bau2028.eq(3), 0);
+var stk2029 = stk2028.where(bau2029.eq(3), 0);
+var stk2030 = stk2029.where(bau2030.eq(3), 0);
+var stk2031 = stk2030.where(bau2031.eq(3), 0);
+var stk2032 = stk2031.where(bau2032.eq(3), 0);
+var stk2033 = stk2032.where(bau2033.eq(3), 0);
+var stk2034 = stk2033.where(bau2034.eq(3), 0);
+var stk2035 = stk2034.where(bau2035.eq(3), 0);
+var stk2036 = stk2035.where(bau2036.eq(3), 0);
+var stk2037 = stk2036.where(bau2037.eq(3), 0);
+var stk2038 = stk2037.where(bau2038.eq(3), 0);
+var stk2039 = stk2038.where(bau2039.eq(3), 0);
+var stk2040 = stk2039.where(bau2040.eq(3), 0);
+var stk2041 = stk2040.where(bau2041.eq(3), 0);
+var stk2042 = stk2041.where(bau2042.eq(3), 0);
+var stk2043 = stk2042.where(bau2043.eq(3), 0);
+var stk2044 = stk2043.where(bau2044.eq(3), 0);
+var stk2045 = stk2044.where(bau2045.eq(3), 0);
+var stk2046 = stk2045.where(bau2046.eq(3), 0);
+var stk2047 = stk2046.where(bau2047.eq(3), 0);
+var stk2048 = stk2047.where(bau2048.eq(3), 0);
+var stk2049 = stk2048.where(bau2049.eq(3), 0);
+var stk2050 = stk2049.where(bau2050.eq(3), 0);
 
 //Incrementar veg secundaria em cada ano pela soma dos incrementos anualmente a partir das area que sao veg secundaria em 2023
+var increment = ee.FeatureCollection('projects/ee-ipam/assets/SEEG/CIAT/incrementos-v3');
+print('increment',increment);
+
+print('deforestationSecondaryVeg_corrected',deforestationSecondaryVeg_corrected);
+var veg_sec = deforestationSecondaryVeg_corrected.eq(3).or(deforestationSecondaryVeg_corrected.eq(5));
+print('veg_sec',veg_sec);
+Map.addLayer(veg_sec,{},'veg_sec');
+
+var container_increment = ee.Image(0);//.rename('classification_1985');
+var container_sec_veg_age = ee.Image().select();
+
+bandnames.slice(1,-1).forEach(function(bandname,i){
+  
+  var veg_sec_year = veg_sec.select(bandname);
+  
+  var grass_forest_year = grass_forest.select(bandname);
+  
+  container_sec_veg_age = i === 0 ? veg_sec_year : container_sec_veg_age.addBands(container_sec_veg_age.slice(-1).unmask().add(veg_sec_year.selfMask()).rename(bandname));
+
+  var container_sec_veg_age_year = container_sec_veg_age.select(bandname);
+  
+  var container_increment_prev_year = container_increment.slice(-1);
+  
+  var subcontainer_increment = ee.Image(0).rename(bandname);
+  
+  [
+    'Amazônia',
+    'Cerrado',
+    'Pantanal'
+  ] .forEach(function(biome_str){
+
+      var biome_img = ee.Image().paint(biomes.filter(ee.Filter.equals('Bioma',biome_str))).eq(0);
+      
+      
+      var grass_increment_table = increment
+        .filter(ee.Filter.equals('Bioma',biome_str))
+        .filter(ee.Filter.equals('classe','G'))
+        .first();
+        
+      var forest_increment_table = increment
+        .filter(ee.Filter.equals('Bioma',biome_str))
+        .filter(ee.Filter.equals('classe','F'))
+        .first();
+      
+      
+      var grass_increment_lt20 = grass_increment_table.getNumber('Ctotal_ate20');
+      var forest_increment_lt20 = forest_increment_table.getNumber('Ctotal_ate20');
+
+      var grass_increment_gte20 = grass_increment_table.getNumber('Ctotal_mais20');
+      var forest_increment_gte20 = forest_increment_table.getNumber('Ctotal_mais20');
+      
+      //
+      var sec_veg_age_year_lt20 = container_sec_veg_age_year.lt(20);
+      var sec_veg_age_year_gte20 = container_sec_veg_age_year.gte(20);
+      
+      //
+      
+      var result_year = veg_sec_year
+        .multiply(biome_img)
+        // onde for vegetação secundaria e formação campestre, com menos de 20 anos
+        .where(grass_forest_year.eq(1).and(sec_veg_age_year_lt20),container_increment_prev_year.add(grass_increment_lt20))
+        .where(grass_forest_year.eq(2).and(sec_veg_age_year_lt20),container_increment_prev_year.add(forest_increment_lt20))
+
+        .where(grass_forest_year.eq(1).and(sec_veg_age_year_gte20),container_increment_prev_year.add(grass_increment_gte20))
+        .where(grass_forest_year.eq(2).and(sec_veg_age_year_gte20),container_increment_prev_year.add(forest_increment_gte20));
+
+      
+      subcontainer_increment = subcontainer_increment
+        .where(result_year.gt(0),result_year);
+
+  });
+  
+    container_increment = container_increment.addBands(subcontainer_increment.float());  
+});
+
+container_increment = container_increment.slice(1);
+
+var keep = container_increment.multiply(0).add(totalCarbon);
+  
+container_increment = container_increment  
+  .where(container_increment.gt(keep),keep);
+
+print('container_increment',container_increment);
+
+Map.addLayer(grass_forest,{bands:['classification_2015']},'grass_forest');
+Map.addLayer(deforestationSecondaryVeg_corrected,{bands:['classification_2015']},'deforestationSecondaryVeg_corrected');
+Map.addLayer(veg_sec,{bands:['classification_2015']},'veg_sec');
+Map.addLayer(container_sec_veg_age,{bands:['classification_2015']},'container_sec_veg_age');
+Map.addLayer(container_increment,{bands:['classification_2015']},'container_increment');
 
 //Exportar mapas de estoque 2024-2050
 

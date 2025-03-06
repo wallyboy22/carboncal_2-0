@@ -1,33 +1,5 @@
 
 
-var stk2023 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_carbon_degradation_t_ha-CIAT-QCN_MapBiomas9-1986_2023-v032").slice(-1);
-var deforestation_projection = ee.ImageCollection("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/BAU");
-
-var years = [
-  2024,2025,2026,2027,2028,2029,2030,
-  2031,2032,2033,2034,2035,2036,2037,
-  2038,2039,2040,2041,2042,2043,2044,
-  2045,2046,2047,2048,2049,2050,
-]
-
-var carbon_projection;
-
-years.forEach(function(year,i){
-  
-  var deforestation_year = deforestation_projection.filter(ee.Filter.eq('year',year)).first();
-  
-  if (year === 2024){
-    carbon_projection = stk2023.where(deforestation_year.eq(3),0).rename('carbon_stock_2024') ;
-  } else {
-    var carbon_year = carbon_projection.slice(-1).where(deforestation_year.eq(3),0).rename('carbon_stock_'+year);
-    carbon_projection = carbon_projection.addBands(carbon_year);
-  }
-});
-
-print('carbon_projection',carbon_projection);
-
-Map.addLayer(carbon_projection,{},'carbon_projection');
-
 
 /////////////////////////
 
@@ -102,6 +74,10 @@ var legends = {
 
 // Load Biomes Shapefile
 var biomes = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
+
+// Load carbon past
+var pastCarbon = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/RETIFICACAO/c_rect_col9');
+var totalCarbon = pastCarbon.select('TOTAL');
 
 // Load Deforestation and Secondary Vegetation Data (MapBiomas Collection 9)
 var deforestationSecondaryVegRaw = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection9/mapbiomas_collection90_deforestation_secondary_vegetation_v1');
@@ -193,11 +169,40 @@ Map.addLayer(veg_sec,{},'veg_sec');
 var container_increment = ee.Image(0);//.rename('classification_1985');
 var container_sec_veg_age = ee.Image().select();
 
-bandnames.slice(1,-1).forEach(function(bandname,i){
+var years_expand = [
+  1985,1986,1987,1988,1989,
+  1990,1991,1992,1993,1994,
+  1995,1996,1997,1998,1999,
+  2000,2001,2002,2003,2004,
+  2005,2006,2007,2008,2009,
+  2010,2011,2012,2013,2014,
+  2015,2016,2017,2018,2019,
+  2020,2021,2022,2023,2024,
+  2025,2026,2027,2028,2029,
+  2030,2031,2032,2033,2034,
+  2035,2036,2037,2038,2039,
+  2040,2041,2042,2043,2044,
+  2045,2046,2047,2048,2049,
+  2050
+];
+
+
+years_expand.slice(1).forEach(function(year,i){
   
-  var veg_sec_year = veg_sec.select(bandname);
+  var veg_sec_year, grass_forest_year;
   
-  var grass_forest_year = grass_forest.select(bandname);
+  var bandname = 'classification_'+year;
+  
+  if (year < 2024){
+  
+    veg_sec_year = veg_sec.select(bandname);
+    grass_forest_year = grass_forest.select(bandname);
+
+  } else {
+    veg_sec_year = veg_sec.slice(-1);
+    grass_forest_year = grass_forest.slice(-1);
+  }
+
   
   container_sec_veg_age = i === 0 ? veg_sec_year : container_sec_veg_age.addBands(container_sec_veg_age.slice(-1).unmask().add(veg_sec_year.selfMask()).rename(bandname));
 
@@ -264,10 +269,45 @@ var keep = container_increment.multiply(0).add(totalCarbon);
 container_increment = container_increment  
   .where(container_increment.gt(keep),keep);
 
+print('container_increment',container_increment);
+
+Map.addLayer(container_increment,{bands:'classification_2050'},'container_increment');
+
+////////////////
 
 
-//Mascarar stk23 pelo BAU de cada ano para obter o estoque em cada ano com desconto do desmatado
+var stk2023 = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_carbon_degradation_t_ha-CIAT-QCN_MapBiomas9-1986_2023-v032").slice(-1);
+var deforestation_projection = ee.ImageCollection("projects/ee-ipam/assets/SEEG/CIAT/Cenarios/BAU");
 
-//Incrementar veg secundaria em cada ano pela soma dos incrementos anualmente a partir das area que sao veg secundaria em 2023
+var years = [
+  2024,2025,2026,2027,2028,2029,2030,
+  2031,2032,2033,2034,2035,2036,2037,
+  2038,2039,2040,2041,2042,2043,2044,
+  2045,2046,2047,2048,2049,2050,
+]
 
-//Exportar mapas de estoque 2024-2050
+var carbon_projection;
+
+years.forEach(function(year,i){
+  
+  var deforestation_year = deforestation_projection.filter(ee.Filter.eq('year',year)).first();
+  var increment_veg_sec_year = container_increment.select('classification_'+year);
+  
+  if (year === 2024){
+    carbon_projection = stk2023
+      .where(increment_veg_sec_year.gt(0),increment_veg_sec_year)
+      .where(deforestation_year.eq(3),0).rename('carbon_stock_2024');
+  } else {
+    var carbon_year = carbon_projection.slice(-1)
+    .where(increment_veg_sec_year.gt(0),increment_veg_sec_year)
+    .where(deforestation_year.eq(3),0).rename('carbon_stock_'+year);
+    
+    carbon_projection = carbon_projection.addBands(carbon_year);
+  }
+});
+
+print('carbon_projection',carbon_projection);
+
+Map.addLayer(carbon_projection,{},'carbon_projection');
+
+

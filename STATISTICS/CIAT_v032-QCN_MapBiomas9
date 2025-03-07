@@ -47,8 +47,8 @@ var geom =
  */
 
 // --- opções
-var scale = 30;
-var version = '2024_11_29-1';
+var scale = 500;
+var version = 'test-2025_03_07-1';
 var description = 'area_and_carbonstock_per_landcover_' + version;
 var folder = 'CCAL_CIAT';
 
@@ -195,7 +195,7 @@ var  niveis = ee.Dictionary(legends.get('lulc_mbc09_niveis')),
 
 // Cálculo das estatísticas de área
 pixelTonelada.bandNames().evaluate(function(bandnames){
-  
+  print('bandnames',bandnames);
   var tables = bandnames
     // .slice(-1) // Utilizando apenas o último ano (2023)
     .map(function(bandname){
@@ -252,7 +252,7 @@ pixelTonelada.bandNames().evaluate(function(bandnames){
       table_area = ee.FeatureCollection(table_area).flatten();
       
       // --- --- ---
-      var observed_toneladas = pixelTonelada.select('biomass_stock_' + year)
+      var observed_toneladas = pixelTonelada.select(bandname)
         .addBands(landCover_original.select('classification_' + year))
         .addBands(territory_img);
         
@@ -280,6 +280,7 @@ pixelTonelada.bandNames().evaluate(function(bandnames){
               
               return ee.Feature(null)
                 .set({
+                  'metric_name':metric_name,
                   'index': ee.String(classe_int).cat('-').cat(territory_int).cat('-').cat(year),
                 }).set('tons_'+metric_name,toneladas);
             }));
@@ -315,7 +316,7 @@ pixelTonelada.bandNames().evaluate(function(bandnames){
   
   tables = ee.FeatureCollection(tables).flatten();
 
-  print('tables', tables.limit(10));
+  print('tables', tables.limit(1000),tables.aggregate_array('metric_name').distinct());
   
   // Exportar para o Drive
   Export.table.toDrive({

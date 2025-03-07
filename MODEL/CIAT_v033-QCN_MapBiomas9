@@ -1,5 +1,8 @@
 /**** Start of imports. If edited, may not auto-convert in the playground. ****/
-var geometry = /* color: #d63000 */ee.Geometry.MultiPoint(
+var geometry = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.MultiPoint(
         [[-56.788474883614874, -6.8109693313360005],
          [-56.840892146273625, -6.808312450730985],
          [-55.455435024925585, -15.764795521158948]]),
@@ -23,7 +26,10 @@ var geometry = /* color: #d63000 */ee.Geometry.MultiPoint(
     /* color: #8900d6 */
     /* shown: false */
     ee.Geometry.Point([-44.96455500589469, -21.634449753345763]),
-    geometry3 = /* color: #d63000 */ee.Geometry.Point([-64.98044682439816, -8.545859951040317]),
+    geometry3 = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.Point([-64.98044682439816, -8.545859951040317]),
     floresta_secundaria_acima_do_teto = /* color: #d63000 */ee.Geometry.Point([-52.32448711876253, -6.943041844847409]),
     veg_sec_age_gte20 = /* color: #d63000 */ee.Geometry.Point([-59.98556740877147, -13.420503991992485]);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/

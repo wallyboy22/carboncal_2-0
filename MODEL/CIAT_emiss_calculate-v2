@@ -1,8 +1,5 @@
 /**** Start of imports. If edited, may not auto-convert in the playground. ****/
-var erro_fogo_veg_primaria = 
-    /* color: #d63000 */
-    /* shown: false */
-    ee.Geometry.Point([-55.62531891171641, -10.204328448756536]),
+var erro_fogo_veg_primaria = /* color: #d63000 */ee.Geometry.Point([-55.62531891171641, -10.204328448756536]),
     def_and_reg = 
     /* color: #98ff00 */
     /* shown: false */
@@ -17,10 +14,7 @@ var erro_fogo_veg_primaria =
     /* color: #ffc82d */
     /* shown: false */
     ee.Geometry.Point([-54.06653536254875, -9.753862411569255]),
-    padrao_fogo_savana = 
-    /* color: #d63000 */
-    /* shown: false */
-    ee.Geometry.Point([-55.45535187644612, -15.764887803257123]),
+    padrao_fogo_savana = /* color: #d63000 */ee.Geometry.Point([-55.45535187644612, -15.764887803257123]),
     bounds = 
     /* color: #d63000 */
     /* shown: false */
@@ -427,7 +421,7 @@ Map.addLayer(fireEmiss_co2, {}, 'fireEmiss_co2', false);
 // ======================================
 
 // Carrega a imagem do estoque de biomassa inicial calculado pelo CIAT-QCN
-var biomass_stock = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_tC_ha-CIAT-QCN_MapBiomas9-1986_2023-v032');
+var biomass_stock = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_tC_ha-CIAT-QCN_MapBiomas9-1986_2023-v033');
 
 
   // Define os nomes das bandas correspondentes a cada ano (1985 a 2023)

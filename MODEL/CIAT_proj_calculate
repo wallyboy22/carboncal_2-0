@@ -282,7 +282,7 @@ Map.addLayer(container_increment,{bands:'classification_2050'},'container_increm
 
 ////////////////
 
-var stk = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_carbon_degradation_t_ha-CIAT-QCN_MapBiomas9-1986_2023-v032");
+var stk = ee.Image("projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_carbon_degradation_t_ha-CIAT-QCN_MapBiomas9-1986_2023-v033");
 var bounds = stk.geometry();
 Map.addLayer(stk,{bands:'biomass_stock_2023'},'stk');
 
@@ -325,8 +325,8 @@ Map.addLayer(carbon_projection,{},'carbon_projection');
 
 Export.image.toAsset({
   image:carbon_projection,
-  description:'biomass_stock_carbon_projection_t_ha-CIAT-QCN_MapBiomas9-2024_2050-v032',
-  assetId:'projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_carbon_projection_t_ha-CIAT-QCN_MapBiomas9-2024_2050-v032',
+  description:'biomass_stock_carbon_projection_t_ha-CIAT-QCN_MapBiomas9-2024_2050-v033',
+  assetId:'projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_carbon_projection_t_ha-CIAT-QCN_MapBiomas9-2024_2050-v033',
   pyramidingPolicy:'median',
   // dimensions:,
   region:bounds,

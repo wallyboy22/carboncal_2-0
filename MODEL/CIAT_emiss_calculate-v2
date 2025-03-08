@@ -531,7 +531,7 @@ Map.addLayer(emiss_co2e_final.select('co2e_deforestation.*'), {}, 'co2e_deforest
 ].forEach(function(list){
   
   // Define a versão e os parâmetros de exportação
-  var version = 'CIAT-QCN_MapBiomas9-1986_2023-v032';
+  var version = 'CIAT-QCN_MapBiomas9-1986_2023-v033';
   var description = list[0] + '-' + version;
   var assetId = 'projects/ee-ipam/assets/SEEG/CIAT/';
   

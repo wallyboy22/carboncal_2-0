@@ -1,0 +1,351 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geom = 
+    /* color: #d63000 */
+    /* shown: false */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[-75.20771779196184, 6.31306782440633],
+          [-75.20771779196184, -35.31919759622834],
+          [-33.02021779196184, -35.31919759622834],
+          [-33.02021779196184, 6.31306782440633]]], null, false),
+    geom2 = 
+    /* color: #d63000 */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[-62.78923613554167, -7.529230134272356],
+          [-62.78923613554167, -10.047919609712524],
+          [-60.94353301054167, -10.047919609712524],
+          [-60.94353301054167, -7.529230134272356]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+/**
+ * Estatísticas de Área por Classe Textural e Cobertura do Solo
+ * 
+ * Este script calcula estatísticas de área para classes texturais do solo combinadas com classes de cobertura do solo,
+ * agrupadas por bioma e unidade federativa no Brasil. Os resultados são exportados como um arquivo CSV.
+ * 
+ * Autor: Wallace Vieira e David Pontes
+ * Data: 27/11/2024
+ * 
+ * Descrição:
+ * - Carrega dados de textura do solo (frações de areia, silte e argila) para a camada de 0-30 cm.
+ * - Classifica a textura do solo com base nas frações em classes predefinidas.
+ * - Carrega dados de uso e cobertura do solo da Coleção 9 do MapBiomas.
+ * - Remapeia as classes de cobertura do solo em níveis principais, excluindo corpos d'água.
+ * - Combina textura do solo e cobertura do solo em uma única imagem.
+ * - Calcula estatísticas de área agrupadas por classe textural, classe de cobertura, bioma e unidade federativa.
+ * - Exporta os resultados para o Google Drive como um arquivo CSV.
+ * 
+ * Nota: Este script utiliza a API JavaScript do Google Earth Engine.
+ */
+
+// --- opções
+var scale = 30;
+var version = '2025_03_09-1-v033';
+var description = 'area_and_carbonstock_per_landcover_' + version;
+var folder = 'CCAL_CIAT';
+
+// --- Datasets
+// Limites dos biomas
+var biomas = ee.FeatureCollection("projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil");
+
+// Limites geométricos dos biomas para o calculo de área, comentar para testes em uma area reduzida
+// var bounds = biomas.geometry().bounds();
+var bounds = geom2;
+
+// Limites das unidades federativas (estados)
+var estados = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/estados-2017')
+  .map(function(feature){
+    return feature.set({
+      CD_GEOCUF: ee.Number.parse(feature.get('CD_GEOCUF')),
+    });
+  });
+
+// Carregando a camada de uso e cobertura do solo (Coleção 9)
+var landCover_original = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection9/mapbiomas_collection90_integration_v1');
+
+// Visualização da cobertura do solo remapeada
+Map.addLayer(landCover_original, {
+    'bands': 'classification_2023',
+    'palette': require('users/mapbiomas/modules:Palettes.js').get('classification8'),
+    'min': 0,
+    'max': 69
+}, 'Uso e Cobertura do Solo 2023', false);
+
+
+
+// Nova coleção de carbono na biomassa
+// var biomass_stock_carbon = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_tC_ha-CIAT-QCN_MapBiomas9-1986_2023-v032');
+var biomass_stock_carbon_degradation = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_carbon_degradation_t_ha-CIAT-QCN_MapBiomas9-1986_2023-v033');
+var co2e_deforestation = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/co2e_deforestation_t_ha-CIAT-QCN_MapBiomas9-1986_2023-v033');
+var co2e_fire = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/co2e_fire_t_ha-CIAT-QCN_MapBiomas9-1986_2023-v033');
+var co2e_liquid = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/co2e_liquid_t_ha-CIAT-QCN_MapBiomas9-1986_2023-v033');
+var co2e_logging = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/co2e_logging_t_ha-CIAT-QCN_MapBiomas9-1986_2023-v033');
+var co2e_removal = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/co2e_removal_t_ha-CIAT-QCN_MapBiomas9-1986_2023-v033');
+var biomass_stock_projection = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_carbon_projection_t_ha-CIAT-QCN_MapBiomas9-2024_2050-v033');
+
+var stack_observad = biomass_stock_carbon_degradation.slice(1)
+    .addBands(co2e_deforestation)
+    .addBands(co2e_fire)
+    .addBands(co2e_liquid)
+    .addBands(co2e_logging)
+    .addBands(co2e_removal)
+    .addBands(biomass_stock_projection);
+
+    
+print('bandnames',stack_observad.bandNames(),stack_observad.bandNames().map(function(s){return ee.String(s).slice(0,-5);}).distinct());
+
+
+// Cálculo da área em hectares
+var pixelAreaHa = ee.Image.pixelArea().divide(1e4); // Converter m² para hectares
+var pixelTonelada = stack_observad.multiply(pixelAreaHa); // Converter toneladas por hectare para hectare
+
+// Imagens dos biomas e estados para mapeamento territorial
+var biomas_img = ee.Image().paint(biomas, 'CD_Bioma');
+var estados_img = ee.Image().paint(estados, 'CD_GEOCUF');
+var territory_img = biomas_img.add(estados_img.multiply(10));
+
+var biomasClasses = ee.Dictionary({
+  0:'Não observado',
+  1:'Amazônia',
+  2:'Caatinga',
+  3:'Cerrado',
+  4:'Mata Atlântica',
+  5:'Pampa',
+  6:'Pantanal',
+});
+
+var unidadeFederativaClasses = ee.Dictionary({
+  0: 'Não observado',
+  11: 'Rondônia',
+  12: 'Acre',
+  13: 'Amazonas',
+  14: 'Roraima',
+  15: 'Pará',
+  16: 'Amapá',
+  17: 'Tocantins',
+  21: 'Maranhão',
+  22: 'Piauí',
+  23: 'Ceará',
+  24: 'Rio Grande do Norte',
+  25: 'Paraíba',
+  26: 'Pernambuco',
+  27: 'Alagoas',
+  28: 'Sergipe',
+  29: 'Bahia',
+  31: 'Minas Gerais',
+  32: 'Espírito Santo',
+  33: 'Rio de Janeiro',
+  35: 'São Paulo',
+  41: 'Paraná',
+  42: 'Santa Catarina',
+  43: 'Rio Grande do Sul',
+  50: 'Mato Grosso do Sul',
+  51: 'Mato Grosso',
+  52: 'Goiás',
+  53: 'Distrito Federal'
+});
+
+var ufClasses = ee.Dictionary({
+  0: 'Não observado',
+  11: 'RO',
+  12: 'AC',
+  13: 'AM',
+  14: 'RR',
+  15: 'PA',
+  16: 'AP',
+  17: 'TO',
+  21: 'MA',
+  22: 'PI',
+  23: 'CE',
+  24: 'RN',
+  25: 'PB',
+  26: 'PE',
+  27: 'AL',
+  28: 'SE',
+  29: 'BA',
+  31: 'MG',
+  32: 'ES',
+  33: 'RJ',
+  35: 'SP',
+  41: 'PR',
+  42: 'SC',
+  43: 'RS',
+  50: 'MS',
+  51: 'MT',
+  52: 'GO',
+  53: 'DF'
+});
+
+var legends = require('users/geomapeamentoipam/MapBiomas__Fogo:00_Tools/Legends.js');
+
+var  niveis = ee.Dictionary(legends.get('lulc_mbc09_niveis')),
+     nivel_0 = ee.Dictionary(legends.get('lulc_mbc09_nivel_0')),
+     nivel_1 = ee.Dictionary(legends.get('lulc_mbc09_nivel_1')),
+     nivel_1_1 = ee.Dictionary(legends.get('lulc_mbc09_nivel_1_1')),
+     nivel_2 = ee.Dictionary(legends.get('lulc_mbc09_nivel_2')),
+     nivel_3 = ee.Dictionary(legends.get('lulc_mbc09_nivel_3')),
+     nivel_4 = ee.Dictionary(legends.get('lulc_mbc09_nivel_4'));
+
+
+// Cálculo das estatísticas de área
+pixelTonelada.bandNames().evaluate(function(bandnames){
+  print('bandnames',bandnames);
+  var tables = bandnames
+    // .slice(-1) // Utilizando apenas o último ano (2023)
+    .map(function(bandname){
+
+      var year = bandname.slice(-4);
+      var metric_name = bandname.slice(0,-5);
+
+      // --- --- ---
+      var observed_area = pixelAreaHa
+        .addBands(landCover_original.select('classification_' + year))
+        .addBands(territory_img);
+        
+      var reduce_area = observed_area.reduceRegion({
+        reducer: ee.Reducer.sum().group(1, 'territory').group(1, 'classe'),
+        geometry: bounds,
+        scale: scale,
+        maxPixels: 1e13,
+      }).get("groups");
+      
+      var table_area = ee.List(reduce_area)
+        .map(function(obj_n1){
+          obj_n1 = ee.Dictionary(obj_n1);
+          var classe_int = obj_n1.getNumber('classe').int();
+          
+          return ee.FeatureCollection(ee.List(obj_n1.get('groups'))
+            .map(function(obj_n2){
+              obj_n2 = ee.Dictionary(obj_n2);
+              
+              var territory_int = obj_n2.getNumber('territory').int();
+              
+              var area_ha = obj_n2.getNumber('sum');
+              
+              return ee.Feature(null)
+                .set({
+                  'index': ee.String(classe_int).cat('-').cat(territory_int).cat('-').cat(year),
+                  'Área ha': area_ha,
+                  'Ano': year,
+                  'Cobertura n0': nivel_0.get(classe_int),
+                  'Cobertura n1': nivel_1.get(classe_int),
+                  'Cobertura n1_1': nivel_1_1.get(classe_int),
+                  'Cobertura n2': nivel_2.get(classe_int),
+                  'Cobertura n3': nivel_3.get(classe_int),
+                  'Cobertura n4': nivel_4.get(classe_int),
+                  'Bioma': biomasClasses.get(territory_int.mod(10).int()),
+                  'Unidade Federativa': unidadeFederativaClasses.get(territory_int.divide(10).int()),
+                  'UF': ufClasses.get(territory_int.divide(10).int()),
+                  // 'classe_int': classe_int,
+                  // 'territory_int': territory_int,
+                });
+            }));
+          
+        });
+      
+      table_area = ee.FeatureCollection(table_area).flatten();
+      
+      // --- --- ---
+      var observed_toneladas = pixelTonelada.select(bandname)
+        .addBands(landCover_original.select('classification_' + year))
+        .addBands(territory_img);
+        
+
+      var reduce_toneladas = observed_toneladas
+        .reduceRegion({
+          reducer: ee.Reducer.sum().group(1, 'territory').group(1, 'classe'),
+          geometry: bounds,
+          scale: scale,
+          maxPixels: 1e13,
+        }).get("groups");
+      
+      var table_toneladas = ee.List(reduce_toneladas)
+        .map(function(obj_n1){
+          obj_n1 = ee.Dictionary(obj_n1);
+          var classe_int = obj_n1.getNumber('classe').int();
+          
+          return ee.FeatureCollection(ee.List(obj_n1.get('groups'))
+            .map(function(obj_n2){
+              obj_n2 = ee.Dictionary(obj_n2);
+              
+              var territory_int = obj_n2.getNumber('territory').int();
+              
+              var toneladas = obj_n2.getNumber('sum');
+              
+              return ee.Feature(null)
+                .set({
+                  'metric_name':metric_name,
+                  'index': ee.String(classe_int).cat('-').cat(territory_int).cat('-').cat(year),
+                }).set('tons_'+metric_name,toneladas);
+            }));
+          
+        });
+      
+      table_toneladas = ee.FeatureCollection(table_toneladas).flatten();
+      
+      // --- --- ---
+      // Junção das tabelas de quantificação do total de área em hectares e carbono organico do solo em toneladas
+      var  joinKey = 'index';
+      var join = ee.Join.inner();
+      var filter_join = ee.Filter.equals({
+        'leftField':joinKey,
+        'rightField':joinKey,
+      });
+      
+      var table = join.apply(table_area, table_toneladas, filter_join)
+      // Função para copiar as propriedades de dois Features juntos
+      .map(function getJoin (feature) {
+        return  ee.Feature(null)
+          .copyProperties(feature.get('primary'))
+          .copyProperties(feature.get('secondary'));
+      });
+      
+      // Verificar o resultado
+      // print('Joined Features:', joinedFeatures);
+      // print('toneladas:', toneladas);
+      // print('areas:', areas);
+      
+      return ee.FeatureCollection(table);
+    });
+  
+  tables = ee.FeatureCollection(tables).flatten();
+
+  print('tables', tables.limit(1000),tables.aggregate_array('metric_name').distinct());
+  
+  // Exportar para o Drive
+  Export.table.toDrive({
+    collection: tables,
+    description: description,
+    fileFormat: 'CSV',
+    folder: folder,
+     selectors:[
+      // 'index',
+      'Ano',
+      'Cobertura n0',
+      'Cobertura n1_1',
+      'Cobertura n2',
+      'Cobertura n3',
+      'Cobertura n4',
+      'Bioma',
+      'UF',
+      'Unidade Federativa',
+      'Área ha',
+      'tons_co2e_liquid',
+      'tons_co2e_fire',
+      'tons_co2e_logging',
+      'tons_co2e_removal',
+      'tons_co2e_emission',
+      'tons_biomass_stock',
+      // classe_int	territory_int	
+      ]
+  });
+  
+});

@@ -91,15 +91,19 @@ var co2e_logging = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/co2e_logging_t_ha
 var co2e_removal = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/co2e_removal_t_ha-CIAT-QCN_MapBiomas9-1986_2023-v033');
 var biomass_stock_projection = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_carbon_projection_t_ha-CIAT-QCN_MapBiomas9-2024_2050-v033');
 
+var table_legal_amazon = ee.FeatureCollection('projects/mapbiomas-territories/assets/TERRITORIES/LULC/BRAZIL/COLLECTION9/WORKSPACE/LEGAL_AMAZON');
+var image_legal_amazon = ee.Image().paint(table_legal_amazon).eq(0);
+
 var stack_observad = biomass_stock_carbon_degradation.slice(1)
     .addBands(co2e_deforestation)
     .addBands(co2e_fire)
     .addBands(co2e_liquid)
     .addBands(co2e_logging)
     .addBands(co2e_removal)
-    .addBands(biomass_stock_projection);
+    .addBands(biomass_stock_projection)
+    .updateMask(image_legal_amazon);
 
-    
+
 print('bandnames',stack_observad.bandNames(),stack_observad.bandNames().map(function(s){return ee.String(s).slice(0,-5);}).distinct());
 
 
@@ -196,156 +200,181 @@ var  niveis = ee.Dictionary(legends.get('lulc_mbc09_niveis')),
 
 
 // Cálculo das estatísticas de área
-pixelTonelada.bandNames().evaluate(function(bandnames){
-  print('bandnames',bandnames);
-  var tables = bandnames
-    // .slice(-1) // Utilizando apenas o último ano (2023)
-    .map(function(bandname){
 
-      var year = bandname.slice(-4);
-      var metric_name = bandname.slice(0,-5);
-
-      // --- --- ---
-      var observed_area = pixelAreaHa
-        .addBands(landCover_original.select('classification_' + year))
-        .addBands(territory_img);
+[
+  'biomass_stock',
+  'co2e_deforestation',
+  'co2e_fire',
+  'co2e_liquid',
+  'co2e_logging',
+  'co2e_removal',
+  'carbon_stock'
+].forEach(function(band){
+  
+  pixelTonelada.select(band+'.*').bandNames().evaluate(function(bandnames){
+    print('bandnames',bandnames);
+    
+    var bandnames_simples = ee.List(bandnames.map(function(bandname){return ee.String(bandname).slice(0,-5)})).distinct();
+    print('bandnames_simples',bandnames_simples);
+  
+    var tables = bandnames
+      // .slice(-1) // Utilizando apenas o último ano (2023)
+      .map(function(bandname){
+  
+        var year = bandname.slice(-4);
+        var year_lulc;
+        if (parseInt(year) >= 2023){
+          year_lulc = 2023;
+        } else {
+          year_lulc = year;
+        }
         
-      var reduce_area = observed_area.reduceRegion({
-        reducer: ee.Reducer.sum().group(1, 'territory').group(1, 'classe'),
-        geometry: bounds,
-        scale: scale,
-        maxPixels: 1e13,
-      }).get("groups");
-      
-      var table_area = ee.List(reduce_area)
-        .map(function(obj_n1){
-          obj_n1 = ee.Dictionary(obj_n1);
-          var classe_int = obj_n1.getNumber('classe').int();
+        var metric_name = bandname.slice(0,-5);
+  
+        // --- --- ---
+        var observed_area = pixelAreaHa
+          .addBands(landCover_original.select('classification_' + year_lulc))
+          .addBands(territory_img);
           
-          return ee.FeatureCollection(ee.List(obj_n1.get('groups'))
-            .map(function(obj_n2){
-              obj_n2 = ee.Dictionary(obj_n2);
-              
-              var territory_int = obj_n2.getNumber('territory').int();
-              
-              var area_ha = obj_n2.getNumber('sum');
-              
-              return ee.Feature(null)
-                .set({
-                  'index': ee.String(classe_int).cat('-').cat(territory_int).cat('-').cat(year),
-                  'Área ha': area_ha,
-                  'Ano': year,
-                  'Cobertura n0': nivel_0.get(classe_int),
-                  'Cobertura n1': nivel_1.get(classe_int),
-                  'Cobertura n1_1': nivel_1_1.get(classe_int),
-                  'Cobertura n2': nivel_2.get(classe_int),
-                  'Cobertura n3': nivel_3.get(classe_int),
-                  'Cobertura n4': nivel_4.get(classe_int),
-                  'Bioma': biomasClasses.get(territory_int.mod(10).int()),
-                  'Unidade Federativa': unidadeFederativaClasses.get(territory_int.divide(10).int()),
-                  'UF': ufClasses.get(territory_int.divide(10).int()),
-                  // 'classe_int': classe_int,
-                  // 'territory_int': territory_int,
-                });
-            }));
-          
-        });
-      
-      table_area = ee.FeatureCollection(table_area).flatten();
-      
-      // --- --- ---
-      var observed_toneladas = pixelTonelada.select(bandname)
-        .addBands(landCover_original.select('classification_' + year))
-        .addBands(territory_img);
-        
-
-      var reduce_toneladas = observed_toneladas
-        .reduceRegion({
+        var reduce_area = observed_area.reduceRegion({
           reducer: ee.Reducer.sum().group(1, 'territory').group(1, 'classe'),
           geometry: bounds,
           scale: scale,
           maxPixels: 1e13,
         }).get("groups");
-      
-      var table_toneladas = ee.List(reduce_toneladas)
-        .map(function(obj_n1){
-          obj_n1 = ee.Dictionary(obj_n1);
-          var classe_int = obj_n1.getNumber('classe').int();
+        
+        var table_area = ee.List(reduce_area)
+          .map(function(obj_n1){
+            obj_n1 = ee.Dictionary(obj_n1);
+            var classe_int = obj_n1.getNumber('classe').int();
+            
+            return ee.FeatureCollection(ee.List(obj_n1.get('groups'))
+              .map(function(obj_n2){
+                obj_n2 = ee.Dictionary(obj_n2);
+                
+                var territory_int = obj_n2.getNumber('territory').int();
+                
+                var area_ha = obj_n2.getNumber('sum');
+                
+                return ee.Feature(null)
+                  .set({
+                    'index': ee.String(classe_int).cat('-').cat(territory_int).cat('-').cat(year),
+                    'Área ha': area_ha,
+                    'Ano': year,
+                    'Cobertura n0': nivel_0.get(classe_int),
+                    'Cobertura n1': nivel_1.get(classe_int),
+                    'Cobertura n1_1': nivel_1_1.get(classe_int),
+                    'Cobertura n2': nivel_2.get(classe_int),
+                    'Cobertura n3': nivel_3.get(classe_int),
+                    'Cobertura n4': nivel_4.get(classe_int),
+                    'Bioma': biomasClasses.get(territory_int.mod(10).int()),
+                    'Unidade Federativa': unidadeFederativaClasses.get(territory_int.divide(10).int()),
+                    'UF': ufClasses.get(territory_int.divide(10).int()),
+                    // 'classe_int': classe_int,
+                    // 'territory_int': territory_int,
+                  });
+              }));
+            
+          });
+        
+        table_area = ee.FeatureCollection(table_area).flatten();
+        
+        // --- --- ---
+        var observed_toneladas = pixelTonelada.select(bandname)
+          .addBands(landCover_original.select('classification_' + year))
+          .addBands(territory_img);
           
-          return ee.FeatureCollection(ee.List(obj_n1.get('groups'))
-            .map(function(obj_n2){
-              obj_n2 = ee.Dictionary(obj_n2);
-              
-              var territory_int = obj_n2.getNumber('territory').int();
-              
-              var toneladas = obj_n2.getNumber('sum');
-              
-              return ee.Feature(null)
-                .set({
-                  'metric_name':metric_name,
-                  'index': ee.String(classe_int).cat('-').cat(territory_int).cat('-').cat(year),
-                }).set('tons_'+metric_name,toneladas);
-            }));
-          
+  
+        var reduce_toneladas = observed_toneladas
+          .reduceRegion({
+            reducer: ee.Reducer.sum().group(1, 'territory').group(1, 'classe'),
+            geometry: bounds,
+            scale: scale,
+            maxPixels: 1e13,
+          }).get("groups");
+        
+        var table_toneladas = ee.List(reduce_toneladas)
+          .map(function(obj_n1){
+            obj_n1 = ee.Dictionary(obj_n1);
+            var classe_int = obj_n1.getNumber('classe').int();
+            
+            return ee.FeatureCollection(ee.List(obj_n1.get('groups'))
+              .map(function(obj_n2){
+                obj_n2 = ee.Dictionary(obj_n2);
+                
+                var territory_int = obj_n2.getNumber('territory').int();
+                
+                var toneladas = obj_n2.getNumber('sum');
+                
+                return ee.Feature(null)
+                  .set({
+                    'metric_name':metric_name,
+                    'index': ee.String(classe_int).cat('-').cat(territory_int).cat('-').cat(year),
+                  }).set('tons_'+metric_name,toneladas);
+              }));
+            
+          });
+        
+        table_toneladas = ee.FeatureCollection(table_toneladas).flatten();
+        
+        // --- --- ---
+        // Junção das tabelas de quantificação do total de área em hectares e carbono organico do solo em toneladas
+        var  joinKey = 'index';
+        var join = ee.Join.inner();
+        var filter_join = ee.Filter.equals({
+          'leftField':joinKey,
+          'rightField':joinKey,
         });
-      
-      table_toneladas = ee.FeatureCollection(table_toneladas).flatten();
-      
-      // --- --- ---
-      // Junção das tabelas de quantificação do total de área em hectares e carbono organico do solo em toneladas
-      var  joinKey = 'index';
-      var join = ee.Join.inner();
-      var filter_join = ee.Filter.equals({
-        'leftField':joinKey,
-        'rightField':joinKey,
+        
+        var table = join.apply(table_area, table_toneladas, filter_join)
+        // Função para copiar as propriedades de dois Features juntos
+        .map(function getJoin (feature) {
+          return  ee.Feature(null)
+            .copyProperties(feature.get('primary'))
+            .copyProperties(feature.get('secondary'));
+        });
+        
+        // Verificar o resultado
+        // print('Joined Features:', joinedFeatures);
+        // print('toneladas:', toneladas);
+        // print('areas:', areas);
+        
+        return ee.FeatureCollection(table);
       });
-      
-      var table = join.apply(table_area, table_toneladas, filter_join)
-      // Função para copiar as propriedades de dois Features juntos
-      .map(function getJoin (feature) {
-        return  ee.Feature(null)
-          .copyProperties(feature.get('primary'))
-          .copyProperties(feature.get('secondary'));
-      });
-      
-      // Verificar o resultado
-      // print('Joined Features:', joinedFeatures);
-      // print('toneladas:', toneladas);
-      // print('areas:', areas);
-      
-      return ee.FeatureCollection(table);
+    
+    tables = ee.FeatureCollection(tables).flatten();
+  
+    print('tables', tables.limit(1000),tables.aggregate_array('metric_name').distinct());
+    
+    // Exportar para o Drive
+    Export.table.toDrive({
+      collection: tables,
+      description: description + '-' + band,
+      fileFormat: 'CSV',
+      folder: folder,
+       selectors:[
+        // 'index',
+        'Ano',
+        'Cobertura n0',
+        'Cobertura n1_1',
+        'Cobertura n2',
+        'Cobertura n3',
+        'Cobertura n4',
+        'Bioma',
+        'UF',
+        'Unidade Federativa',
+        'Área ha',
+        'metric_name',
+        'tons_' + band
+        // 'tons_co2e_liquid',
+        // 'tons_co2e_fire',
+        // 'tons_co2e_logging',
+        // 'tons_co2e_removal',
+        // 'tons_co2e_emission',
+        // 'tons_biomass_stock',
+        // classe_int	territory_int	
+        ]
     });
-  
-  tables = ee.FeatureCollection(tables).flatten();
-
-  print('tables', tables.limit(1000),tables.aggregate_array('metric_name').distinct());
-  
-  // Exportar para o Drive
-  Export.table.toDrive({
-    collection: tables,
-    description: description,
-    fileFormat: 'CSV',
-    folder: folder,
-     selectors:[
-      // 'index',
-      'Ano',
-      'Cobertura n0',
-      'Cobertura n1_1',
-      'Cobertura n2',
-      'Cobertura n3',
-      'Cobertura n4',
-      'Bioma',
-      'UF',
-      'Unidade Federativa',
-      'Área ha',
-      'tons_co2e_liquid',
-      'tons_co2e_fire',
-      'tons_co2e_logging',
-      'tons_co2e_removal',
-      'tons_co2e_emission',
-      'tons_biomass_stock',
-      // classe_int	territory_int	
-      ]
+    
   });
-  
 });

@@ -56,9 +56,6 @@ var folder = 'CCAL_CIAT';
 // Limites dos biomas
 var biomas = ee.FeatureCollection("projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil");
 
-// Limites geométricos dos biomas para o calculo de área, comentar para testes em uma area reduzida
-// var bounds = biomas.geometry().bounds();
-var bounds = geom2;
 
 // Limites das unidades federativas (estados)
 var estados = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/estados-2017')
@@ -93,6 +90,11 @@ var biomass_stock_projection = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/bioma
 
 var table_legal_amazon = ee.FeatureCollection('projects/mapbiomas-territories/assets/TERRITORIES/LULC/BRAZIL/COLLECTION9/WORKSPACE/LEGAL_AMAZON');
 var image_legal_amazon = ee.Image().paint(table_legal_amazon).eq(0);
+
+// Limites geométricos dos biomas para o calculo de área, comentar para testes em uma area reduzida
+var bounds = table_legal_amazon.geometry().bounds();
+// var bounds = geom2;
+
 
 var stack_observad = biomass_stock_carbon_degradation.slice(1)
     .addBands(co2e_deforestation)

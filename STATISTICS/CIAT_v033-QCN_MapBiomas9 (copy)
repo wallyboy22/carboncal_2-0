@@ -48,8 +48,8 @@ var geom =
 
 // --- opções
 var scale = 30;
-var version = '2025_03_09-1-v033';
-var description = 'area_and_carbonstock_per_landcover_' + version;
+var version = '2025_03_10-1-v033';
+var description = 'area_and_carbonstock_per_landcover_';
 var folder = 'CCAL_CIAT';
 
 // --- Datasets
@@ -281,7 +281,7 @@ var  niveis = ee.Dictionary(legends.get('lulc_mbc09_niveis')),
         
         // --- --- ---
         var observed_toneladas = pixelTonelada.select(bandname)
-          .addBands(landCover_original.select('classification_' + year))
+          .addBands(landCover_original.select('classification_' + year_lulc))
           .addBands(territory_img);
           
   
@@ -349,7 +349,7 @@ var  niveis = ee.Dictionary(legends.get('lulc_mbc09_niveis')),
     // Exportar para o Drive
     Export.table.toDrive({
       collection: tables,
-      description: description + '-' + band,
+      description: description + '_' + band + '_'  + version,
       fileFormat: 'CSV',
       folder: folder,
        selectors:[

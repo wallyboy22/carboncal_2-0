@@ -49,7 +49,7 @@ var geom =
 // --- opções
 var scale = 30;
 var version = '2025_03_10-1-v033';
-var description = 'area_and_carbonstock_per_landcover_';
+var description = 'area_legal_amazon_and_carbonstock_per_landcover_';
 var folder = 'CCAL_CIAT';
 
 // --- Datasets

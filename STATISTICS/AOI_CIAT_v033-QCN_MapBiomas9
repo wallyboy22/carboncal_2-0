@@ -127,7 +127,7 @@ var stack_observad = biomass_stock_carbon_degradation.slice(1)
     .addBands(co2e_logging)
     .addBands(co2e_removal)
     .addBands(biomass_stock_projection)
-    .updateMask(aoi_id_image.gt(0));
+    .multiply(aoi_id_image.multiply(aoi_id_image));
 
 
 print('bandnames',stack_observad.bandNames(),stack_observad.bandNames().map(function(s){return ee.String(s).slice(0,-5);}).distinct());

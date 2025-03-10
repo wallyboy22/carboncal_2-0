@@ -49,7 +49,7 @@ var geom =
 // --- opções
 var scale = 30;
 var version = '2025_03_10-1-v033';
-var description = 'area_legal_amazon_and_carbonstock_per_landcover_';
+var description = 'area_CIAT_project_and_carbonstock_per_landcover_';
 var folder = 'CCAL_CIAT';
 
 // --- Datasets
@@ -91,16 +91,28 @@ var biomass_stock_projection = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/bioma
 var table_legal_amazon = ee.FeatureCollection('projects/mapbiomas-territories/assets/TERRITORIES/LULC/BRAZIL/COLLECTION9/WORKSPACE/LEGAL_AMAZON');
 var image_legal_amazon = ee.Image().paint(table_legal_amazon).eq(0);
 
-var aoi = ee.FeatureCollection('projects/ee-ipam/assets/SEEG/CIAT/CIAT_geral_PPA_carbon')
-  .map(function(feature){
-    return feature.set({
-      ID: ee.Number.parse(feature.get('ID')),
-    });
+var aoi_ciat = ee.FeatureCollection('projects/ee-ipam/assets/SEEG/CIAT/CIAT_geral_PPA_carbon')
+
+var aoi_ciat_ids = aoi_ciat.aggregate_array('Project').distinct();
+
+aoi_ciat = aoi_ciat.map(function(f){
+  var id = aoi_ciat_ids.indexOf(f.getString('Project')).add(1);
+  
+  var Project_legend = ee.String(id).cat(':').cat(f.getString('Project'))
+  
+  return f.set({
+    Project_id:id,
+    Project_legend:Project_legend,
   });
+});
 
-print('aoi',aoi);
+var aoi_ciat_legend = aoi_ciat.aggregate_array('Project_legend').distinct();
 
-var aoi_id_image = ee.Image().paint(aoi,'ID');
+
+
+print('aoi_ciat',aoi_ciat,aoi_ciat.aggregate_array('Project').distinct(),aoi_ciat.aggregate_array('Project_id').distinct(),aoi_ciat.aggregate_array('Project_legend').distinct());
+
+var aoi_id_image = ee.Image().paint(aoi_ciat,'Project_id');
 
 
 // Limites geométricos dos biomas para o calculo de área, comentar para testes em uma area reduzida
@@ -115,7 +127,7 @@ var stack_observad = biomass_stock_carbon_degradation.slice(1)
     .addBands(co2e_logging)
     .addBands(co2e_removal)
     .addBands(biomass_stock_projection)
-    .updateMask(image_legal_amazon);
+    .updateMask(aoi_id_image.gt(0));
 
 
 print('bandnames',stack_observad.bandNames(),stack_observad.bandNames().map(function(s){return ee.String(s).slice(0,-5);}).distinct());
@@ -128,7 +140,7 @@ var pixelTonelada = stack_observad.multiply(pixelAreaHa); // Converter toneladas
 // Imagens dos biomas e estados para mapeamento territorial
 var biomas_img = ee.Image().paint(biomas, 'CD_Bioma');
 var estados_img = ee.Image().paint(estados, 'CD_GEOCUF');
-var territory_img = biomas_img.add(estados_img.multiply(10));
+var territory_img = biomas_img.add(estados_img.multiply(10)).multiply(100).add(aoi_id_image);
 
 var biomasClasses = ee.Dictionary({
   0:'Não observado',
@@ -202,6 +214,23 @@ var ufClasses = ee.Dictionary({
   53: 'DF'
 });
 
+var aoi_ciat_classes = ee.Dictionary({
+  1: '100+ Labs',
+  2: 'Lab de Impacto',
+  3: 'Nossa Floresta, Nossa Casa',
+  4: 'PTMJ',
+  5: 'Pesca para Sempre',
+  6: 'Revitalização da Cadeia da Borracha',
+  7: 'Sociobioeconomia na Amazônia',
+  8: 'Desenvolvimento Territorial no Sudeste Paraense',
+  9: 'INGÁ',
+  10: 'Carbono Insetting',
+  11: 'Emprestimo Coletivo',
+  12: 'IBS',
+  13: 'Incubadora da Floresta',
+  14: 'Semeando a Sustentabilidade',
+});
+
 var legends = require('users/geomapeamentoipam/MapBiomas__Fogo:00_Tools/Legends.js');
 
 var  niveis = ee.Dictionary(legends.get('lulc_mbc09_niveis')),
@@ -267,6 +296,15 @@ var  niveis = ee.Dictionary(legends.get('lulc_mbc09_niveis')),
                 obj_n2 = ee.Dictionary(obj_n2);
                 
                 var territory_int = obj_n2.getNumber('territory').int();
+
+                var ciat_id = territory_int.mod(100).int();
+                
+                territory_int = territory_int.divide(100).int();
+                
+                var bioma_id = territory_int.mod(10).int();
+                
+                var uf_id = territory_int.divide(10).int();
+                
                 
                 var area_ha = obj_n2.getNumber('sum');
                 
@@ -281,9 +319,11 @@ var  niveis = ee.Dictionary(legends.get('lulc_mbc09_niveis')),
                     'Cobertura n2': nivel_2.get(classe_int),
                     'Cobertura n3': nivel_3.get(classe_int),
                     'Cobertura n4': nivel_4.get(classe_int),
-                    'Bioma': biomasClasses.get(territory_int.mod(10).int()),
-                    'Unidade Federativa': unidadeFederativaClasses.get(territory_int.divide(10).int()),
-                    'UF': ufClasses.get(territory_int.divide(10).int()),
+                    'Bioma': biomasClasses.get(bioma_id),
+                    'Unidade Federativa': unidadeFederativaClasses.get(uf_id),
+                    'UF': ufClasses.get(uf_id),
+                    'Project':aoi_ciat_classes.get(ciat_id),
+                    'Project_id':ciat_id
                     // 'classe_int': classe_int,
                     // 'territory_int': territory_int,
                   });
@@ -374,12 +414,14 @@ var  niveis = ee.Dictionary(legends.get('lulc_mbc09_niveis')),
         'Cobertura n2',
         'Cobertura n3',
         'Cobertura n4',
+        // 'Project_id',
+        'Project',
         'Bioma',
         'UF',
         'Unidade Federativa',
         'Área ha',
         'metric_name',
-        'tons_' + band
+        'tons_' + band,
         // 'tons_co2e_liquid',
         // 'tons_co2e_fire',
         // 'tons_co2e_logging',

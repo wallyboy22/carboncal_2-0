@@ -3,7 +3,8 @@ var sempre_primaria = /* color: #d63000 */ee.Geometry.MultiPoint(
         [[-53.33770277022617, -6.949906972704902],
          [-53.05814308732072, -6.841582820362253]]),
     veg_sec_stop_deforestation_projection = /* color: #98ff00 */ee.Geometry.Point([-53.26470865288519, -6.894612229294961]),
-    veg_sec_increment = /* color: #0b4a8b */ee.Geometry.Point([-53.170296415062836, -6.86752481422346]);
+    veg_sec_increment = /* color: #0b4a8b */ee.Geometry.Point([-53.170296415062836, -6.86752481422346]),
+    geometry = /* color: #d63000 */ee.Geometry.Point([-53.39920859845308, -6.7563649709477085]);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 
 
@@ -321,12 +322,63 @@ years.forEach(function(year,i){
 
 print('carbon_projection',carbon_projection);
 
+
+var co2e_projection = carbon_projection.addBands(carbon_projection.select('carbon_stock_2050').rename('carbon_stock_2051'))
+  .multiply(-3.67);
+
+var co2e_projection_balance = co2e_projection
+  .subtract(stk2023.multiply(-3.67).addBands(co2e_projection.slice(0,-1)))
+  .slice(0,-1);
+
+var co2e_projection_balance_deforestation = co2e_projection_balance.where(co2e_projection_balance.gt(0),0)
+  .rename(co2e_projection_balance.bandNames().map(function(s){return ee.String('co2e_deforestation').cat(ee.String(s).slice(-5))}))
+  .float();
+var co2e_projection_balance_removal = co2e_projection_balance.where(co2e_projection_balance.lt(0),0)
+  .rename(co2e_projection_balance.bandNames().map(function(s){return ee.String('co2e_removal').cat(ee.String(s).slice(-5))}))
+  .float();
+
+print('co2e_projection_balance_deforestation',co2e_projection_balance_deforestation);
+print('co2e_projection_balance_removal',co2e_projection_balance_removal);
+
 Map.addLayer(carbon_projection,{},'carbon_projection');
+Map.addLayer(co2e_projection_balance,{},'co2e_projection');
+Map.addLayer(co2e_projection_balance_deforestation,{},'co2e_projection_balance_deforestation');
+Map.addLayer(co2e_projection_balance_removal,{},'co2e_projection_balance_removal');
 
 Export.image.toAsset({
   image:carbon_projection,
   description:'biomass_stock_carbon_projection_t_ha-CIAT-QCN_MapBiomas9-2024_2050-v033',
   assetId:'projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_carbon_projection_t_ha-CIAT-QCN_MapBiomas9-2024_2050-v033',
+  pyramidingPolicy:'median',
+  // dimensions:,
+  region:bounds,
+  scale:30,
+  // crs:,
+  // crsTransform:,
+  maxPixels:1e13,
+  // shardSize:,
+  // priority:
+});
+
+Export.image.toAsset({
+  image:co2e_projection_balance_deforestation,
+  description:'co2e_deforestation_projection_t_ha-CIAT-QCN_MapBiomas9-2024_2050-v033',
+  assetId:'projects/ee-ipam/assets/SEEG/CIAT/co2e_deforestation_projection_t_ha-CIAT-QCN_MapBiomas9-2024_2050-v033',
+  pyramidingPolicy:'median',
+  // dimensions:,
+  region:bounds,
+  scale:30,
+  // crs:,
+  // crsTransform:,
+  maxPixels:1e13,
+  // shardSize:,
+  // priority:
+});
+
+Export.image.toAsset({
+  image:co2e_projection_balance_removal,
+  description:'co2e_removal_projection_t_ha-CIAT-QCN_MapBiomas9-2024_2050-v033',
+  assetId:'projects/ee-ipam/assets/SEEG/CIAT/co2e_removal_projection_t_ha-CIAT-QCN_MapBiomas9-2024_2050-v033',
   pyramidingPolicy:'median',
   // dimensions:,
   region:bounds,

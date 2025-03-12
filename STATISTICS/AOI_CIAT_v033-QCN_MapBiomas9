@@ -20,10 +20,10 @@ var geom =
       }
     ] */
     ee.Geometry.Polygon(
-        [[[-62.78923613554167, -7.529230134272356],
-          [-62.78923613554167, -10.047919609712524],
-          [-60.94353301054167, -10.047919609712524],
-          [-60.94353301054167, -7.529230134272356]]], null, false);
+        [[[-59.71306426054167, 0.9743496869502443],
+          [-59.71306426054167, -1.5742333687004826],
+          [-57.86736113554167, -1.5742333687004826],
+          [-57.86736113554167, 0.9743496869502443]]], null, false);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 /**
  * Estatísticas de Área por Classe Textural e Cobertura do Solo
@@ -47,7 +47,7 @@ var geom =
  */
 
 // --- opções
-var scale = 30;
+var scale = 500;
 var version = '2025_03_10-1-v033';
 var description = 'area_CIAT_project_and_carbonstock_per_landcover_';
 var folder = 'CCAL_CIAT';
@@ -115,9 +115,12 @@ print('aoi_ciat',aoi_ciat,aoi_ciat.aggregate_array('Project').distinct(),aoi_cia
 var aoi_id_image = ee.Image().paint(aoi_ciat,'Project_id');
 
 
+
+Map.addLayer(aoi_id_image,{min:0,max:14},'aoi_id_image');
+Map.addLayer(table_legal_amazon.geometry().bounds(),{},'bounds');
 // Limites geométricos dos biomas para o calculo de área, comentar para testes em uma area reduzida
-var bounds = table_legal_amazon.geometry().bounds();
-// var bounds = geom2;
+// var bounds = table_legal_amazon.geometry().bounds();
+var bounds = geom2;
 
 
 var stack_observad = biomass_stock_carbon_degradation.slice(1)
@@ -127,8 +130,9 @@ var stack_observad = biomass_stock_carbon_degradation.slice(1)
     .addBands(co2e_logging)
     .addBands(co2e_removal)
     .addBands(biomass_stock_projection)
-    .multiply(aoi_id_image.multiply(aoi_id_image));
+    .multiply(aoi_id_image.divide(aoi_id_image));
 
+Map.addLayer(stack_observad,{},'stack_observad');
 
 print('bandnames',stack_observad.bandNames(),stack_observad.bandNames().map(function(s){return ee.String(s).slice(0,-5);}).distinct());
 
@@ -140,7 +144,9 @@ var pixelTonelada = stack_observad.multiply(pixelAreaHa); // Converter toneladas
 // Imagens dos biomas e estados para mapeamento territorial
 var biomas_img = ee.Image().paint(biomas, 'CD_Bioma');
 var estados_img = ee.Image().paint(estados, 'CD_GEOCUF');
-var territory_img = biomas_img.add(estados_img.multiply(10)).multiply(100).add(aoi_id_image);
+var territory_img = estados_img.multiply(10).add(biomas_img).multiply(100).add(aoi_id_image);
+
+Map.addLayer(territory_img.randomVisualizer(),{},'territory_img');
 
 var biomasClasses = ee.Dictionary({
   0:'Não observado',
@@ -398,7 +404,7 @@ var  niveis = ee.Dictionary(legends.get('lulc_mbc09_niveis')),
     
     tables = ee.FeatureCollection(tables).flatten();
   
-    print('tables', tables.limit(1000),tables.aggregate_array('metric_name').distinct());
+    print('tables', tables.limit(100),tables.aggregate_array('metric_name').distinct());
     
     // Exportar para o Drive
     Export.table.toDrive({

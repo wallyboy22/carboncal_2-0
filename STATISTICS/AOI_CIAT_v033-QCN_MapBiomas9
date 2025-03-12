@@ -130,7 +130,7 @@ var stack_observad = biomass_stock_carbon_degradation.slice(1)
     .addBands(co2e_logging)
     .addBands(co2e_removal)
     .addBands(biomass_stock_projection)
-    .multiply(aoi_id_image.divide(aoi_id_image));
+    .multiply(aoi_id_image.gt(0));
 
 Map.addLayer(stack_observad,{},'stack_observad');
 
@@ -138,7 +138,7 @@ print('bandnames',stack_observad.bandNames(),stack_observad.bandNames().map(func
 
 
 // Cálculo da área em hectares
-var pixelAreaHa = ee.Image.pixelArea().divide(1e4); // Converter m² para hectares
+var pixelAreaHa = ee.Image.pixelArea().divide(1e4).multiply(aoi_id_image.gt(0)); // Converter m² para hectares
 var pixelTonelada = stack_observad.multiply(pixelAreaHa); // Converter toneladas por hectare para hectare
 
 // Imagens dos biomas e estados para mapeamento territorial
@@ -267,7 +267,7 @@ var  niveis = ee.Dictionary(legends.get('lulc_mbc09_niveis')),
     print('bandnames_simples',bandnames_simples);
   
     var tables = bandnames
-      // .slice(-1) // Utilizando apenas o último ano (2023)
+      .slice(-1) // Utilizando apenas o último ano (2023)
       .map(function(bandname){
   
         var year = bandname.slice(-4);

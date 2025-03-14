@@ -397,20 +397,15 @@ var  niveis = ee.Dictionary(legends.get('lulc_mbc09_niveis')),
         });
         
         // Verificar o resultado
-        // print('Joined Features:', joinedFeatures);
-        // print('toneladas:', toneladas);
-        // print('areas:', areas);
-        
-        return {
-          'table_area':table_area,
-          'table_toneladas':table_toneladas,
-          'filter_join':filter_join,
-        }
+        // return {
+        //   'table_area':table_area,
+        //   'table_toneladas':table_toneladas,
+        //   'filter_join':filter_join,
+        // }
         
         return ee.FeatureCollection(table);
       });
-    
-    print('tables', tables)
+
     
     tables = ee.FeatureCollection(tables).flatten();
   

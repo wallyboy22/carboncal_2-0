@@ -87,8 +87,8 @@ var co2e_liquid = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/co2e_liquid_t_ha-C
 var co2e_logging = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/co2e_logging_t_ha-CIAT-QCN_MapBiomas9-1986_2023-v033');
 var co2e_removal = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/co2e_removal_t_ha-CIAT-QCN_MapBiomas9-1986_2023-v033');
 var biomass_stock_projection = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_carbon_projection_t_ha-CIAT-QCN_MapBiomas9-2024_2050-v033');
-//var deforestation_projection = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/co2e_deforestation_projection_t_ha-CIAT-QCN_MapBiomas9-2024_2050-v033');
-//var removal_projection = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/co2e_removal_projection_t_ha-CIAT-QCN_MapBiomas9-2024_2050-v033');
+var deforestation_projection = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/co2e_deforestation_projection_t_ha-CIAT-QCN_MapBiomas9-2024_2050-v033');
+var removal_projection = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/co2e_removal_projection_t_ha-CIAT-QCN_MapBiomas9-2024_2050-v033');
 
 
 var table_legal_amazon = ee.FeatureCollection('projects/mapbiomas-territories/assets/TERRITORIES/LULC/BRAZIL/COLLECTION9/WORKSPACE/LEGAL_AMAZON');
@@ -100,14 +100,14 @@ var bounds = table_legal_amazon.geometry().bounds();
 
 
 var stack_observad = biomass_stock_carbon_degradation.slice(1)
-    .addBands(co2e_deforestation)
+    //.addBands(co2e_deforestation)
     .addBands(co2e_fire)
     .addBands(co2e_liquid)
     .addBands(co2e_logging)
-    .addBands(co2e_removal)
+    //.addBands(co2e_removal)
     .addBands(biomass_stock_projection)
-    //.addBands(deforestation_projection)
-   // .addBands(removal_projection)
+    .addBands(deforestation_projection)
+    .addBands(removal_projection)
     .updateMask(image_legal_amazon);
 
 
@@ -250,14 +250,14 @@ var  niveis = ee.Dictionary(legends.get('lulc_mbc09_niveis')),
 
 [
   'biomass_stock',
-  'co2e_deforestation',
+  //'co2e_deforestation',
   'co2e_fire',
   'co2e_liquid',
   'co2e_logging',
-  'co2e_removal',
+  //'co2e_removal',
   'carbon_stock',
-  //'co2e_deforestation',
-  //'co2e_removal'
+  'co2e_deforestation',
+  'co2e_removal'
 ].forEach(function(band){
   
   pixelTonelada.select(band+'.*').bandNames().evaluate(function(bandnames){

@@ -179,6 +179,7 @@ print('deforestationSecondaryVeg_corrected',deforestationSecondaryVeg_corrected)
 var veg_sec = deforestationSecondaryVeg_corrected.eq(3).or(deforestationSecondaryVeg_corrected.eq(5));
 print('veg_sec',veg_sec);
 Map.addLayer(veg_sec,{},'veg_sec');
+Map.addLayer(deforestationSecondaryVeg_corrected,{},'deforestationSecondaryVeg_corrected');
 
 var container_increment = ee.Image(0);//.rename('classification_1985');
 var container_sec_veg_age = ee.Image().select();
@@ -316,7 +317,8 @@ years.forEach(function(year,i){
   if (year === 2024){
     carbon_projection = stk2023
       .where(increment_veg_sec_year.gt(0),increment_veg_sec_year)
-      .where(deforestation_year.eq(3),0).rename('carbon_stock_2024');
+      .where(deforestation_year.eq(3),0)
+      .rename('carbon_stock_2024');
   } else {
     var carbon_year = carbon_projection.slice(-1)
     .where(increment_veg_sec_year.gt(0),increment_veg_sec_year)
@@ -329,12 +331,13 @@ years.forEach(function(year,i){
 print('carbon_projection',carbon_projection);
 
 
-var co2e_projection = carbon_projection.addBands(carbon_projection.select('carbon_stock_2050').rename('carbon_stock_2051'))
-  .multiply(-3.67);
+var co2e_projection = carbon_projection
+  .addBands(carbon_projection.select('carbon_stock_2050').rename('carbon_stock_2051'));
 
-var co2e_projection_balance = co2e_projection
-  .subtract(stk2023.multiply(-3.67).addBands(co2e_projection.slice(0,-1)))
-  .slice(0,-1);
+var co2e_projection_balance = co2e_projection.aside(print,'1')
+  .subtract(stk2023.addBands(co2e_projection.slice(0,-1)).aside(print,'2'))
+  .slice(0,-1)
+  .multiply(-3.67);
 
 var co2e_projection_balance_deforestation = co2e_projection_balance.where(co2e_projection_balance.lt(0),0)
   .rename(co2e_projection_balance.bandNames().map(function(s){return ee.String('co2e_deforestation').cat(ee.String(s).slice(-5))}))
@@ -347,9 +350,13 @@ print('co2e_projection_balance_deforestation',co2e_projection_balance_deforestat
 print('co2e_projection_balance_removal',co2e_projection_balance_removal);
 
 Map.addLayer(carbon_projection,{},'carbon_projection');
-Map.addLayer(co2e_projection_balance,{},'co2e_projection');
+Map.addLayer(co2e_projection_balance,{},'co2e_projection_balance');
 Map.addLayer(co2e_projection_balance_deforestation,{},'co2e_projection_balance_deforestation');
 Map.addLayer(co2e_projection_balance_removal,{},'co2e_projection_balance_removal');
+
+Map.addLayer(stk.addBands(carbon_projection),{bands:'biomass_stock_2023'},'full carbon stock');
+
+
 
 /*Export.image.toAsset({
   image:carbon_projection,

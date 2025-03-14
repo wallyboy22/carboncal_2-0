@@ -252,12 +252,12 @@ var  niveis = ee.Dictionary(legends.get('lulc_mbc09_niveis')),
 
 [
   'biomass_stock',
-  'co2e_deforestation',
-  'co2e_fire',
-  'co2e_liquid',
-  'co2e_logging',
-  'co2e_removal',
-  'carbon_stock'
+  // 'co2e_deforestation',
+  // 'co2e_fire',
+  // 'co2e_liquid',
+  // 'co2e_logging',
+  // 'co2e_removal',
+  // 'carbon_stock'
 ].forEach(function(band){
   
   pixelTonelada.select(band+'.*').bandNames().evaluate(function(bandnames){
@@ -305,11 +305,12 @@ var  niveis = ee.Dictionary(legends.get('lulc_mbc09_niveis')),
 
                 var ciat_id = territory_int.mod(100).int();
                 
-                territory_int = territory_int.divide(100).int();
+                // BUG da tabela vazia: a sobrescrição dessa variavel causava uma distinção na propriedade index, utilizada no join entre as tabelas de area e carbono. (ver linhas, 293, 347 e 357)
+                // territory_int = territory_int.divide(100).int(); 
                 
-                var bioma_id = territory_int.mod(10).int();
+                var bioma_id = territory_int.divide(100).int().mod(10).int();
                 
-                var uf_id = territory_int.divide(10).int();
+                var uf_id = territory_int.divide(1000).int();
                 
                 
                 var area_ha = obj_n2.getNumber('sum');
@@ -339,7 +340,8 @@ var  niveis = ee.Dictionary(legends.get('lulc_mbc09_niveis')),
         
         table_area = ee.FeatureCollection(table_area).flatten();
         
-        // --- --- ---
+        
+        // // --- --- ---
         var observed_toneladas = pixelTonelada.select(bandname)
           .addBands(landCover_original.select('classification_' + year_lulc))
           .addBands(territory_img);
@@ -377,7 +379,7 @@ var  niveis = ee.Dictionary(legends.get('lulc_mbc09_niveis')),
         
         table_toneladas = ee.FeatureCollection(table_toneladas).flatten();
         
-        // --- --- ---
+        // // --- --- ---
         // Junção das tabelas de quantificação do total de área em hectares e carbono organico do solo em toneladas
         var  joinKey = 'index';
         var join = ee.Join.inner();
@@ -399,12 +401,20 @@ var  niveis = ee.Dictionary(legends.get('lulc_mbc09_niveis')),
         // print('toneladas:', toneladas);
         // print('areas:', areas);
         
+        return {
+          'table_area':table_area,
+          'table_toneladas':table_toneladas,
+          'filter_join':filter_join,
+        }
+        
         return ee.FeatureCollection(table);
       });
     
+    print('tables', tables)
+    
     tables = ee.FeatureCollection(tables).flatten();
   
-    print('tables', tables.limit(100),tables.aggregate_array('metric_name').distinct());
+    print('tables', tables.limit(100));
     
     // Exportar para o Drive
     Export.table.toDrive({

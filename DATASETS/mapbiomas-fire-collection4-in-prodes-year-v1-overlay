@@ -1,0 +1,214 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = 
+    /* color: #d63000 */
+    /* shown: false */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[-76.54780555077535, 6.702549891783329],
+          [-76.54780555077535, -36.49659065368281],
+          [-28.735305550775358, -36.49659065368281],
+          [-28.735305550775358, 6.702549891783329]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Carrega o asset com as bandas de 1985 a 2023
+// var fireCollection = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection3/mapbiomas_fire_collection3_monthly_burned_v1');
+var fireCollection = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4/mapbiomas_fire_collection4_monthly_burned_v1');
+
+// Gera a sequência de anos de 1986 a 2024
+ee.List.sequence(1986, 2024, 1).evaluate(function(years) {
+  
+  // Cria uma imagem vazia para armazenar as imagens anuais
+  var annualFireImages = ee.Image().select();
+  
+  // Loop para gerar as imagens anuais de queimadas
+  years.forEach(function(year) {
+    var bandPreviousYear = 'burned_monthly_' + (year - 1);
+    var bandCurrentYear = 'burned_monthly_' + year;
+    
+    // Seleciona as bandas do ano anterior e do ano atual
+    var selectedBands = fireCollection.select([bandPreviousYear, bandCurrentYear]);
+    
+    // Cria a máscara para os meses de agosto a dezembro do ano anterior
+    var maskedPreviousYear = selectedBands.select(bandPreviousYear).gte(8).multiply(1).unmask();
+    
+    // Cria a máscara para os meses de janeiro a julho do ano atual
+    var maskedCurrentYear = selectedBands.select(bandCurrentYear).lte(7).multiply(2).unmask();
+    
+    // Combina as máscaras e considerando a sobreposição dos dados de área queimada
+    // var leg = {
+    //   0: 'Não observado', // mascarado
+    //   1: 'Agosto e dezembro do ano anterior',
+    //   2: 'Janeiro a julho do ano atual',
+    //   3: 'Fogo nos dois periodos'
+    // };
+    
+    var mergedImage = maskedPreviousYear.add(maskedCurrentYear);
+    
+    // Transforma todas as ocorrências de fogo em 1
+    var binaryImage = mergedImage.selfMask();
+    
+    // Renomeia a banda para refletir o ano atual
+    var renamedImage = binaryImage.rename('burned_year_' + year);
+    
+    // Adiciona a imagem renomeada à lista de imagens anuais
+    annualFireImages = annualFireImages.addBands(renamedImage);
+  });
+  
+  // Exibe a imagem final no console para inspeção
+  print('Imagem Final com Múltiplas Bandas:', annualFireImages);
+  
+  // Define a descrição para a imagem exportada
+  var annualBurnedDescription = 'MapBiomas Fire Collection 4 - Imagens anuais de áreas queimadas (1986-2024).';
+
+  // Exporta a imagem anual de queimadas concatenada para um asset
+  Export.image.toAsset({
+    image: annualFireImages.set('description', annualBurnedDescription),
+    description: 'mapbiomas_fire_collection4_annual_burned_areas_v1_overlay',
+    assetId: 'projects/ee-ipam/assets/CCAL/DATASETS/MAPBIOMAS/mapbiomas_fire_collection4_monthly_burned_areas_prodes_year_v1_overlay',
+    scale: 30,
+    region: fireCollection.geometry(),
+    maxPixels: 1e13
+  });
+
+  // Visualiza a banda correspondente ao ano de 2023 no mapa
+  // Map.addLayer(annualFireImages, 
+  //             {bands:['burned_year_2023'],min: 0, max: 1, palette: ['white', 'red']}, 'Fogo 2023 - AProdes');
+  
+  
+  // --- --- dado ja exportado
+  // annualFireImages = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/MAPBIOMAS/mapbiomas_fire_monthly_burned_areas_prodes_year_v1_overlay');
+  annualFireImages = annualFireImages.select(annualFireImages.bandNames(),annualFireImages.bandNames().map(function(str){return ee.String(str).slice(-4)}));
+// print(annualFireImages);
+  var options = {
+    dataLayers:[
+      {
+        name: 'mapbiomas - ano prodes',
+        image: annualFireImages,
+        valueLabels: [
+        {value:0, label: 'Não observado'}, // mascarado
+        {value:1, label: 'Agosto e dezembro do ano anterior'},
+        {value:2, label: 'Janeiro a julho do ano atual'},
+        {value:3, label: 'Fogo nos dois periodos'},
+        ],
+        visParams:{
+          palette:['#ffffff','#120B8F','#F24F02','#5DFC6E'],
+          min:0,
+          max:3
+        },
+        initTrueBandsLayer:['2023'/*,'2005'*/],
+  
+      },
+    ]
+  };
+  require('users/workspaceipam/packpages:toolkits/roku/production').start(options);
+  
+  stop;
+  
+  // Função para calcular o Tempo Após o Fogo (Time After Fire - TAF)
+  var scars = annualFireImages.gte(1).selfMask();
+  
+  function timeAfterFire(current, previous) {
+    var year = ee.Number(current).int();
+    var yearPost = year.add(1);
+  
+    var sliceIndex = ee.List(years).indexOf(current);
+    sliceIndex = ee.Number(sliceIndex).add(1);
+    var sliceList = ee.List(years).slice(0, sliceIndex, 1);
+  
+    var alreadyBurned = sliceList.map(function(y) {
+      return scars.select([ee.String('burned_year_').cat(ee.Number(y).int())])
+        .rename('time_after_fire');
+    });
+    alreadyBurned = ee.ImageCollection(alreadyBurned).mosaic().byte();
+    alreadyBurned = ee.Image(1).updateMask(alreadyBurned).byte();
+  
+    var burnedThisYear = ee.Image(1).updateMask(scars.select([ee.String('burned_year_').cat(year)]))
+      .byte();
+  
+    var newImage = ee.Image(previous)
+      .select(ee.String('time_after_fire_').cat(year))
+      .add(alreadyBurned).byte();
+  
+    newImage = newImage.blend(burnedThisYear);
+  
+    return ee.Image(previous)
+      .addBands(
+        newImage.rename(ee.String('time_after_fire_').cat(yearPost))
+      );
+  }
+  
+  var first = ee.Image(0).mask(0).rename('time_after_fire_' + ''+years[0]);
+  var timeAfterFireImage = ee.List(years).iterate(timeAfterFire, first);
+  timeAfterFireImage = ee.Image(timeAfterFireImage).slice(1);
+
+  // Atualiza a imagem para o tempo após o fogo
+  timeAfterFireImage = scars.multiply(0).blend(timeAfterFireImage).rename(timeAfterFireImage.bandNames());
+
+  // Define a descrição para a imagem de tempo após o fogo
+  var tafDescription = 'MapBiomas Fire Collection 4 - Tempo após o fogo (TAF) acumulado de 1986-2024.';
+
+  // Exporta a imagem de Tempo Após o Fogo (TAF)
+  Export.image.toAsset({
+    image: timeAfterFireImage.set('description', tafDescription),
+    description: 'mapbiomas_fire_collection4_time_after_fire_v1',
+    assetId: 'projects/ee-ipam/assets/CCAL/DATASETS/MAPBIOMAS/mapbiomas_fire_collection4_time_after_fire_v1_prodes_year',
+    scale: 30,
+    region: fireCollection.geometry(),
+    maxPixels: 1e13
+  });
+  
+  // Função para calcular a Recorrência de Fogo
+  function fireRecurrence(current, previous) {
+    var year = ee.String(current);
+    var bandname = ee.String('fire_recurrence_').cat(''+years[0]).cat('_').cat(year);
+    var fireYear = scars.select(ee.String('burned_year_').cat(year));
+    var newImg = ee.Image(previous).slice(-1).unmask().add(fireYear.unmask()).selfMask().rename(bandname);
+    
+    return ee.Image(previous).addBands(newImg);
+  }
+  
+  var firstRecurrence = scars.slice(0, 1).rename(ee.String('fire_recurrence_').cat(''+years[0]).cat('_').cat(''+years[0]));
+  var fireRecurrenceImage = ee.List(years).iterate(fireRecurrence, firstRecurrence);
+  fireRecurrenceImage = ee.Image(fireRecurrenceImage);
+
+  // Define a descrição para a imagem de recorrência de fogo
+  var recurrenceDescription = 'MapBiomas Fire Collection 4 - Recorrência de fogo de 1986 a 2024.';
+
+  // Exporta a imagem de Recorrência de Fogo
+  Export.image.toAsset({
+    image: fireRecurrenceImage.set('description', recurrenceDescription),
+    description: 'mapbiomas_fire_collection4_fire_recurrence_v1',
+    assetId: 'projects/ee-ipam/assets/CCAL/DATASETS/MAPBIOMAS/mapbiomas_fire_collection4_recurrence_v1_prodes_year',
+    scale: 30,
+    region: fireCollection.geometry(),
+    maxPixels: 1e13
+  });
+  
+  // Visualization
+  var palette = [
+    "FFFFFF", "800000", "850708", "8B0E0F", "901417", "961B1E",
+    "9B2226", "9F2222", "A3211E", "A6211A", "AA2016", "AE2012",
+    "B42E0F", "B93C0C", "BF4B08", "C45905", "CA6702", "BF7C27",
+    "B4924D", "AAA772", "9FBD98", "94D2BD", "78C5B5", "5DB9AD",
+    "41ACA6", "26A09E", "0A9396", "0876AB", "0658C0", "043BD5",
+    "021DEA", "0000FF", "0000E6", "0000CC", "0000B3", "000080"
+  ];
+  
+  
+  var visParams_taf = {
+    bands:['time_after_fire_2024'],
+    min: 0,
+    max: 39,
+    palette: palette
+  };
+
+  
+  // Visualiza a banda correspondente ao tempo após o fogo e recorrência de fogo no mapa
+  Map.addLayer(timeAfterFireImage, 
+               visParams_taf, 'Tempo Após Fogo 2024');
+  
+  Map.addLayer(fireRecurrenceImage,{bands:['fire_recurrence_1986_2024'],min: 1, max: 39, palette: require('users/geomapeamentoipam/MapBiomas__Fogo:00_Tools/Palettes.js').get('frequencia')}, 'Recorrência de Fogo 2023');
+});

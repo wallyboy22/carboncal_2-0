@@ -220,7 +220,7 @@ var deforestationSecondaryVeg_corrected = processBands(bandnames).byte();
 // var increment = ee.FeatureCollection('projects/ee-ipam/assets/SEEG/CIAT/incrementos');
 var increment = ee.FeatureCollection('projects/ee-ipam/assets/SEEG/CIAT/incrementos-v3');
 print('increment',increment);
-stop
+
 print('deforestationSecondaryVeg_corrected',deforestationSecondaryVeg_corrected);
 var veg_sec = deforestationSecondaryVeg_corrected.eq(3).or(deforestationSecondaryVeg_corrected.eq(5));
 print('veg_sec',veg_sec);
@@ -245,8 +245,11 @@ bandnames.slice(1,-1).forEach(function(bandname,i){
   
   [
     'Amazônia',
+    // 'Caatinga',
     'Cerrado',
-    'Pantanal'
+    // 'Mata Atlântica',
+    // 'Pampa',
+    'Pantanal',
   ] .forEach(function(biome_str){
 
       var biome_img = ee.Image().paint(biomes.filter(ee.Filter.equals('Bioma',biome_str))).eq(0);

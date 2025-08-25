@@ -267,14 +267,12 @@ bandnames.forEach(function(bandname,i){
       var grass_increment_table = increment
         .filter(ee.Filter.equals('Bioma',biome_str))
         .filter(ee.Filter.equals('﻿Classe','G'))
-        .first()
-        // .aside(print,'grass_increment_table');
+        .first();
         
       var forest_increment_table = increment
         .filter(ee.Filter.equals('Bioma',biome_str))
         .filter(ee.Filter.equals('﻿Classe','F'))
-        .first()
-        // .aside(print,'forest_increment_table');
+        .first();
       
       
       var grass_increment_lt20 = grass_increment_table.getNumber('Ctotal_ate20');

@@ -24,15 +24,14 @@ var geometry =
 //_______________________________________________________________________________
 
 // --- --- --- VERSION
-var version = 'SEEG12';
-
+var version = 'SEEG13';
 // --- --- --- ASSETS
-var time_since_fire = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection3_1/mapbiomas_fire_collection31_time_after_fire_v1'),
-    frequence_fire = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection3_1/mapbiomas_fire_collection31_fire_recurrence_v1').slice(0,39),
-    annual_fire = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection3_1/mapbiomas_fire_collection31_annual_burned_v1').selfMask(),
+var time_since_fire = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_time_after_fire_v1'),
+    frequence_fire = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_fire_recurrence_v1').slice(0,39),
+    annual_fire = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_annual_burned_v1').selfMask(),
     annual_fire_freq_gte2 = annual_fire.updateMask(frequence_fire.gte(2)).gte(1),
 
-    qcn = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/RETIFICACAO/c_rect_col9'),
+    qcn = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/RETIFICACAO/c_rect_col10'),
 
     fwd = qcn.select('LITTER'),
     cwd = qcn.select('CDW'),
@@ -44,7 +43,7 @@ var time_since_fire = ee.Image('projects/mapbiomas-public/assets/brazil/fire/col
     // municipios = ee.Image('projects/ee-seeg-brazil/assets/collection_9/v1/mun_BR');
 
 // Mascara de florestas estaveis
-var mask_stable_col = ee.ImageCollection('projects/ee-ipam/assets/SEEG/SEEG12/12_1_3_Stable_cover').toBands();
+var mask_stable_col = ee.ImageCollection('projects/ee-ipam/assets/SEEG/SEEG13/13_3_Stable_cover').toBands();
 var mask_stable = mask_stable_col.rename(mask_stable_col.bandNames().map(function(str){  return ee.String(str).slice(14);}));
 // mascara estavel do ultimo ano
 mask_stable = mask_stable.slice(-1).eq(3).selfMask();

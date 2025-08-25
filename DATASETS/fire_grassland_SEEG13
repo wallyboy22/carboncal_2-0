@@ -166,6 +166,7 @@ list_biomes.forEach(function(biome){
     Map.addLayer(image)
     
     var name = list[1];
+    var split = name.split('_');
     print(image)
     
     image.bandNames().evaluate(function(oldBands){
@@ -174,10 +175,20 @@ list_biomes.forEach(function(biome){
       image = image.select(oldBands,newBands)
         .round()
         .int32();
-  
+      
       var version = 'grassland_SEEG13';
       var description = biome+'-'+name + '-' + version;
       var address = 'projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/';
+      
+      var newProps = {
+        date_create:ee.Date(Date.now()).format('y-M-d'),
+        source:'SEEG',
+        theme:'Grassland fire emissions',
+        version: version,
+        unit: 'g ' + split[0] + ' ha-1', 
+        biome:biome
+      };
+
       
       Map.addLayer(image,{},description,false);
       

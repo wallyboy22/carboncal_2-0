@@ -196,8 +196,6 @@ function processBands(bandnames) {
       var prev_bands = bandnames_extend.slice(0, index);
       var post_bands = bandnames_extend.slice(index + 1);
   
-      var sec_veg = deforestationSecondaryVegRaw.select(bandname);
-      var sec_veg_7 = sec_veg.eq(7);
 
       var img_prev_bands = simple_lulc_extended.select(prev_bands).reduce('lastNonNull');
       var img_post_bands = simple_lulc_extended.select(post_bands).reduce('firstNonNull');
@@ -208,8 +206,10 @@ function processBands(bandnames) {
       var remap_1 = [0, 1, 2,  1,  1,  3,  2,  1,  2];
       // 🔹 Mapeamento de pixels (remapeando valores)
       var remap = sum.remap(remap_0, remap_1);
+
+      var sec_veg_year = deforestationSecondaryVegRaw.select(bandname);
   
-      var final_image = sec_veg.where(sec_veg.eq(7), remap);
+      var final_image = sec_veg_year.where(sec_veg_year.eq(7), remap);
       container = container.addBands(final_image);
     });
 

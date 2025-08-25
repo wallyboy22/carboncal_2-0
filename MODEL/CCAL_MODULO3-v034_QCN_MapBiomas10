@@ -179,9 +179,11 @@ function processBands(bandnames) {
   
   var container = ee.Image().select();
   
-  var simple_lulc_extended = simple_lulc.select('classification_1985').rename('classification_1984')
-      .addBands(simple_lulc)
-      .addBands(simple_lulc.select('classification_2024').rename('classification_2025'));
+  var simple_lulc_extended = simple_lulc.updateMask(deforestationSecondaryVegRaw.neq(7));
+
+  simple_lulc_extended = simple_lulc_extended.select('classification_1985').rename('classification_1984')
+      .addBands(simple_lulc_extended)
+      .addBands(simple_lulc_extended.select('classification_2024').rename('classification_2025'));
   
   var bandnames_extend = ['classification_1984']
     .concat(bandnames)
@@ -191,15 +193,14 @@ function processBands(bandnames) {
     .slice(1,-1)
     .forEach(function(bandname) {
       var index = bandnames_extend.indexOf(bandname);
-      var prev_bands = bandnames_extend.slice(0, index).reverse();
+      var prev_bands = bandnames_extend.slice(0, index);
       var post_bands = bandnames_extend.slice(index + 1);
   
       var sec_veg = deforestationSecondaryVegRaw.select(bandname);
       var sec_veg_7 = sec_veg.eq(7);
-      var img_bandname = simple_lulc.select(bandname);
-  
-      var img_prev_bands = simple_lulc_extended.select(prev_bands).updateMask(sec_veg_7).reduce('first');
-      var img_post_bands = simple_lulc_extended.select(post_bands).updateMask(sec_veg_7).reduce('first');
+
+      var img_prev_bands = simple_lulc_extended.select(prev_bands).reduce('lastNonNull');
+      var img_post_bands = simple_lulc_extended.select(post_bands).reduce('firstNonNull');
   
       var sum = img_prev_bands.unmask().multiply(10).add(img_post_bands.unmask()).selfMask();
       

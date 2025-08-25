@@ -8,7 +8,7 @@ var geometry =
           [-28.735305550775358, -36.49659065368281],
           [-28.735305550775358, 6.702549891783329]]], null, false);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
-//SEEG_12 emissoes por fogo em CAMPOS
+//SEEG_13 emissoes por fogo em CAMPOS
 
 //_____________________________________________________________________________ 
 // GHG emissions from field fires not related to land clearance
@@ -17,21 +17,19 @@ var geometry =
 //
 //
 // Created by: Camila Silva, Aline Pontes e Wallace Silva
-// Last edited: 18 Oct 2024
+// Last edited: 25 Ago 2025
 //_______________________________________________________________________________
 
-
-
 // --- --- --- ASSETS
-var annual_fire = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection3_1/mapbiomas_fire_collection31_annual_burned_v1').selfMask(),
+var annual_fire = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_annual_burned_v1').selfMask(),
     
     // Mascara de florestas estaveis
-    mask_stable_col = ee.ImageCollection('projects/ee-ipam/assets/SEEG/SEEG12/12_1_3_Stable_cover').toBands(),
+    mask_stable_col = ee.ImageCollection('projects/ee-ipam/assets/SEEG/SEEG13/13_3_Stable_cover').toBands(),
     mask_stable = mask_stable_col.rename(mask_stable_col.bandNames().map(function(str){  return ee.String(str).slice(14);})),
     // mascara estavel do ultimo ano
     mask_stable = mask_stable.slice(-1).eq(3).selfMask(),
 
-    qcn = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/RETIFICACAO/c_rect_col9'),
+    qcn = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/RETIFICACAO/c_rect_col10'),
 
     fwd = qcn.select('LITTER'),
     cwd = qcn.select('CDW'),
@@ -177,9 +175,9 @@ list_biomes.forEach(function(biome){
         .round()
         .int32();
   
-      var version = 'SEEG12';
+      var version = 'grassland_SEEG13';
       var description = biome+'-'+name + '-' + version;
-      var address = 'projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/';
+      var address = 'projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/';
       
       Map.addLayer(image,{},description,false);
       
@@ -197,30 +195,30 @@ list_biomes.forEach(function(biome){
       });
       
       // - convert table export to drive 
-      // var table =  image
-      //   .multiply(ee.Image.pixelArea().divide(10000)) // convert pixel area in meters to hectare
-      //   .reduceRegions({
-      //     collection:featureCollection,
-      //     reducer:ee.Reducer.sum(),
-      //     scale:30, 
-      //     // crs:,
-      //     // crsTransform:,
-      //     // tileScale:
-      //   });
+      var table =  image
+        .multiply(ee.Image.pixelArea().divide(10000)) // convert pixel area in meters to hectare
+        .reduceRegions({
+          collection:featureCollection,
+          reducer:ee.Reducer.sum(),
+          scale:30, 
+          // crs:,
+          // crsTransform:,
+          // tileScale:
+        });
       
-      // table=table.map(function(feature){return ee.Feature(null).copyProperties(feature)})
+      table=table.map(function(feature){return ee.Feature(null).copyProperties(feature)})
       
-      // print(table.limit(2),table)
+      print(table.limit(2),table)
       
-      // Export.table.toDrive({
-      //   collection:table,
-      //   description:description,
-      //   folder:'SEEG11/Campos',
-      //   fileNamePrefix:description,
-      //   fileFormat:'csv',
-      //   // selectors:,
-      //   // maxVertices:
-      // });
+      Export.table.toDrive({
+        collection:table,
+        description:description,
+        folder:'SEEG13',
+        fileNamePrefix:description,
+        fileFormat:'csv',
+        // selectors:,
+        // maxVertices:
+      });
         
     });
   });

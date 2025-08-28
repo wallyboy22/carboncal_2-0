@@ -52,7 +52,7 @@ var erro_fogo_veg_primaria = /* color: #d63000 */ee.Geometry.Point([-55.62531891
  *   - Definição de parâmetros visuais e legendas para camadas de mapas.
  *
  * Autores: Wallace Silva e Bárbara Zimbres
- * Data: 2024-12-2024
+ * Data: 28-08-2025
  */
 
 // ======================================
@@ -118,15 +118,13 @@ var legends = {
 // Carrega shapefile dos biomas (ex.: Amazônia, Cerrado, etc.)
 var biomes = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
 
+print('deforestationSecondaryVegRaw',deforestationSecondaryVegRaw);
+
 // Carrega a imagem de desmatamento e vegetação secundária do MapBiomas Collection 9
-var deforestationSecondaryVegRaw = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection9/mapbiomas_collection90_deforestation_secondary_vegetation_v1');
-// O valor é dividido por 100 e convertido para inteiro para facilitar a reclassificação
-var deforestationSecondaryVeg = deforestationSecondaryVegRaw.divide(100).int();
-// A parte de LULC é extraída através do módulo da operação (resto da divisão por 100)
-var lulc = deforestationSecondaryVegRaw.mod(100).int();
+var deforestationSecondaryVeg = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10/mapbiomas_brazil_collection10_deforestation_secondary_vegetation_v2');
 
 // Carrega os dados LULC originais, úteis para identificar áreas permanentemente submersas
-var lulcOriginal = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection9/mapbiomas_collection90_integration_v1');
+var lulcOriginal = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10/mapbiomas_brazil_collection10_integration_v2');
 
 // ======================================
 // 3. Reclassificação do LULC para simplificação e interpretação
@@ -134,12 +132,11 @@ var lulcOriginal = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collec
 
 // Mapeamento: valores antigos são convertidos para duas classes principais:
 // [1] para áreas antropogênicas e [2] para vegetação
-var old_values = [3, 4, 5, 6, 49, 11, 12, 29, 50, 13, 15, 19, 39, 20, 40, 62, 41, 46, 47, 35, 48, 9, 21, 23, 24, 30, 25, 33, 31];
-var new_values = [2, 2, 2, 2,  2,  2,  2,  2,  2,  2,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  2,  1,  1,  1,  2,  1];
+var old_values = [3, 4, 5, 6, 49, 11, 12, 29, 50, 13, 15, 19, 39, 20, 40, 62, 41, 46, 47, 35, 48, 9, 21, 23, 24, 75, 30, 25, 33, 31];
+var new_values = [2, 2, 2, 2,  2,  2,  2,  2,  2,  2,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  2,  1,  1,  1,  1,  2,  1];
 
 // Cria uma imagem simples a partir do LULC original e duplica a banda de 2023 para 2024
-var simple_lulc = lulcOriginal;
-simple_lulc = simple_lulc.addBands(simple_lulc.select('classification_2023').rename('classification_2024')); // duplicando dado de 2023 para servir como "img_post_bands" do ultimo ano
+var simple_lulc = lulcOriginal.multiply(0);
 
 // Aplica a reclassificação usando os arrays definidos
 old_values.forEach(function(value, i) {
@@ -156,60 +153,59 @@ old_values.forEach(function(value, i) {
  * 
  * @returns {ee.Image} Imagem com as transições corrigidas.
  */
-function defining_other_transitions() {
-  // Inicializa um contêiner vazio para acumular as bandas processadas
+// 🔹 Função para calcular mudanças temporais
+function processBands(bandnames) {
   var container = ee.Image().select();
-  
-  // Define os nomes das bandas correspondentes a cada ano (1985 a 2023)
-  var bandnames = [
-    'classification_1985', // ano base para comparação com 1986
-    'classification_1986','classification_1987','classification_1988','classification_1989','classification_1990',
-    'classification_1991','classification_1992','classification_1993','classification_1994','classification_1995',
-    'classification_1996','classification_1997','classification_1998','classification_1999','classification_2000',
-    'classification_2001','classification_2002','classification_2003','classification_2004','classification_2005',
-    'classification_2006','classification_2007','classification_2008','classification_2009','classification_2010',
-    'classification_2011','classification_2012','classification_2013','classification_2014','classification_2015',
-    'classification_2016','classification_2017','classification_2018','classification_2019','classification_2020',
-    'classification_2021','classification_2022','classification_2023','classification_2024'
-  ];
 
-  // Itera sobre cada banda, exceto a primeira, para verificar a condição de transição
-  bandnames.slice(1,-1).forEach(function(bandname) {
-    var index = bandnames.indexOf(bandname);
-    var prev_bands = bandnames.slice(0, index);       // bandas anteriores
-    var post_bands = bandnames.slice(index + 1);        // bandas posteriores
+  // Cria uma máscara para processar apenas os pixels que não têm o valor 7.
+  var simple_lulc_extended = simple_lulc.updateMask(deforestationSecondaryVegRaw.neq(7));
 
-    // Seleciona a banda atual de vegetação secundária
-    var sec_veg = deforestationSecondaryVeg.select(bandname);
-    // Cria uma máscara para os pixels com valor 7 (transição específica)
-    var sec_veg_7 = sec_veg.eq(7);
-    // Seleciona a banda correspondente no LULC - DUVIDA: LULC ORIGINAL OU LULC
-    var img_bandname = simple_lulc.select(bandname);
+  // Estende a série temporal para garantir que a busca por anos vizinhos funcione nos extremos.
+  simple_lulc_extended = simple_lulc_extended
+    .select('classification_1985').rename('classification_1984')
+    .addBands(simple_lulc_extended)
+    .addBands(simple_lulc.select('classification_2024').rename('classification_2025'));
 
-    // Agrega os valores das bandas anteriores e posteriores para pixels que não são 7
-    var img_prev_bands = simple_lulc.select(prev_bands).updateMask(sec_veg_7.neq(0)).reduce('first');
-    var img_post_bands = simple_lulc.select(post_bands).updateMask(sec_veg_7.neq(0)).reduce('first');
-    
-    // Combina os valores anteriores e posteriores: a multiplicação por 10 cria um código único para remapeamento
+  var bandnames_extend = ['classification_1984'].concat(bandnames).concat(['classification_2025']);
+
+  // Itera sobre cada ano para aplicar a correção.
+  bandnames.forEach(function(bandname) {
+    var index = bandnames_extend.indexOf(bandname);
+    var prev_bands = bandnames_extend.slice(0, index);
+    var post_bands = bandnames_extend.slice(index + 1);
+
+    var img_prev_bands = simple_lulc_extended.select(prev_bands).reduce('lastNonNull');
+    var img_post_bands = simple_lulc_extended.select(post_bands).reduce('firstNonNull');
+
     var sum = img_prev_bands.unmask().multiply(10).add(img_post_bands.unmask()).selfMask();
-
-    // Define arrays para remapeamento
+    
     var remap_0 = [0, 1, 2, 10, 11, 12, 20, 21, 22];
     var remap_1 = [0, 1, 2, 1, 1, 3, 2, 1, 2];
-    // Aplica o remapeamento para os pixels com transição "7"
     var remap = sum.remap(remap_0, remap_1);
 
-    // Substitui os valores da imagem de vegetação secundária para os pixels onde a condição se aplica
-    var final_image = sec_veg.where(sec_veg.eq(7), remap);
-    // Adiciona a banda processada ao contêiner
+    var sec_veg_year = deforestationSecondaryVegRaw.select(bandname);
+    var final_image = sec_veg_year.where(sec_veg_year.eq(7), remap);
+
     container = container.addBands(final_image);
   });
 
-  return container;
+  return container.byte();
 }
 
-// Executa a função para corrigir as transições no desmatamento/vegetação secundária
-var deforestationSecondaryVeg_corrected = defining_other_transitions();
+var bandnames = [
+  'classification_1985','classification_1986','classification_1987','classification_1988','classification_1989',
+  'classification_1990','classification_1991','classification_1992','classification_1993','classification_1994',
+  'classification_1995','classification_1996','classification_1997','classification_1998','classification_1999',
+  'classification_2000','classification_2001','classification_2002','classification_2003','classification_2004',
+  'classification_2005','classification_2006','classification_2007','classification_2008','classification_2009',
+  'classification_2010','classification_2011','classification_2012','classification_2013','classification_2014',
+  'classification_2015','classification_2016','classification_2017','classification_2018','classification_2019',
+  'classification_2020','classification_2021','classification_2022','classification_2023','classification_2024',
+];
+
+// 🔹 Executando a função de processamento
+var deforestationSecondaryVeg_corrected = processBands(bandnames);
+
 print("deforestationSecondaryVeg_corrected",deforestationSecondaryVeg_corrected);
 // ======================================
 // 5. Identificação de áreas de água e submersão permanente
@@ -222,7 +218,7 @@ var waterOccurrence = lulcOriginal.eq(33)
   .reduce('sum');
 
 // Define áreas que permanecem submersas quando a ocorrência de água é maior ou igual a 37
-var alwaysSubmerged = waterOccurrence.gte(37).selfMask();
+var alwaysSubmerged = waterOccurrence.gte(38).selfMask();
 
 // ======================================
 // 6. Configuração dos estilos e adição das camadas no mapa
@@ -263,32 +259,32 @@ Map.addLayer(deforestationSecondaryVeg.eq(5).reduce('sum').selfMask(), visParams
 
 // Emissões para florestasCO₂
 var fireForestBalance_co2 = ee.ImageCollection([
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/amazonia-CO2_Mg_ha_balance-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/caatinga-CO2_Mg_ha_balance-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/cerrado-CO2_Mg_ha_balance-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/mata_atlantica-CO2_Mg_ha_balance-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/pampa-CO2_Mg_ha_balance-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/pantanal-CO2_Mg_ha_balance-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/amazonia-CO2_Mg_ha_balance-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/caatinga-CO2_Mg_ha_balance-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/cerrado-CO2_Mg_ha_balance-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/mata_atlantica-CO2_Mg_ha_balance-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/pampa-CO2_Mg_ha_balance-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/pantanal-CO2_Mg_ha_balance-SEEG13'),
 ]).mosaic().float();
 
 // Emissões de CH₄ para florestas, convertendo para CO₂e (multiplicador 28)
 var fireForestBalance_ch4 = ee.ImageCollection([
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/amazonia-CH4_g_ha_comb-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/caatinga-CH4_g_ha_comb-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/cerrado-CH4_g_ha_comb-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/mata_atlantica-CH4_g_ha_comb-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/pampa-CH4_g_ha_comb-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/pantanal-CH4_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/amazonia-CH4_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/caatinga-CH4_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/cerrado-CH4_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/mata_atlantica-CH4_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/pampa-CH4_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/pantanal-CH4_g_ha_comb-SEEG13'),
 ]).mosaic().float().multiply(28).divide(1000000);
 
 // Emissões de N₂O para florestas, convertendo para CO₂e (multiplicador 265)
 var fireForestBalance_n2o = ee.ImageCollection([
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/amazonia-N2O_g_ha_comb-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/caatinga-N2O_g_ha_comb-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/cerrado-N2O_g_ha_comb-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/mata_atlantica-N2O_g_ha_comb-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/pampa-N2O_g_ha_comb-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/FLORESTA/pantanal-N2O_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/amazonia-N2O_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/caatinga-N2O_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/cerrado-N2O_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/mata_atlantica-N2O_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/pampa-N2O_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/pantanal-N2O_g_ha_comb-SEEG13'),
 ]).mosaic().float().multiply(265).divide(1000000);
 
 // Combina os componentes de emissões para florestas em CO₂e
@@ -299,11 +295,11 @@ var fireForestBalance_co2e = fireForestBalance_co2
 // EMISSÕES PARA SAVANAS
 
 // Emissões para savanas (CO₂)
-var fireSavannaBalance_co2 = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/savanas_fogo_seeg12_v2/brasil_savanas_co2_all_years_v2').float();
+var fireSavannaBalance_co2 = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/SAVANA/brasil_savanas_co2_all_years_v2').float();
 // Emissões para savanas (CH₄)
-var fireSavannaBalance_ch4 = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/savanas_fogo_seeg12_v2/brasil_savanas_ch4_all_years_v2').float().multiply(28);
+var fireSavannaBalance_ch4 = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/SAVANA/brasil_savanas_ch4_all_years_v2').float().multiply(28);
 // Emissões para savanas (N₂O)
-var fireSavannaBalance_n2o = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/savanas_fogo_seeg12_v2/brasil_savanas_n2o_all_years_v2').float().multiply(265);
+var fireSavannaBalance_n2o = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/SAVANA/brasil_savanas_n2o_all_years_v2').float().multiply(265);
 
 // Combina os componentes para savanas em CO₂e
 var fireSavannaBalance_co2e = fireSavannaBalance_co2
@@ -315,22 +311,22 @@ var fireSavannaBalance_co2e = fireSavannaBalance_co2
 
 // Emissões para campos (CH₄)
 var fireGrasslandBalance_ch4 = ee.ImageCollection([
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/amazonia-CH4_g_ha_comb-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/caatinga-CH4_g_ha_comb-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/cerrado-CH4_g_ha_comb-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/mata_atlantica-CH4_g_ha_comb-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/pampa-CH4_g_ha_comb-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/pantanal-CH4_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/amazonia-CH4_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/caatinga-CH4_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/cerrado-CH4_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/mata_atlantica-CH4_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/pampa-CH4_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/pantanal-CH4_g_ha_comb-SEEG13'),
 ]).mosaic().float().multiply(28).divide(1000000);
 
 // Emissões para campos (N₂O)
 var fireGrasslandBalance_n2o = ee.ImageCollection([
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/amazonia-N2O_g_ha_comb-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/caatinga-N2O_g_ha_comb-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/cerrado-N2O_g_ha_comb-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/mata_atlantica-N2O_g_ha_comb-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/pampa-N2O_g_ha_comb-SEEG12'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/FOGO/CAMPO/pantanal-N2O_g_ha_comb-SEEG12'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/amazonia-N2O_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/caatinga-N2O_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/cerrado-N2O_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/mata_atlantica-N2O_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/pampa-N2O_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/pantanal-N2O_g_ha_comb-SEEG13'),
 ]).mosaic().float().multiply(265).divide(1000000);
 
 // Combina os componentes de emissões para campos em CO₂e
@@ -364,7 +360,7 @@ var fireEmiss_co2 = fireForestBalance_co2.unmask()
 */
 
 // Carrega dados de biomassa passada (AGB e Total) para referência
-var past_biomas_stock = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/RETIFICACAO/c_rect_col9');
+var past_biomas_stock = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/RETIFICACAO/c_rect_col10');
 var past_biomas_stock_total = past_biomas_stock.select('TOTAL');
 var past_biomas_stock_agb = past_biomas_stock.select('AGB');
 print('past_biomas_stock_agb',past_biomas_stock_agb);
@@ -373,15 +369,15 @@ Map.addLayer(past_biomas_stock_agb,{},'past_biomas_stock_agb');
 // Inicializa o AGB para extração seletiva (começa com o estoque passado)
 var agbSelectiveLogging = past_biomas_stock_agb;
 // Inicializa a imagem que acumulará os balanços anuais da extração seletiva, essas bandas são descartadas na imagem final de corte seletivo
-var selectiveLoggingBalance = fireEmiss_co2e.slice(0,31).unmask().multiply(0);
+var selectiveLoggingEmiss = fireEmiss_co2e.slice(0,31).unmask().multiply(0);
 
 // Para cada ano de interesse, processa os dados de desmatamento seletivo
-[2017, 2018, 2019, 2020, 2021, 2022, 2023].forEach(function (year) {
+[2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024].forEach(function (year) {
   // Carrega duas imagens para cada ano: uma com dados desordenados e outra com dados geométricos
   var slYearDis = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_disordered').unmask();
   var slYearGeo = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_geometric').unmask();
   
-  var stableForest = ee.Image('projects/ee-ipam/assets/SEEG/SEEG12/12_1_3_Stable_cover/SEEG_c12_2023')
+  var stableForest = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/13_3_Stable_cover/SEEG_c13_2024')
     .unmask().eq(3);
 
   var amazonBiome = biomes.filter(ee.Filter.equals('Bioma', 'Amazônia'));
@@ -409,11 +405,11 @@ var selectiveLoggingBalance = fireEmiss_co2e.slice(0,31).unmask().multiply(0);
   
 // 1840.75 / 3.64 = 505
   // Acumula o balanço da extração seletiva ao longo dos anos
-  selectiveLoggingBalance = selectiveLoggingBalance.addBands(slCarbonBalanceYear.multiply(3.67));
+  selectiveLoggingEmiss = selectiveLoggingEmiss.addBands(slCarbonBalanceYear.multiply(3.67));
 });
 
 // Adiciona a camada de balanço da extração seletiva ao mapa (opcional, desabilitada por padrão)
-Map.addLayer(selectiveLoggingBalance, {}, 'selectiveLoggingBalance', false);
+Map.addLayer(selectiveLoggingEmiss, {}, 'selectiveLoggingEmiss', false);
 Map.addLayer(fireEmiss_co2, {}, 'fireEmiss_co2', false);
 
 // ======================================
@@ -421,28 +417,15 @@ Map.addLayer(fireEmiss_co2, {}, 'fireEmiss_co2', false);
 // ======================================
 
 // Carrega a imagem do estoque de biomassa inicial calculado pelo CIAT-QCN
-var biomass_stock = ee.Image('projects/ee-ipam/assets/SEEG/CIAT/biomass_stock_tC_ha-CIAT-QCN_MapBiomas9-1986_2023-v033');
- 
+var biomass_stock = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/biomass_stock_tC_ha-CCAL_MODULO3-QCN_MapBiomas10-1985_2024-v034');
 
-  // Define os nomes das bandas correspondentes a cada ano (1985 a 2023)
-var bandnames = [
-  'classification_1986','classification_1987','classification_1988','classification_1989','classification_1990',
-  'classification_1991','classification_1992','classification_1993','classification_1994','classification_1995',
-  'classification_1996','classification_1997','classification_1998','classification_1999','classification_2000',
-  'classification_2001','classification_2002','classification_2003','classification_2004','classification_2005',
-  'classification_2006','classification_2007','classification_2008','classification_2009','classification_2010',
-  'classification_2011','classification_2012','classification_2013','classification_2014','classification_2015',
-  'classification_2016','classification_2017','classification_2018','classification_2019','classification_2020',
-  'classification_2021','classification_2022','classification_2023'
-];
-
-var accumulated_degradation = ee.Image(0).slice(0,1);
+var accumulated_degradation = ee.Image(0);
 
 bandnames.forEach(function(bandname,i){
 
   var accumulated_degradation_year = accumulated_degradation.slice(-1)
     .add(fireEmiss_co2.select(i).unmask().divide(3.67).multiply(-1))
-    .add(selectiveLoggingBalance.select(i).unmask().divide(3.67).multiply(-1))
+    .add(selectiveLoggingEmiss.select(i).unmask().divide(3.67).multiply(-1))
     .rename(bandname);
     
   accumulated_degradation = accumulated_degradation.addBands(accumulated_degradation_year);
@@ -459,11 +442,11 @@ Map.addLayer(accumulated_degradation,{},'accumulated_degradation');
 var biomass_stock_updated = biomass_stock
   .add(accumulated_degradation);
   
-  
 // // Atualiza o estoque de biomassa subtraindo as emissões de fogo e extração seletiva
 // var biomass_stock_updated = biomass_stock
 
 print('biomass_stock', biomass_stock);
+//////////////
 
 // Calcula o balanço de degradação/regeneração comparando o estoque atualizado com o estoque passado
 var def_reg_balance = biomass_stock
@@ -478,27 +461,20 @@ print('--- fireEmiss_co2e', fireEmiss_co2e);
 print('--- selectiveLoggingBalance', selectiveLoggingBalance);
 print('--- def_reg_balance', def_reg_balance);
 
-// Combina as emissões líquidas em uma única imagem
-var emiss_co2eLiqui = fireEmiss_co2e.unmask()
-  .add(selectiveLoggingBalance.unmask())
-  .add(def_reg_balance.unmask());
-
 // Ajusta os nomes das bandas para melhor identificação das categorias
-var emiss_co2e_final = emiss_co2eLiqui.rename(emiss_co2eLiqui.bandNames().map(function(s) {
-    return ee.String('co2e_liquid').cat(ee.String(s).slice(-5));
+var emiss_co2e_final = fireEmiss_co2e.unmask().rename(fireEmiss_co2e.bandNames().map(function(s) {
+    return ee.String('loss_fire').cat(ee.String(s).slice(-5));
   }))
-  .addBands(fireEmiss_co2e.unmask().rename(fireEmiss_co2e.bandNames().map(function(s) {
-    return ee.String('co2e_fire').cat(ee.String(s).slice(-5));
-  })))
-  .addBands(selectiveLoggingBalance.unmask().rename(selectiveLoggingBalance.bandNames().map(function(s) {
-    return ee.String('co2e_logging').cat(ee.String(s).slice(-5));
+  .addBands(selectiveLoggingBalance.unmask().rename(selectiveLoggingEmiss.bandNames().map(function(s) {
+    return ee.String('loss_selective_logging').cat(ee.String(s).slice(-5));
   })).slice(31))
   .addBands(def_reg_balance.unmask().updateMask(def_reg_balance.lt(0)).rename(def_reg_balance.bandNames().map(function(s) {
-    return ee.String('co2e_removal').cat(ee.String(s).slice(-5));
+    return ee.String('gain_secondary_vegetation').cat(ee.String(s).slice(-5));
   }))) // representa remoção de carbono
   .addBands(def_reg_balance.unmask().updateMask(def_reg_balance.gt(0)).rename(def_reg_balance.bandNames().map(function(s) {
-    return ee.String('co2e_deforestation').cat(ee.String(s).slice(-5));
+    return ee.String('loss_deforestation').cat(ee.String(s).slice(-5));
   }))) // representa emissões por desmatamento
+  .addBands(biomass_stock)
   .float();
 
 print("emiss_co2e_final", emiss_co2e_final);
@@ -507,29 +483,17 @@ print("emiss_co2e_final", emiss_co2e_final);
 Map.addLayer(biomass_stock_updated, {}, 'biomass_stock_updated', false);
 Map.addLayer(past_biomas_stock_total.addBands(biomass_stock), {}, 'biomass_stock', false);
 Map.addLayer(def_reg_balance, {}, 'def_reg_balance', false);
-Map.addLayer(emiss_co2eLiqui, {}, 'emiss_co2eLiqui', false);
 Map.addLayer(fireEmiss_co2e, {}, 'fireEmiss_co2e', false);
 
-Map.addLayer(emiss_co2e_final.select('co2e_liquid.*'), {}, 'co2e_liquid', false);
-Map.addLayer(emiss_co2e_final.select('co2e_fire.*'), {}, 'co2e_fire', false);
-Map.addLayer(emiss_co2e_final.select('co2e_logging.*'), {}, 'co2e_logging', false);
-Map.addLayer(emiss_co2e_final.select('co2e_removal.*'), {}, 'co2e_removal', false);
-Map.addLayer(emiss_co2e_final.select('co2e_deforestation.*'), {}, 'co2e_deforestation', false);
+Map.addLayer(emiss_co2e_final.select('loss_fire.*'), {}, 'co2e_fire', false);
+Map.addLayer(emiss_co2e_final.select('loss_selective_logging.*'), {}, 'co2e_logging', false);
+Map.addLayer(emiss_co2e_final.select('gain_secondary_vegetation.*'), {}, 'co2e_removal', false);
+Map.addLayer(emiss_co2e_final.select('loss_deforestation.*'), {}, 'co2e_deforestation', false);
 
 // ======================================
 // 9. Exportação do resultado final para um Asset no Earth Engine
 // ======================================
 
-[
-  ['biomass_stock_carbon_degradation_t_ha',past_biomas_stock_total.rename('biomass_stock_past').addBands(biomass_stock_updated).float()],
-  // ['biomass_stock_updated_t_ha',biomass_stock_updated.float(],
-  ['co2e_liquid_t_ha',emiss_co2e_final.select('co2e_liquid.*').float()],
-  ['co2e_fire_t_ha',emiss_co2e_final.select('co2e_fire.*').float()],
-  ['co2e_logging_t_ha',emiss_co2e_final.select('co2e_logging.*').float()],
-  ['co2e_removal_t_ha',emiss_co2e_final.select('co2e_removal.*').float()],
-  ['co2e_deforestation_t_ha',emiss_co2e_final.select('co2e_deforestation.*').float()],
-].forEach(function(list){
-  
   // Define a versão e os parâmetros de exportação
   var version = 'CIAT-QCN_MapBiomas9-1986_2023-v033';
   var description = list[0] + '-' + version;
@@ -544,7 +508,7 @@ Map.addLayer(emiss_co2e_final.select('co2e_deforestation.*'), {}, 'co2e_deforest
   // Exporta a imagem final de emissões líquidas para um asset,
   // definindo política de piramidação, escala e extensão
   Export.image.toAsset({
-    image: image,
+    image: emiss_co2e_final,
     description: 'W-SEEG_CCAL-' + description,
     assetId: assetId + description,
     pyramidingPolicy: 'median',
@@ -552,7 +516,6 @@ Map.addLayer(emiss_co2e_final.select('co2e_deforestation.*'), {}, 'co2e_deforest
     scale: 30,
     maxPixels: 1e13
   });
-});
 
 // ======================================
 // !!! final do script

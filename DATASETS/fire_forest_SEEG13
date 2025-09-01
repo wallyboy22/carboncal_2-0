@@ -209,11 +209,11 @@ var biome_dict = {
 };
 
 var list_biomes = [
-  'amazonia',
-  'caatinga',
-  'cerrado',
-  'mata_atlantica',
-  'pampa',
+  // 'amazonia',
+  // 'caatinga',
+  // 'cerrado',
+  // 'mata_atlantica',
+  // 'pampa',
   'pantanal',
 ];
 
@@ -466,11 +466,11 @@ list_biomes.forEach(function(biome){
   var NOX_g_ha = fAGNcomb.multiply(2000).multiply(1.6); // result in g NOX per hectare
   
   var lists_gases_non_co2 = [
-    [CO2_g_ha,'CO2_g_ha_comb_read_warning','ATENÇÃO: Essa é a emissão bruta da combustão e ja foi incluida no balanço (emissão liquida por combustão, decomposição e crescimento). Não somar com a camada de CO2 proveniente do balanço, para não gerar dupla contagem.'], // ATENÇÃO: Não somar com a camada de CO2 proveniente do balanço, pois pode gerar dupla contagem. 
+    // [CO2_g_ha,'CO2_g_ha_comb_read_warning','ATENÇÃO: Essa é a emissão bruta da combustão e ja foi incluida no balanço (emissão liquida por combustão, decomposição e crescimento). Não somar com a camada de CO2 proveniente do balanço, para não gerar dupla contagem.'], // ATENÇÃO: Não somar com a camada de CO2 proveniente do balanço, pois pode gerar dupla contagem. 
     [CO_g_ha,'CO_g_ha_comb'],
-    [CH4_g_ha,'CH4_g_ha_comb'],
-    [N2O_g_ha,'N2O_g_ha_comb'],
-    [NOX_g_ha,'NOX_g_ha_comb'],
+    // [CH4_g_ha,'CH4_g_ha_comb'],
+    // [N2O_g_ha,'N2O_g_ha_comb'],
+    // [NOX_g_ha,'NOX_g_ha_comb'],
   ];    
   print(lists_gases_non_co2);
   lists_gases_non_co2.forEach(function(list){
@@ -524,13 +524,46 @@ list_biomes.forEach(function(biome){
         // shardSize
       });
       
+      
+      //////////////
+            
+    
+      
+      var reduce = image
+      .multiply(ee.Image.pixelArea().divide(10000)) // convert pixel area in meters to hectare
+      .updateMask(maskRegion)
+      .reduceRegion({
+        reducer:ee.Reducer.sum(),
+        geometry:region, 
+        scale:2000,
+        // crs, crsTransform, bestEffort, 
+        maxPixels:1e13, 
+        // tileScale
+      });
+      
+      reduce = ee.Dictionary(reduce);
+      
+      var table = ee.FeatureCollection(ee.List(reduce.keys()).map(function(key){
+        key = ee.String(key);
+        return ee.Feature(null)
+        .set('Emissions_Tg',reduce.getNumber(key).divide(1e12)) // 1e12 transforma grama para teragrama
+        .set('Biome',biome)
+        .set('Year',key.slice(-4))
+        .set('GHG',key.split('_').get(0));
+      }));
+      
+      print('table',table.limit(2))
+      
+      //////////////
+      
+      
       // - convert table export to drive 
       var table =  image
         .multiply(ee.Image.pixelArea().divide(10000)) // convert pixel area in meters to hectare
         .reduceRegions({
           collection:featureCollection,
           reducer:ee.Reducer.sum(),
-          scale:30, 
+          scale:2000, 
           // crs:,
           // crsTransform:,
           // tileScale:
@@ -554,7 +587,7 @@ list_biomes.forEach(function(biome){
         
       });
       
-      // print(table.limit(2),table);
+      print('recipe',recipe.limit(2));
       description = description.replace('g_ha','Tg');
       Export.table.toDrive({
         collection:recipe,

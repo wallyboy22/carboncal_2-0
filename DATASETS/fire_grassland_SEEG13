@@ -40,7 +40,6 @@ var annual_fire = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collect
          
     biomas = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
     
-print('mask_stable',mask_stable);
 Map.addLayer(annual_fire,{},'annual_fire');
 // Map.addLayer(qcn,{},'qcn')
 // Map.addLayer(fwd,{},'fwd')
@@ -167,7 +166,7 @@ list_biomes.forEach(function(biome){
     
     var name = list[1];
     var split = name.split('_');
-    print(image)
+    // print(image)
     
     image.bandNames().evaluate(function(oldBands){
       var newBands = oldBands.map(function(band){ return name + band.slice(-5)});
@@ -206,20 +205,30 @@ list_biomes.forEach(function(biome){
       });
       
       // - convert table export to drive 
-      var table =  image
-        .multiply(ee.Image.pixelArea().divide(10000)) // convert pixel area in meters to hectare
-        .reduceRegions({
-          collection:featureCollection,
-          reducer:ee.Reducer.sum(),
-          scale:30, 
-          // crs:,
-          // crsTransform:,
-          // tileScale:
-        });
       
-      table=table.map(function(feature){return ee.Feature(null).copyProperties(feature)})
+    
       
-      print(table.limit(2),table)
+      var reduce = image
+      .multiply(ee.Image.pixelArea().divide(10000)) // convert pixel area in meters to hectare
+      .updateMask(maskRegion)
+      .reduceRegion({
+        reducer:ee.Reducer.sum(),
+        geometry:region, 
+        scale:30,
+        // crs, crsTransform, bestEffort, 
+        maxPixels:1e13, 
+        // tileScale
+      });
+      
+      reduce = ee.Dictionary(reduce);
+      
+      var table = ee.FeatureCollection(ee.List(reduce.keys()).map(function(key){
+        key = ee.String(key);
+        return ee.Feature(null).copyProperties(featureCollection.first())
+        .set(key.slice(0,-5),reduce.get(key))
+        .set('year',key.slice(-4));
+      }));
+      
       
       Export.table.toDrive({
         collection:table,

@@ -211,10 +211,10 @@ var biome_dict = {
 var list_biomes = [
   // 'amazonia',
   // 'caatinga',
-  // 'cerrado',
+  'cerrado',
   // 'mata_atlantica',
   // 'pampa',
-  'pantanal',
+  // 'pantanal',
 ];
 
 
@@ -524,11 +524,9 @@ list_biomes.forEach(function(biome){
         // shardSize
       });
       
-      
-      //////////////
-            
-    
-      
+      // 1000e4 // combustão
+      // 1000e2 // balanço
+
       var reduce = image
       .multiply(ee.Image.pixelArea().divide(10000)) // convert pixel area in meters to hectare
       .updateMask(maskRegion)
@@ -552,50 +550,17 @@ list_biomes.forEach(function(biome){
         .set('GHG',key.split('_').get(0));
       }));
       
-      print('table',table.limit(2))
-      
-      //////////////
-      
-      
+
+
       // - convert table export to drive 
-      var table =  image
-        .multiply(ee.Image.pixelArea().divide(10000)) // convert pixel area in meters to hectare
-        .reduceRegions({
-          collection:featureCollection,
-          reducer:ee.Reducer.sum(),
-          scale:2000, 
-          // crs:,
-          // crsTransform:,
-          // tileScale:
-        });
-      
-      var recipe = ee.FeatureCollection([]);
-      // 1000e4 // combustão
-      // 1000e2 // balanço
-      newBands.forEach(function(newBand){
-        var year = newBand.slice(-4);
-        
-        var newFeat = ee.Feature(null)
-          .set({
-            Biome:biome,
-            GHG:name.split('_')[0],
-            Year:year,
-            Emissions_Tg:table.first().getNumber(newBand).divide(1e12) // 1e12 transforma grama para teragrama
-          });
-        
-        recipe = recipe.merge(ee.FeatureCollection([newFeat]));
-        
-      });
-      
-      print('recipe',recipe.limit(2));
       description = description.replace('g_ha','Tg');
       Export.table.toDrive({
-        collection:recipe,
+        collection:table,
         description:description,
         folder:'SEEG13',
         fileNamePrefix:description,
         fileFormat:'csv',
-        // selectors:,
+        selectors:['Biome','Emissions_Tg','GHG','Year'],
         // maxVertices:
       });
         
@@ -611,7 +576,7 @@ list_biomes.forEach(function(biome){
 
   var CO2_Mg_ha = fAGNcomb.multiply(0.099).add(fCBalance) // descontar fração de carbono perdida por gases não CO2 (CO e CH4); OBS: FCBalance é negativo
     .multiply(3.67); // razão entre peso molecular do carbono e do CO2
-  print('CO2_Mg_ha',CO2_Mg_ha)
+  print('CO2_Mg_ha',CO2_Mg_ha);
   CO2_Mg_ha.bandNames().evaluate(function(oldBands){
     var newBands = oldBands.map(function(band){ return 'CO2_Mg_ha' + band.slice(-5)});
     
@@ -628,13 +593,12 @@ list_biomes.forEach(function(biome){
       biome:biome
     };
 
-    
     var image = CO2_Mg_ha.select(oldBands,newBands)
       .float()
       .multiply(-1) // convertendo para emissões
-      .set(newProps)
+      .set(newProps);
       
-      print('image CO2_Mg_ha',image)
+      print('image CO2_Mg_ha',image);
       // Map.addLayer(image,{},description,false);
       
       // - export to asset
@@ -653,43 +617,40 @@ list_biomes.forEach(function(biome){
       
       // - convert table export to drive 
       // - convert table export to drive 
-      var table =  image
-        .multiply(ee.Image.pixelArea().divide(10000)) // convert pixel area in meters to hectare
-        .reduceRegions({
-          collection:featureCollection,
-          reducer:ee.Reducer.sum(),
-          scale:30, 
-          // crs:,
-          // crsTransform:,
-          // tileScale:
-        });
-      
-        
-      var recipe = ee.FeatureCollection([]);
-
-      newBands.forEach(function(newBand){
-        var year = newBand.slice(-4);
-        
-        var newFeat = ee.Feature(null)
-          .set({
-            Biome:biome,
-            GHG:name.split('_')[0],
-            Year:year,
-            Emissions_Tg:table.first().getNumber(newBand).divide(1e6) // 1e6 transforma megagrama para teragrama
-          });
-        
-        recipe = recipe.merge(ee.FeatureCollection([newFeat]));
-        
+      var reduce = image
+      .multiply(ee.Image.pixelArea().divide(10000)) // convert pixel area in meters to hectare
+      .updateMask(maskRegion)
+      .reduceRegion({
+        reducer:ee.Reducer.sum(),
+        geometry:region, 
+        scale:2000,
+        // crs, crsTransform, bestEffort, 
+        maxPixels:1e13, 
+        // tileScale
       });
       
+      reduce = ee.Dictionary(reduce);
+      
+      var table = ee.FeatureCollection(ee.List(reduce.keys()).map(function(key){
+        key = ee.String(key);
+        return ee.Feature(null)
+        .set('Emissions_Tg',reduce.getNumber(key).divide(1e6)) // 1e6 transforma megagrama para teragrama
+        .set('Biome',biome)
+        .set('Year',key.slice(-4))
+        .set('GHG',key.split('_').get(0));
+      }));
+      
       description = description.replace('Mg_ha','Tg');
+
+      print('table',table);
+
       Export.table.toDrive({
-        collection:recipe,
+        collection:table,
         description:description,
         folder:'SEEG13',
         fileNamePrefix:description,
         fileFormat:'csv',
-        // selectors:,
+        selectors:['Biome','Emissions_Tg','GHG','Year'],
         // maxVertices:
       });
   
@@ -743,7 +704,7 @@ list_biomes.forEach(function(biome){
         }),
       ee.Feature(null)
         .set({
-          METADATA:'Input spatial products: Mapbiomas Fire collection 3.1 (1986-2023), SEEG 12 forest mask stable, and Rectified QCN carbon stocks',
+          METADATA:'Input spatial products: Mapbiomas Fire collection 4.1 (1985-2024), SEEG 13 forest mask stable, and Rectified QCN carbon stocks',
         }),
       ee.Feature(null)
         .set({

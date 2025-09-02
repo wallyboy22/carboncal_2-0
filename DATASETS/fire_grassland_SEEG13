@@ -225,8 +225,11 @@ list_biomes.forEach(function(biome){
       var table = ee.FeatureCollection(ee.List(reduce.keys()).map(function(key){
         key = ee.String(key);
         return ee.Feature(null).copyProperties(featureCollection.first())
-        .set(key.slice(0,-5),reduce.get(key))
-        .set('year',key.slice(-4));
+        .set('Emissions_Tg',reduce.getNumber(key).divide(1e12)) // 1e12 transforma grama para teragrama
+        .set('Biome',biome)
+        .set('Year',key.slice(-4))
+        .set('GHG',key.split('_').get(0));
+        
       }));
       
       

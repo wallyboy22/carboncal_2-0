@@ -98,12 +98,12 @@ var biome_dict = {
 };
 
 var list_biomes = [
-  'amazonia',
-  'caatinga',
+  // 'amazonia',
+  // 'caatinga',
   'cerrado',
-  'mata_atlantica',
-  'pampa',
-  'pantanal',
+  // 'mata_atlantica',
+  // 'pampa',
+  // 'pantanal',
 ];
 
 

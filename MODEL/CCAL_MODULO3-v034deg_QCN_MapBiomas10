@@ -420,7 +420,7 @@ var biomass_stock = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/biomass_stock
 
 var accumulated_degradation = ee.Image(0);
 
-bandnames.forEach(function(bandname,i){
+bandnames.slice(1).forEach(function(bandname,i){
 
   var accumulated_degradation_year = accumulated_degradation.slice(-1)
     .add(fireEmiss_co2.select(i).unmask().divide(3.67).multiply(-1))
@@ -460,23 +460,26 @@ print('--- fireEmiss_co2e', fireEmiss_co2e);
 print('--- selectiveLoggingEmiss', selectiveLoggingEmiss);
 print('--- def_reg_balance', def_reg_balance);
 
+var pixel_area_ha = ee.Image.pixelArea().divide(10000);
+
 // Ajusta os nomes das bandas para melhor identificação das categorias
-var emiss_co2e_final = fireEmiss_co2e.unmask().rename(fireEmiss_co2e.bandNames().map(function(s) {
+var final_image_modulo3 = fireEmiss_co2e.unmask().rename(fireEmiss_co2e.bandNames().map(function(s) {
     return ee.String('loss_fire').cat(ee.String(s).slice(-5));
-  }))
+  })) // representa as emissões por corte seletivo
   .addBands(selectiveLoggingEmiss.unmask().rename(selectiveLoggingEmiss.bandNames().map(function(s) {
     return ee.String('loss_selective_logging').cat(ee.String(s).slice(-5));
-  })).slice(31))
+  })).slice(31)) // representa as emissões por corte seletivo
   .addBands(def_reg_balance.unmask().updateMask(def_reg_balance.lt(0)).rename(def_reg_balance.bandNames().map(function(s) {
     return ee.String('gain_secondary_vegetation').cat(ee.String(s).slice(-5));
-  }))) // representa remoção de carbono
+  }))) // representa remoção de carbono por recrescimento da vegetação secundaria
   .addBands(def_reg_balance.unmask().updateMask(def_reg_balance.gt(0)).rename(def_reg_balance.bandNames().map(function(s) {
     return ee.String('loss_deforestation').cat(ee.String(s).slice(-5));
   }))) // representa emissões por desmatamento
-  .addBands(biomass_stock)
+  .multiply(pixel_area_ha) // todas as emissões e remoções estão contabizadas como total de carbono no pixel
+  .addBands(biomass_stock) // o carbono na biomassa remanescente permanece como carbono total de carbono por hectare no pixel
   .float();
 
-print("emiss_co2e_final", emiss_co2e_final);
+print("final_image_modulo3", final_image_modulo3);
 
 // Adiciona camadas intermediárias para visualização (opcional)
 Map.addLayer(biomass_stock_updated, {}, 'biomass_stock_updated', false);
@@ -484,42 +487,40 @@ Map.addLayer(past_biomas_stock_total.addBands(biomass_stock), {}, 'biomass_stock
 Map.addLayer(def_reg_balance, {}, 'def_reg_balance', false);
 Map.addLayer(fireEmiss_co2e, {}, 'fireEmiss_co2e', false);
 
-Map.addLayer(emiss_co2e_final.select('loss_fire.*'), {}, 'co2e_fire', false);
-Map.addLayer(emiss_co2e_final.select('loss_selective_logging.*'), {}, 'co2e_logging', false);
-Map.addLayer(emiss_co2e_final.select('gain_secondary_vegetation.*'), {}, 'co2e_removal', false);
-Map.addLayer(emiss_co2e_final.select('loss_deforestation.*'), {}, 'co2e_deforestation', false);
+Map.addLayer(final_image_modulo3.select('loss_fire.*'), {}, 'co2e_fire', false);
+Map.addLayer(final_image_modulo3.select('loss_selective_logging.*'), {}, 'co2e_logging', false);
+Map.addLayer(final_image_modulo3.select('gain_secondary_vegetation.*'), {}, 'co2e_removal', false);
+Map.addLayer(final_image_modulo3.select('loss_deforestation.*'), {}, 'co2e_deforestation', false);
 
 // ======================================
 // 9. Exportação do resultado final para um Asset no Earth Engine
 // ======================================
 
-  // Define a versão e os parâmetros de exportação
-  var version = 'CIAT-QCN_MapBiomas9-1986_2023-v033';
-  var description = list[0] + '-' + version;
-  var assetId = 'projects/ee-ipam/assets/SEEG/CIAT/';
-  
-  var image = list[1];
-  
-  print('description',description);
-  print('assetId',assetId);
-  print('image',image);
-  
-  // Exporta a imagem final de emissões líquidas para um asset,
-  // definindo política de piramidação, escala e extensão
-  Export.image.toAsset({
-    image: emiss_co2e_final,
-    description: 'W-SEEG_CCAL-' + description,
-    assetId: assetId + description,
-    pyramidingPolicy: 'median',
-    region: bounds,  // Certifique-se de que 'bounds' esteja definido previamente no script
-    scale: 30,
-    maxPixels: 1e13
-  });
+// Define a versão e os parâmetros de exportação
+var final_name = 'CCAL_MODULO3-v034';
+var assetId = 'projects/ee-ipam/assets/SEEG/CIAT/' + final_name;
+
+print('final_name',final_name);
+print('assetId',assetId);
+print('final_image_modulo3',final_image_modulo3);
+
+// Exporta a imagem final de emissões líquidas para um asset,
+// definindo política de piramidação, escala e extensão
+Export.image.toAsset({
+  image: final_image_modulo3,
+  description: 'W-SEEG_CCAL-' + final_name,
+  assetId: assetId,
+  pyramidingPolicy: 'median',
+  region: bounds,  // Certifique-se de que 'bounds' esteja definido previamente no script
+  scale: 30,
+  maxPixels: 1e13
+});
+
 
 // ======================================
 // !!! final do script
 // ======================================
-
+stop
 ///////////////////////////////////////////////////
 // ======================================
 // Seção: Interface do Usuário e Visualização Complementar
@@ -539,6 +540,7 @@ Map.addLayer(emiss_co2e_final.select('loss_deforestation.*'), {}, 'co2e_deforest
 //   - Uma miniatura (thumbnail) da camada para inspeção visual.
 //   - Um link informativo para tutorial de raster virtual no QGIS.
 //   - A URL do MapId, que pode ser utilizada para integrar a camada em outras plataformas.
+
 Map.layers().forEach(function(layer) {
   // Ignora a camada de fundo branco
   if (layer.getName() === 'White Background') {

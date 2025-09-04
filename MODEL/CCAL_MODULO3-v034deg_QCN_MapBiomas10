@@ -215,7 +215,7 @@ var waterOccurrence = lulcOriginal.eq(33)
   .blend(lulcOriginal.eq(31).selfMask())
   .reduce('sum');
 
-// Define áreas que permanecem submersas quando a ocorrência de água é maior ou igual a 37
+// Define áreas que permanecem submersas quando a ocorrência de água é maior ou igual a 38
 var alwaysSubmerged = waterOccurrence.gte(38).selfMask();
 
 // ======================================

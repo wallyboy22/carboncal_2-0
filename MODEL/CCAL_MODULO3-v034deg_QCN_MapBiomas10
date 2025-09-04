@@ -1,23 +1,13 @@
 /**** Start of imports. If edited, may not auto-convert in the playground. ****/
-var erro_fogo_veg_primaria = 
-    /* color: #d63000 */
-    /* shown: false */
-    ee.Geometry.Point([-55.62531891171641, -10.204328448756536]),
+var erro_fogo_veg_primaria = /* color: #d63000 */ee.Geometry.Point([-55.62531891171641, -10.204328448756536]),
     def_and_reg = /* color: #98ff00 */ee.Geometry.MultiPoint(
         [[-55.63806809566014, -10.205347625641314],
          [-55.64053572795384, -10.205389862022338]]),
-    teto_baixo_floresta = 
-    /* color: #0b4a8b */
-    /* shown: false */
-    ee.Geometry.Point([-55.63918389461033, -10.205136443652115]),
+    teto_baixo_floresta = /* color: #0b4a8b */ee.Geometry.Point([-55.63918389461033, -10.205136443652115]),
     erro_selective_logging = /* color: #ffc82d */ee.Geometry.Point([-54.06653536254875, -9.753862411569255]),
-    padrao_fogo_savana = 
-    /* color: #d63000 */
-    /* shown: false */
-    ee.Geometry.Point([-55.45535187644612, -15.764887803257123]),
+    padrao_fogo_savana = /* color: #d63000 */ee.Geometry.Point([-55.45535187644612, -15.764887803257123]),
     bounds = 
     /* color: #d63000 */
-    /* shown: false */
     /* displayProperties: [
       {
         "type": "rectangle"
@@ -292,6 +282,8 @@ var fireForestBalance_co2e = fireForestBalance_co2
 
 // EMISSÕES PARA SAVANAS
 
+var pixel_area_ha = ee.Image.pixelArea().divide(10000);
+
 // Emissões para savanas (CO₂)
 var fireSavannaBalance_co2 = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/SAVANA/brasil_savanas_co2_all_years_v2').float();
 // Emissões para savanas (CH₄)
@@ -302,7 +294,8 @@ var fireSavannaBalance_n2o = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/
 // Combina os componentes para savanas em CO₂e
 var fireSavannaBalance_co2e = fireSavannaBalance_co2
   .add(fireSavannaBalance_ch4)
-  .add(fireSavannaBalance_n2o);
+  .add(fireSavannaBalance_n2o)
+  .divide(pixel_area_ha); // transformando input de total de toneladas para densidade em toneladas por hectare
 
 
 // EMISSÕES PARA CAMPOS
@@ -449,10 +442,11 @@ var biomass_stock = biomass_stock_updated
 print('biomass_stock', biomass_stock);
 //////////////
 
-// Calcula o balanço de degradação/regeneração comparando o estoque atualizado com o estoque passado
+// Calcula o balanço de degradação/regeneração comparando o estoque atualizado com o estoque passado e transforma em emissão
 var def_reg_balance = biomass_stock
   .subtract(past_biomas_stock_total.addBands(biomass_stock.slice(0,-1)))
-  .multiply(-1);
+  .multiply(-1)
+  .multiply(3.67);
 
 print('def_reg_balance', def_reg_balance);
 
@@ -461,7 +455,7 @@ print('--- fireEmiss_co2e', fireEmiss_co2e);
 print('--- selectiveLoggingEmiss', selectiveLoggingEmiss);
 print('--- def_reg_balance', def_reg_balance);
 
-var pixel_area_ha = ee.Image.pixelArea().divide(10000);
+
 
 // Ajusta os nomes das bandas para melhor identificação das categorias
 var final_image_modulo3 = fireEmiss_co2e.unmask().rename(fireEmiss_co2e.bandNames().map(function(s) {
@@ -479,8 +473,8 @@ var final_image_modulo3 = fireEmiss_co2e.unmask().rename(fireEmiss_co2e.bandName
     .rename(def_reg_balance.bandNames().map(function(s) {
     return ee.String('loss_deforestation').cat(ee.String(s).slice(-5));
   }))) // representa emissões por desmatamento
-  // .multiply(pixel_area_ha) // todas as emissões e remoções estão contabizadas como total de carbono no pixel
-  .addBands(biomass_stock) // o carbono na biomassa remanescente permanece como carbono total de carbono por hectare no pixel
+  .multiply(pixel_area_ha) // todas as emissões e remoções estão contabizadas como total de carbono no pixel
+  .addBands(biomass_stock) // o carbono na biomassa remanescente permanece como carbono por hectare no pixel
   .float();
 
 print("final_image_modulo3", final_image_modulo3);
@@ -509,8 +503,10 @@ Map.add(barra);
 // ======================================
 
 // Define a versão e os parâmetros de exportação
+// biomass_stock_balance_tC_ha-CCAL_MODULO3-QCN_MapBiomas10-1985_2024-v034b;
+
 var final_name = 'CCAL_MODULO3-v034';
-var assetId = 'projects/ee-ipam/assets/SEEG/CIAT/' + final_name;
+var assetId = 'projects/ee-ipam/assets/CCAL/MODELOS/' + final_name;
 
 print('final_name',final_name);
 print('assetId',assetId);

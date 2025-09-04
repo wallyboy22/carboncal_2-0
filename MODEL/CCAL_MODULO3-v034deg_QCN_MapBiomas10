@@ -6,11 +6,11 @@ var erro_fogo_veg_primaria =
     def_and_reg = /* color: #98ff00 */ee.Geometry.MultiPoint(
         [[-55.63806809566014, -10.205347625641314],
          [-55.64053572795384, -10.205389862022338]]),
-    teto_baixo_floresta = 
-    /* color: #0b4a8b */
+    teto_baixo_floresta = /* color: #0b4a8b */ee.Geometry.Point([-55.63918389461033, -10.205136443652115]),
+    erro_selective_logging = 
+    /* color: #ffc82d */
     /* shown: false */
-    ee.Geometry.Point([-55.63918389461033, -10.205136443652115]),
-    erro_selective_logging = /* color: #ffc82d */ee.Geometry.Point([-54.06653536254875, -9.753862411569255]),
+    ee.Geometry.Point([-54.06653536254875, -9.753862411569255]),
     padrao_fogo_savana = 
     /* color: #d63000 */
     /* shown: false */
@@ -452,8 +452,7 @@ print('biomass_stock', biomass_stock);
 // Calcula o balanço de degradação/regeneração comparando o estoque atualizado com o estoque passado
 var def_reg_balance = biomass_stock
   .subtract(past_biomas_stock_total.addBands(biomass_stock.slice(0,-1)))
-  .multiply(-1)
-  .multiply(3.67);
+  .multiply(-1);
 
 print('def_reg_balance', def_reg_balance);
 
@@ -480,8 +479,8 @@ var final_image_modulo3 = fireEmiss_co2e.unmask().rename(fireEmiss_co2e.bandName
     .rename(def_reg_balance.bandNames().map(function(s) {
     return ee.String('loss_deforestation').cat(ee.String(s).slice(-5));
   }))) // representa emissões por desmatamento
-  .multiply(pixel_area_ha) // todas as emissões e remoções estão contabizadas como total de carbono no pixel
-  // .addBands(biomass_stock) // o carbono na biomassa remanescente permanece como carbono total de carbono por hectare no pixel
+  // .multiply(pixel_area_ha) // todas as emissões e remoções estão contabizadas como total de carbono no pixel
+  .addBands(biomass_stock) // o carbono na biomassa remanescente permanece como carbono total de carbono por hectare no pixel
   .float();
 
 print("final_image_modulo3", final_image_modulo3);

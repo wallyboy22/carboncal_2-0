@@ -374,9 +374,9 @@ var selectiveLoggingEmiss = fireEmiss_co2e.slice(0,31).unmask().multiply(0);
 // Para cada ano de interesse, processa os dados de desmatamento seletivo
 [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024].forEach(function (year) {
   // Carrega duas imagens para cada ano: uma com dados desordenados e outra com dados geométricos
-  var slYearDis = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_disordered').unmask();
-  var slYearGeo = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_geometric').unmask();
-  
+  var slYearDis = ee.Image('projects/ee-ipam/assets/MRV_REDD_PARA/0_Activity_Year/degradation_' + year + '_sl_disordered').unmask();
+  var slYearGeo = ee.Image('projects/ee-ipam/assets/MRV_REDD_PARA/0_Activity_Year/degradation_' + year + '_sl_geometric').unmask();
+
   var stableForest = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/13_3_Stable_cover/SEEG_c13_2024')
     .unmask().eq(3);
 

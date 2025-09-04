@@ -6,11 +6,11 @@ var erro_fogo_veg_primaria =
     def_and_reg = /* color: #98ff00 */ee.Geometry.MultiPoint(
         [[-55.63806809566014, -10.205347625641314],
          [-55.64053572795384, -10.205389862022338]]),
-    teto_baixo_floresta = /* color: #0b4a8b */ee.Geometry.Point([-55.63918389461033, -10.205136443652115]),
-    erro_selective_logging = 
-    /* color: #ffc82d */
+    teto_baixo_floresta = 
+    /* color: #0b4a8b */
     /* shown: false */
-    ee.Geometry.Point([-54.06653536254875, -9.753862411569255]),
+    ee.Geometry.Point([-55.63918389461033, -10.205136443652115]),
+    erro_selective_logging = /* color: #ffc82d */ee.Geometry.Point([-54.06653536254875, -9.753862411569255]),
     padrao_fogo_savana = 
     /* color: #d63000 */
     /* shown: false */
@@ -485,18 +485,25 @@ var final_image_modulo3 = fireEmiss_co2e.unmask().rename(fireEmiss_co2e.bandName
 
 print("final_image_modulo3", final_image_modulo3);
 
+var biomass_palette = ["#440154","#46327e","#365c8d", "#277f8e", "#1fa187", "#4ac16d","#a0da39","#fde725"];
+var yearVis = 2022;
 // Adiciona camadas intermediárias para visualização (opcional)
-Map.addLayer(biomass_stock_updated, {}, 'biomass_stock_updated', false);
-Map.addLayer(past_biomas_stock_total.addBands(biomass_stock), {}, 'biomass_stock', false);
-Map.addLayer(def_reg_balance, {}, 'def_reg_balance', false);
-Map.addLayer(fireEmiss_co2e, {}, 'fireEmiss_co2e', false);
+Map.addLayer(biomass_stock_updated, {min:0,max:90,bands:['biomass_stock_'+yearVis],palette:biomass_palette}, 'biomass_stock_updated', false);
+Map.addLayer(past_biomas_stock_total, {min:0,max:90,bands:['TOTAL'],palette:biomass_palette}, 'biomass_stock PAST', false);
+Map.addLayer(past_biomas_stock_total.addBands(biomass_stock), {min:0,max:90,bands:['biomass_stock_'+yearVis],palette:biomass_palette}, 'biomass_stock', false);
+Map.addLayer(def_reg_balance, {min:0,max:90,bands:['biomass_stock_'+yearVis],palette:biomass_palette}, 'def_reg_balance', false);
+Map.addLayer(fireEmiss_co2e, {min:0,max:90,bands:['CO2_Mg_ha_'+yearVis],palette:biomass_palette}, 'fireEmiss_co2e', false);
 
-Map.addLayer(final_image_modulo3.select('loss_fire.*'), {}, 'co2e_fire', false);
-Map.addLayer(final_image_modulo3.select('loss_selective_logging.*'), {}, 'co2e_logging', false);
-Map.addLayer(final_image_modulo3.select('gain_secondary_vegetation.*'), {}, 'co2e_removal', false);
-Map.addLayer(final_image_modulo3.select('loss_deforestation.*'), {}, 'co2e_deforestation', false);
+Map.addLayer(final_image_modulo3.select('loss_fire.*').selfMask(), {min:0,max:90,bands:['loss_fire_'+yearVis],palette:biomass_palette}, 'co2e_fire', false);
+Map.addLayer(final_image_modulo3.select('loss_selective_logging.*').selfMask(), {min:0,max:90,bands:['loss_selective_logging_'+yearVis],palette:biomass_palette}, 'co2e_logging', false);
+Map.addLayer(final_image_modulo3.select('gain_secondary_vegetation.*').selfMask(), {min:0,max:90,bands:['gain_secondary_vegetation_'+yearVis],palette:biomass_palette}, 'co2e_removal', false);
+Map.addLayer(final_image_modulo3.select('loss_deforestation.*').selfMask(), {min:0,max:90,bands:['loss_deforestation_'+yearVis],palette:biomass_palette}, 'co2e_deforestation', false);
 Map.addLayer(final_image_modulo3, {}, 'final_image_modulo3', false);
-
+var barra = getColorBar({min:0,max:90,palette:biomass_palette},'Carbono na Biomassa');
+barra.style().set({
+  position:'bottom-left'
+});
+Map.add(barra);
 // ======================================
 // 9. Exportação do resultado final para um Asset no Earth Engine
 // ======================================
@@ -681,6 +688,7 @@ function getColorBar(visParams, title) {
     title: {
       margin: '0px',
       fontSize: '12px',
+      backgroundColor: '00000000',
       fontWeight: 'bold'
     }
   };
@@ -723,7 +731,7 @@ function getColorBar(visParams, title) {
       label_mean,
       label_end
     ],
-    style: { margin: '0px' },
+    style: { margin: '0px',backgroundColor: '00000000' },
     layout: ui.Panel.Layout.Flow('horizontal')
   });
   
@@ -736,7 +744,7 @@ function getColorBar(visParams, title) {
     ],
     layout: ui.Panel.Layout.flow('vertical'),
     style: {
-      backgroundColor: 'ffffff80',
+      backgroundColor: 'ffffff00',
       stretch: 'horizontal',
       minWidth: '200px'
     }
@@ -748,7 +756,7 @@ function getColorBar(visParams, title) {
     layout: ui.Panel.Layout.flow('horizontal'),
     style: {
       margin: '0px',
-      backgroundColor: 'ffffff80',
+      backgroundColor: 'ffffffaa',
       stretch: 'horizontal'
     }
   });

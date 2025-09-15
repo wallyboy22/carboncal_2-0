@@ -285,17 +285,18 @@ var fireForestBalance_co2e = fireForestBalance_co2
 var pixel_area_ha = ee.Image.pixelArea().divide(10000);
 
 // Emissões para savanas (CO₂)
-var fireSavannaBalance_co2 = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/SAVANA/brasil_savanas_co2_all_years_v2').float();
+var fireSavannaBalance_co2 = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/SAVANA/brasil_savanas_co2_all_years_v3').float();
 // Emissões para savanas (CH₄)
-var fireSavannaBalance_ch4 = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/SAVANA/brasil_savanas_ch4_all_years_v2').float().multiply(28);
+var fireSavannaBalance_ch4 = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/SAVANA/brasil_savanas_ch4_all_years_v3').float().multiply(28);
 // Emissões para savanas (N₂O)
-var fireSavannaBalance_n2o = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/SAVANA/brasil_savanas_n2o_all_years_v2').float().multiply(265);
+var fireSavannaBalance_n2o = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/SAVANA/brasil_savanas_n2o_all_years_v3').float().multiply(265);
 
 // Combina os componentes para savanas em CO₂e
 var fireSavannaBalance_co2e = fireSavannaBalance_co2
   .add(fireSavannaBalance_ch4)
   .add(fireSavannaBalance_n2o)
-  .divide(pixel_area_ha); // transformando input de total de toneladas para densidade em toneladas por hectare
+  // ! a v3 foi produzida em toneladas por hectare, descartando a divisão
+  // .divide(pixel_area_ha);// transformando input de total de toneladas para densidade em toneladas por hectare
 
 
 // EMISSÕES PARA CAMPOS
@@ -474,7 +475,9 @@ var final_image_modulo3 = fireEmiss_co2e.unmask().rename(fireEmiss_co2e.bandName
     return ee.String('loss_deforestation').cat(ee.String(s).slice(-5));
   }))) // representa emissões por desmatamento
   .multiply(pixel_area_ha) // todas as emissões e remoções estão contabizadas como total de carbono no pixel
-  .addBands(biomass_stock) // o carbono na biomassa remanescente permanece como carbono por hectare no pixel
+  .addBands(biomass_stock.rename(biomass_stock.bandNames().map(function(s) {
+    return ee.String('stock').cat(ee.String(s).slice(-5));
+  }))) // o carbono na biomassa remanescente permanece como carbono por hectare no pixel
   .float();
 
 print("final_image_modulo3", final_image_modulo3);
@@ -482,10 +485,10 @@ print("final_image_modulo3", final_image_modulo3);
 var biomass_palette = ["#440154","#46327e","#365c8d", "#277f8e", "#1fa187", "#4ac16d","#a0da39","#fde725"];
 var yearVis = 2022;
 // Adiciona camadas intermediárias para visualização (opcional)
-Map.addLayer(biomass_stock_updated, {min:0,max:90,bands:['biomass_stock_'+yearVis],palette:biomass_palette}, 'biomass_stock_updated', false);
+Map.addLayer(biomass_stock_updated, {min:0,max:90,bands:['stock_'+yearVis],palette:biomass_palette}, 'biomass_stock_updated', false);
 Map.addLayer(past_biomas_stock_total, {min:0,max:90,bands:['TOTAL'],palette:biomass_palette}, 'biomass_stock PAST', false);
 Map.addLayer(past_biomas_stock_total.addBands(biomass_stock), {min:0,max:90,bands:['biomass_stock_'+yearVis],palette:biomass_palette}, 'biomass_stock', false);
-Map.addLayer(def_reg_balance, {min:0,max:90,bands:['biomass_stock_'+yearVis],palette:biomass_palette}, 'def_reg_balance', false);
+Map.addLayer(def_reg_balance, {min:0,max:90,bands:['stock_'+yearVis],palette:biomass_palette}, 'def_reg_balance', false);
 Map.addLayer(fireEmiss_co2e, {min:0,max:90,bands:['CO2_Mg_ha_'+yearVis],palette:biomass_palette}, 'fireEmiss_co2e', false);
 
 Map.addLayer(final_image_modulo3.select('loss_fire.*').selfMask(), {min:0,max:90,bands:['loss_fire_'+yearVis],palette:biomass_palette}, 'co2e_fire', false);
@@ -505,7 +508,7 @@ Map.add(barra);
 // Define a versão e os parâmetros de exportação
 // biomass_stock_balance_tC_ha-CCAL_MODULO3-QCN_MapBiomas10-1985_2024-v034b;
 
-var final_name = 'CCAL_MODULO3-v034';
+var final_name = 'CCAL_MODULO3-v034_b';
 var assetId = 'projects/ee-ipam/assets/CCAL/MODELOS/' + final_name;
 
 print('final_name',final_name);
@@ -514,7 +517,8 @@ print('final_image_modulo3',final_image_modulo3);
 
 // Exporta a imagem final de emissões líquidas para um asset,
 // definindo política de piramidação, escala e extensão
-Export.image.toAsset({
+Export.image.toAsset(
+  {
   image: final_image_modulo3,
   description: 'W-SEEG_CCAL-' + final_name,
   assetId: assetId,

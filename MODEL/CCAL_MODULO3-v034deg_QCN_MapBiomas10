@@ -1,13 +1,29 @@
 /**** Start of imports. If edited, may not auto-convert in the playground. ****/
-var erro_fogo_veg_primaria = /* color: #d63000 */ee.Geometry.Point([-55.62531891171641, -10.204328448756536]),
-    def_and_reg = /* color: #98ff00 */ee.Geometry.MultiPoint(
+var erro_fogo_veg_primaria = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.Point([-55.62531891171641, -10.204328448756536]),
+    def_and_reg = 
+    /* color: #98ff00 */
+    /* shown: false */
+    ee.Geometry.MultiPoint(
         [[-55.63806809566014, -10.205347625641314],
          [-55.64053572795384, -10.205389862022338]]),
-    teto_baixo_floresta = /* color: #0b4a8b */ee.Geometry.Point([-55.63918389461033, -10.205136443652115]),
-    erro_selective_logging = /* color: #ffc82d */ee.Geometry.Point([-54.06653536254875, -9.753862411569255]),
-    padrao_fogo_savana = /* color: #d63000 */ee.Geometry.Point([-55.45535187644612, -15.764887803257123]),
+    teto_baixo_floresta = 
+    /* color: #0b4a8b */
+    /* shown: false */
+    ee.Geometry.Point([-55.63918389461033, -10.205136443652115]),
+    erro_selective_logging = 
+    /* color: #ffc82d */
+    /* shown: false */
+    ee.Geometry.Point([-54.06653536254875, -9.753862411569255]),
+    padrao_fogo_savana = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.Point([-55.45535187644612, -15.764887803257123]),
     bounds = 
     /* color: #d63000 */
+    /* shown: false */
     /* displayProperties: [
       {
         "type": "rectangle"
@@ -468,12 +484,25 @@ var final_image_modulo3 = fireEmiss_co2e.unmask().rename(fireEmiss_co2e.bandName
   .addBands(def_reg_balance.unmask().updateMask(def_reg_balance.lt(0)).rename(def_reg_balance.bandNames().map(function(s) {
     return ee.String('gain_secondary_vegetation').cat(ee.String(s).slice(-5));
   }))) // representa remoção de carbono por recrescimento da vegetação secundaria
+  .addBands(fireEmiss_co2e.add(selectiveLoggingEmiss)
+  .rename(selectiveLoggingEmiss.bandNames().map(function(s) {
+    return ee.String('loss_convergence_degradation').cat(ee.String(s).slice(-5));
+  })).slice(31))// representa as emissões convergentes
   .addBands(def_reg_balance.unmask()
     .updateMask(def_reg_balance.gt(0))
     .updateMask(accumulated_degradation.unmask().eq(0))
     .rename(def_reg_balance.bandNames().map(function(s) {
     return ee.String('loss_deforestation').cat(ee.String(s).slice(-5));
   }))) // representa emissões por desmatamento
+
+  .addBands(def_reg_balance.unmask()
+    .updateMask(def_reg_balance.gt(0))
+    .updateMask(accumulated_degradation.unmask().eq(0))
+    .rename(def_reg_balance.bandNames().map(function(s) {
+    return ee.String('loss_deforestation').cat(ee.String(s).slice(-5));
+  }))) // representa a convergencia do total de emissões por fogo e desmatamento
+
+
   .multiply(pixel_area_ha) // todas as emissões e remoções estão contabizadas como total de carbono no pixel
   .addBands(biomass_stock.rename(biomass_stock.bandNames().map(function(s) {
     return ee.String('stock').cat(ee.String(s).slice(-5));
@@ -493,6 +522,7 @@ Map.addLayer(fireEmiss_co2e, {min:0,max:90,bands:['CO2_Mg_ha_'+yearVis],palette:
 
 Map.addLayer(final_image_modulo3.select('loss_fire.*').selfMask(), {min:0,max:90,bands:['loss_fire_'+yearVis],palette:biomass_palette}, 'co2e_fire', false);
 Map.addLayer(final_image_modulo3.select('loss_selective_logging.*').selfMask(), {min:0,max:90,bands:['loss_selective_logging_'+yearVis],palette:biomass_palette}, 'co2e_logging', false);
+Map.addLayer(final_image_modulo3.select('loss_convergence_degradation.*').selfMask(), {min:0,max:90,bands:['loss_convergence_degradation_'+yearVis],palette:biomass_palette}, 'co2e_convergence', false);
 Map.addLayer(final_image_modulo3.select('gain_secondary_vegetation.*').selfMask(), {min:0,max:90,bands:['gain_secondary_vegetation_'+yearVis],palette:biomass_palette}, 'co2e_removal', false);
 Map.addLayer(final_image_modulo3.select('loss_deforestation.*').selfMask(), {min:0,max:90,bands:['loss_deforestation_'+yearVis],palette:biomass_palette}, 'co2e_deforestation', false);
 Map.addLayer(final_image_modulo3, {}, 'final_image_modulo3', false);

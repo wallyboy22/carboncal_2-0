@@ -493,7 +493,7 @@ var final_image_modulo3 = fireEmiss_co2e.unmask().rename(fireEmiss_co2e.bandName
     .updateMask(accumulated_degradation.unmask().eq(0))
     .rename(def_reg_balance.bandNames().map(function(s) {
     return ee.String('loss_deforestation').cat(ee.String(s).slice(-5));
-  }))) // representa emissões por desmatamento
+  })).slice(1)) // representa emissões por desmatamento
   .multiply(pixel_area_ha) // todas as emissões e remoções estão contabizadas como total de carbono no pixel
   .addBands(biomass_stock.rename(biomass_stock.bandNames().map(function(s) {
     return ee.String('stock').cat(ee.String(s).slice(-5));

@@ -477,14 +477,14 @@ print('--- def_reg_balance', def_reg_balance);
 // Ajusta os nomes das bandas para melhor identificação das categorias
 var final_image_modulo3 = fireEmiss_co2e.unmask().rename(fireEmiss_co2e.bandNames().map(function(s) {
     return ee.String('loss_fire').cat(ee.String(s).slice(-5));
-  })) // representa as emissões por corte seletivo
+  })).slice(1) // representa as emissões por corte seletivo
   .addBands(selectiveLoggingEmiss.unmask().rename(selectiveLoggingEmiss.bandNames().map(function(s) {
     return ee.String('loss_selective_logging').cat(ee.String(s).slice(-5));
   })).slice(31)) // representa as emissões por corte seletivo
   .addBands(def_reg_balance.unmask().updateMask(def_reg_balance.lt(0)).rename(def_reg_balance.bandNames().map(function(s) {
     return ee.String('gain_secondary_vegetation').cat(ee.String(s).slice(-5));
-  }))) // representa remoção de carbono por recrescimento da vegetação secundaria
-  .addBands(fireEmiss_co2e.add(selectiveLoggingEmiss)
+  })).slice(1)) // representa remoção de carbono por recrescimento da vegetação secundaria
+  .addBands(fireEmiss_co2e.selfMask().add(selectiveLoggingEmiss.selfMask())
   .rename(selectiveLoggingEmiss.bandNames().map(function(s) {
     return ee.String('loss_convergence_degradation').cat(ee.String(s).slice(-5));
   })).slice(31))// representa as emissões convergentes
@@ -494,15 +494,6 @@ var final_image_modulo3 = fireEmiss_co2e.unmask().rename(fireEmiss_co2e.bandName
     .rename(def_reg_balance.bandNames().map(function(s) {
     return ee.String('loss_deforestation').cat(ee.String(s).slice(-5));
   }))) // representa emissões por desmatamento
-
-  .addBands(def_reg_balance.unmask()
-    .updateMask(def_reg_balance.gt(0))
-    .updateMask(accumulated_degradation.unmask().eq(0))
-    .rename(def_reg_balance.bandNames().map(function(s) {
-    return ee.String('loss_deforestation').cat(ee.String(s).slice(-5));
-  }))) // representa a convergencia do total de emissões por fogo e desmatamento
-
-
   .multiply(pixel_area_ha) // todas as emissões e remoções estão contabizadas como total de carbono no pixel
   .addBands(biomass_stock.rename(biomass_stock.bandNames().map(function(s) {
     return ee.String('stock').cat(ee.String(s).slice(-5));

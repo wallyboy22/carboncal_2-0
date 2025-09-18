@@ -135,8 +135,10 @@ Map.addLayer(selectiveLoggingEmiss, visParams.stock, 'selectiveLoggingEmiss', tr
 // Adiciona a camada de balanço da extração seletiva ao mapa (opcional, desabilitada por padrão)
 Export.image.toAsset({
     image: selectiveLoggingEmiss.multiply(10000),
-    description: 'brasil_forest_logging_v1',
-    assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_logging_v1',
+    // description: 'brasil_forest_logging_v1',
+    // assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_logging_v1',
+    description: 'brasil_forest_logging_ano_prodes_v1',
+    assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_ano_prodes_logging_v1',
     scale: 30,
     region: amazonBounds,
     maxPixels: 1e13
@@ -144,9 +146,11 @@ Export.image.toAsset({
 
 Export.image.toAsset({
     image: selectiveLoggingEmiss,
-    description: 'brasil_forest_logging_v2',
-    assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_logging_v2',
-    scale: 30,
+    // description: 'brasil_forest_logging_v2',
+    // assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_logging_v2',
+    description: 'brasil_forest_logging_ano_prodesv2',
+    assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_ano_prodes_logging_v2',
+    // scale: 30,
     region: amazonBounds,
     maxPixels: 1e13
 });

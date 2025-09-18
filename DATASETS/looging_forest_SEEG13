@@ -85,11 +85,11 @@ var years = [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024];
 years.forEach(function (year) {
 
   // Carrega duas imagens para cada ano: uma com dados desordenados e outra com dados geométricos
-  // var slYearDis = ee.Image("projects/ee-ipam/assets/MRV_REDD_PARA/0_Activity_Year/degradation_" + year + '_sl_disordered');
-  // var slYearGeo = ee.Image("projects/ee-ipam/assets/MRV_REDD_PARA/0_Activity_Year/degradation_" + year + '_sl_geometric');
+  var slYearDis = ee.Image("projects/ee-ipam/assets/MRV_REDD_PARA/0_Activity_Year/degradation_" + year + '_sl_disordered');
+  var slYearGeo = ee.Image("projects/ee-ipam/assets/MRV_REDD_PARA/0_Activity_Year/degradation_" + year + '_sl_geometric');
   // --- ano prodes
-  var slYearDis = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_disordered').unmask();
-  var slYearGeo = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_geometric').unmask();
+  // var slYearDis = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_disordered').unmask();
+  // var slYearGeo = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_geometric').unmask();
 
   // Combina as duas fontes para identificar áreas de extração seletiva
   var slYear = ee.Image(0)
@@ -146,10 +146,10 @@ Export.image.toAsset({
 
 Export.image.toAsset({
     image: selectiveLoggingEmiss,
-    // description: 'brasil_forest_logging_v2',
-    // assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_logging_v2',
-    description: 'brasil_forest_logging_ano_prodes_v2',
-    assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_ano_prodes_logging_v2',
+    description: 'brasil_forest_logging_v2',
+    assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_logging_v2',
+    // description: 'brasil_forest_logging_ano_prodes_v2',
+    // assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_ano_prodes_logging_v2',
     // scale: 30,
     region: amazonBounds,
     maxPixels: 1e13

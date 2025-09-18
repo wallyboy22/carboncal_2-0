@@ -148,7 +148,7 @@ Export.image.toAsset({
     image: selectiveLoggingEmiss,
     // description: 'brasil_forest_logging_v2',
     // assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_logging_v2',
-    description: 'brasil_forest_logging_ano_prodesv2',
+    description: 'brasil_forest_logging_ano_prodes_v2',
     assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_ano_prodes_logging_v2',
     // scale: 30,
     region: amazonBounds,

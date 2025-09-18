@@ -51,6 +51,7 @@ var visParams = {
 var biomes = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
 var amazonBiome = biomes.filter(ee.Filter.equals('Bioma', 'Amazônia'));
 var amazonMask = ee.Image().paint(amazonBiome).eq(0);
+var amazonBounds = amazonBiome.geometry().bounds();
 
 
 // Carrega dataset com as areas de floresta estavel em 2024. Forest Formation - Code ID 3
@@ -175,7 +176,7 @@ Export.image.toAsset({
     description: 'brasil_forest_logging_v1',
     assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_logging_v1',
     scale: 30,
-    region: stable_florest.geometry().bounds(),
+    region: amazonBounds,
     maxPixels: 1e13
 });
 
@@ -184,7 +185,7 @@ Export.image.toAsset({
     description: 'brasil_forest_logging_ano_prodes_v1',
     assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_logging_ano_prodes_v1',
     scale: 30,
-    region: stable_florest.geometry().bounds(),
+    region: amazonBounds,
     maxPixels: 1e13
 });
 

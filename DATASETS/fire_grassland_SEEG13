@@ -24,11 +24,12 @@ var geometry =
 var annual_fire = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_annual_burned_v1').selfMask(),
     
     // Mascara de florestas estaveis
-    mask_stable_col = ee.ImageCollection('projects/ee-ipam/assets/SEEG/SEEG13/13_3_Stable_cover').toBands(),
-    mask_stable = mask_stable_col.rename(mask_stable_col.bandNames().map(function(str){  return ee.String(str).slice(14);})),
-    // mascara estavel do ultimo ano
-    mask_stable = mask_stable.slice(-1).eq(3).selfMask(),
-
+    mask_stable = ee.Image("projects/ee-ipam/assets/SEEG/SEEG13/13_3_Stable_cover/SEEG_c13_2024"),
+    mask_stable = mask_stable.multiply(0)
+      .where(mask_stable.eq(11),1)
+      .where(mask_stable.eq(12),1)
+      .where(mask_stable.eq(50),1),
+      
     qcn = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/RETIFICACAO/c_rect_col10'),
 
     fwd = qcn.select('LITTER'),

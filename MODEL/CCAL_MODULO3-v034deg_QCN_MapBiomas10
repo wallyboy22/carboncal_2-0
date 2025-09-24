@@ -558,7 +558,7 @@ Map.add(barra);
 // Define a versão e os parâmetros de exportação
 // stock_balance_tC_ha-CCAL_MODULO3-QCN_MapBiomas10-1985_2024-v034b;
 
-var final_name = 'CCAL_MODULO3-v034_b';
+var final_name = 'CCAL_MODULO3-v034_e';
 var assetId = 'projects/ee-ipam/assets/CCAL/MODELOS/' + final_name;
 
 print('final_name',final_name);

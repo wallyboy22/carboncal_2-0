@@ -22,6 +22,7 @@ var geometry =
 
 // --- --- --- ASSETS
 var annual_fire = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_annual_burned_v1').selfMask(),
+    accumulated_burned = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_accumulated_burned_v1').slice(0,40).selfMask(),
     
     // Mascara de florestas estaveis
     mask_stable = ee.Image("projects/ee-ipam/assets/SEEG/SEEG13/13_3_Stable_cover/SEEG_c13_2024"),
@@ -99,12 +100,12 @@ var biome_dict = {
 };
 
 var list_biomes = [
-  'amazonia',
-  'caatinga',
+  // 'amazonia',
+  // 'caatinga',
   'cerrado',
-  'mata_atlantica',
-  'pampa',
-  'pantanal',
+  // 'mata_atlantica',
+  // 'pampa',
+  // 'pantanal',
 ];
 
 
@@ -160,10 +161,9 @@ list_biomes.forEach(function(biome){
   ];    
   
   lists_gases_non_co2.forEach(function(list){
-    var image = list[0].updateMask(mask_stable).updateMask(maskRegion); //restringe pra area de vegetacao e bioma
-    image = annual_fire.multiply(image) //restringe para area de fogo anual
-    
-    Map.addLayer(image)
+    var image = accumulated_burned.multiply(0).blend(annual_fire.multiply(list[0])) //restringe para area de fogo anual
+    .updateMask(mask_stable).updateMask(maskRegion);
+    Map.addLayer(image);
     
     var name = list[1];
     var split = name.split('_');

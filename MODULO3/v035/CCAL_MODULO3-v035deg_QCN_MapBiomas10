@@ -263,32 +263,32 @@ Map.addLayer(deforestationSecondaryVeg.eq(5).reduce('sum').selfMask(), visParams
 
 // Emissões para florestasCO₂
 var fireForestBalance_co2 = ee.ImageCollection([
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/amazonia-CO2_Mg_ha_balance-SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/caatinga-CO2_Mg_ha_balance-SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/cerrado-CO2_Mg_ha_balance-SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/mata_atlantica-CO2_Mg_ha_balance-SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/pampa-CO2_Mg_ha_balance-SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/pantanal-CO2_Mg_ha_balance-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/FLORESTA/amazonia-CO2_Mg_ha_balance-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/FLORESTA/caatinga-CO2_Mg_ha_balance-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/FLORESTA/cerrado-CO2_Mg_ha_balance-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/FLORESTA/mata_atlantica-CO2_Mg_ha_balance-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/FLORESTA/pampa-CO2_Mg_ha_balance-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/FLORESTA/pantanal-CO2_Mg_ha_balance-SEEG13'),
 ]).mosaic().float();
 
 // Emissões de CH₄ para florestas, convertendo para CO₂e (multiplicador 28)
 var fireForestBalance_ch4 = ee.ImageCollection([
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/amazonia-CH4_g_ha_comb-SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/caatinga-CH4_g_ha_comb-SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/cerrado-CH4_g_ha_comb-SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/mata_atlantica-CH4_g_ha_comb-SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/pampa-CH4_g_ha_comb-SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/pantanal-CH4_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/FLORESTA/amazonia-CH4_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/FLORESTA/caatinga-CH4_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/FLORESTA/cerrado-CH4_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/FLORESTA/mata_atlantica-CH4_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/FLORESTA/pampa-CH4_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/FLORESTA/pantanal-CH4_g_ha_comb-SEEG13'),
 ]).mosaic().float().multiply(28).divide(1000000);
 
 // Emissões de N₂O para florestas, convertendo para CO₂e (multiplicador 265)
 var fireForestBalance_n2o = ee.ImageCollection([
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/amazonia-N2O_g_ha_comb-SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/caatinga-N2O_g_ha_comb-SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/cerrado-N2O_g_ha_comb-SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/mata_atlantica-N2O_g_ha_comb-SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/pampa-N2O_g_ha_comb-SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/FLORESTA/pantanal-N2O_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/FLORESTA/amazonia-N2O_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/FLORESTA/caatinga-N2O_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/FLORESTA/cerrado-N2O_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/FLORESTA/mata_atlantica-N2O_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/FLORESTA/pampa-N2O_g_ha_comb-SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/FLORESTA/pantanal-N2O_g_ha_comb-SEEG13'),
 ]).mosaic().float().multiply(265).divide(1000000);
 
 // Combina os componentes de emissões para florestas em CO₂e
@@ -301,11 +301,11 @@ var fireForestBalance_co2e = fireForestBalance_co2
 var pixel_area_ha = ee.Image.pixelArea().divide(10000);
 
 // Emissões para savanas (CO₂)
-var fireSavannaBalance_co2 = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/SAVANA/brasil_savanas_co2_all_years_v3').float();
+var fireSavannaBalance_co2 = ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/SAVANA/brasil_savanas_co2_all_years_v1').float();
 // Emissões para savanas (CH₄)
-var fireSavannaBalance_ch4 = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/SAVANA/brasil_savanas_ch4_all_years_v3').float().multiply(28);
+var fireSavannaBalance_ch4 = ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/SAVANA/brasil_savanas_ch4_all_years_v1').float().multiply(28);
 // Emissões para savanas (N₂O)
-var fireSavannaBalance_n2o = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/SAVANA/brasil_savanas_n2o_all_years_v3').float().multiply(265);
+var fireSavannaBalance_n2o = ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/SAVANA/brasil_savanas_n2o_all_years_v1').float().multiply(265);
 
 // Combina os componentes para savanas em CO₂e
 var fireSavannaBalance_co2e = fireSavannaBalance_co2
@@ -319,22 +319,22 @@ var fireSavannaBalance_co2e = fireSavannaBalance_co2
 
 // Emissões para campos (CH₄)
 var fireGrasslandBalance_ch4 = ee.ImageCollection([
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/amazonia-CH4_g_ha_comb-grassland_SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/caatinga-CH4_g_ha_comb-grassland_SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/cerrado-CH4_g_ha_comb-grassland_SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/mata_atlantica-CH4_g_ha_comb-grassland_SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/pampa-CH4_g_ha_comb-grassland_SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/pantanal-CH4_g_ha_comb-grassland_SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/CAMPO/amazonia-CH4_g_ha_comb-grassland_SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/CAMPO/caatinga-CH4_g_ha_comb-grassland_SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/CAMPO/cerrado-CH4_g_ha_comb-grassland_SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/CAMPO/mata_atlantica-CH4_g_ha_comb-grassland_SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/CAMPO/pampa-CH4_g_ha_comb-grassland_SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/CAMPO/pantanal-CH4_g_ha_comb-grassland_SEEG13'),
 ]).mosaic().float().multiply(28).divide(1000000);
 
 // Emissões para campos (N₂O)
 var fireGrasslandBalance_n2o = ee.ImageCollection([
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/amazonia-N2O_g_ha_comb-grassland_SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/caatinga-N2O_g_ha_comb-grassland_SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/cerrado-N2O_g_ha_comb-grassland_SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/mata_atlantica-N2O_g_ha_comb-grassland_SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/pampa-N2O_g_ha_comb-grassland_SEEG13'),
-  ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/pantanal-N2O_g_ha_comb-grassland_SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/CAMPO/amazonia-N2O_g_ha_comb-grassland_SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/CAMPO/caatinga-N2O_g_ha_comb-grassland_SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/CAMPO/cerrado-N2O_g_ha_comb-grassland_SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/CAMPO/mata_atlantica-N2O_g_ha_comb-grassland_SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/CAMPO/pampa-N2O_g_ha_comb-grassland_SEEG13'),
+  ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/CAMPO/pantanal-N2O_g_ha_comb-grassland_SEEG13'),
 
 ]).mosaic().float().multiply(265).divide(1000000);
 
@@ -387,66 +387,12 @@ var amazonMask = ee.Image().paint(amazonBiome).eq(0);
 
 Map.addLayer(past_stock_agb,{},'past_stock_agb');
 // Inicializa o AGB para extração seletiva (começa com o estoque passado)
-var agbSelectiveLoggingUpdated = past_stock_agb;
-var selectiveLogging = ee.Image().select();
-var selectiveLoggingAcumulated = ee.Image().select();
-var selectiveLoggingEmiss = ee.Image().select();
-
-// Para cada ano de interesse, processa os dados de desmatamento seletivo
-var years = [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024];
-
-years.forEach(function (year) {
-
-  // Carrega duas imagens para cada ano: uma com dados desordenados e outra com dados geométricos
-  var slYearDis = ee.Image("projects/ee-ipam/assets/MRV_REDD_PARA/0_Activity_Year/degradation_" + year + '_sl_disordered');
-  var slYearGeo = ee.Image("projects/ee-ipam/assets/MRV_REDD_PARA/0_Activity_Year/degradation_" + year + '_sl_geometric');
-  // --- ano prodes
-  // var slYearDis = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_disordered').unmask();
-  // var slYearGeo = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_geometric').unmask();
-
-  // Combina as duas fontes para identificar áreas de extração seletiva
-  var slYear = ee.Image(0)
-    .where(slYearDis.eq(1), 1)
-    .where(slYearGeo.eq(1), 1)
-    // Aplica máscara para manter somente áreas de floresta estável dentro do limite da Amazônia
-    .multiply(stableForest)
-    .multiply(amazonMask)
-    .rename('selective_logging_' + year)
-    .selfMask();
-  
-  selectiveLogging = selectiveLogging
-    .addBands(slYear);
-
-  selectiveLoggingAcumulated = selectiveLoggingAcumulated
-    .addBands(selectiveLogging.reduce('max').rename('selective_logging_' + year));
-    
-      // Calcula o balanço de carbono da extração seletiva para o ano corrente,
-  // considerando uma fração (0.196) aplicada ao AGB
-  var selectiveLoggingCarbon = agbSelectiveLoggingUpdated.multiply(slYear).multiply(0.196)
-    .rename('selective_logging_' + year)
-    .float();
-
-  // Atualiza o estoque de AGB subtraindo o balanço do ano corrente
-  // e converte a diferença para CO₂ (multiplicador 3.67)
-  agbSelectiveLoggingUpdated = agbSelectiveLoggingUpdated.subtract(selectiveLoggingCarbon.unmask());
-  
-  // Acumula o balanço da extração seletiva ao longo dos anos
-  selectiveLoggingEmiss = selectiveLoggingEmiss.addBands(selectiveLoggingCarbon.multiply(3.67));
-  
-
-});
 
 
-selectiveLoggingEmiss = selectiveLoggingAcumulated.multiply(0)
-  .add(selectiveLoggingEmiss.unmask())
-  .rename(selectiveLoggingEmiss.bandNames())
+var selectiveLoggingEmiss = ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/CORTE_SELETIVO/FLORESTA/amazon_forest_logging_v2')
   .divide(3.67);
   
 selectiveLoggingEmiss = fireEmiss_co2.multiply(0).selfMask().slice(0,31).addBands(selectiveLoggingEmiss);
-
-Map.addLayer(agbSelectiveLoggingUpdated,{},'agbSelectiveLoggingUpdated',false);
-Map.addLayer(selectiveLogging,{},'selectiveLogging',false);
-Map.addLayer(selectiveLoggingAcumulated,{},'selectiveLoggingAcumulated',false);
 
 // Adiciona a camada de balanço da extração seletiva ao mapa (opcional, desabilitada por padrão)
 Map.addLayer(selectiveLoggingEmiss, {}, 'selectiveLoggingEmiss', false);

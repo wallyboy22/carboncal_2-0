@@ -25,7 +25,14 @@ var annual_fire = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collect
     accumulated_burned = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_accumulated_burned_v1').slice(0,40).selfMask(),
     
     // Mascara de florestas estaveis
-    mask_stable = ee.Image("projects/ee-ipam/assets/SEEG/SEEG13/13_3_Stable_cover/SEEG_c13_2024"),
+    mask_stable_col = ee.ImageCollection('projects/ee-ipam/assets/SEEG/SEEG13/13_3_Stable_cover').toBands(),
+    mask_stable = mask_stable_col.rename(mask_stable_col.bandNames().map(function(str){  return ee.String(str);})),
+    // mascara estavel do ultimo ano
+    mask_stable = mask_stable.select(['SEEG_c13_1989_classification_1989'],['SEEG_c13_1985_classification_1985'])
+      .addBands(mask_stable.select(['SEEG_c13_1989_classification_1989'],['SEEG_c13_1986_classification_1986']))
+      .addBands(mask_stable.select(['SEEG_c13_1989_classification_1989'],['SEEG_c13_1987_classification_1987']))
+      .addBands(mask_stable.select(['SEEG_c13_1989_classification_1989'],['SEEG_c13_1988_classification_1988']))
+      .addBands(mask_stable),
     mask_stable = mask_stable.multiply(0)
       .where(mask_stable.eq(11),1)
       .where(mask_stable.eq(12),1)

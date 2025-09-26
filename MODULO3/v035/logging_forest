@@ -51,10 +51,16 @@ var amazonBounds = amazonBiome.geometry().bounds();
 
 
 // Carrega dataset com as areas de floresta estavel em 2024. Forest Formation - Code ID 3
-var stableForest = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/13_3_Stable_cover/SEEG_c13_2024')
-  .unmask()
-  .eq(3);
-
+var mask_stable_col = ee.ImageCollection('projects/ee-ipam/assets/SEEG/SEEG13/13_3_Stable_cover').toBands();
+print('mask_stable_col',mask_stable_col);
+var mask_stable = mask_stable_col.rename(mask_stable_col.bandNames().map(function(str){  return ee.String(str);}));
+// mascara estavel do ultimo ano
+var mask_stable = mask_stable.select(['SEEG_c13_1989_classification_1989'],['SEEG_c13_1986_classification_1986'])
+  .addBands(mask_stable.select(['SEEG_c13_1989_classification_1989'],['SEEG_c13_1987_classification_1987']))
+  .addBands(mask_stable.select(['SEEG_c13_1989_classification_1989'],['SEEG_c13_1988_classification_1988']))
+  .addBands(mask_stable)
+  .eq(3)
+  // .slice(-8);
 // Carrega dados de biomassa passada (AGB e Total) para referência
 var past_stock = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/RETIFICACAO/c_rect_col10');
 var past_stock_total = past_stock.select('TOTAL');
@@ -92,7 +98,7 @@ years.forEach(function (year) {
     .where(slYearDis.eq(1), 1)
     .where(slYearGeo.eq(1), 1)
     // Aplica máscara para manter somente áreas de floresta estável dentro do limite da Amazônia
-    .multiply(stableForest)
+    .multiply(mask_stable.select('SEEG_c13_' + year + '_classification_' + year))
     .multiply(amazonMask)
     .rename('selective_logging_' + year)
     .selfMask();
@@ -132,7 +138,7 @@ Map.addLayer(selectiveLoggingEmiss, visParams.stock, 'selectiveLoggingEmiss', tr
 Export.image.toAsset({
     image: selectiveLoggingEmiss.multiply(ee.Image.pixelArea().divide(10000)),
     description: 'brasil_forest_logging_v1',
-    assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_logging_v1',
+    assetId: 'projects/ee-ipam/assets/CCAL/MODULO3/v035/CORTE_SELETIVO/FLORESTA/amazon_forest_logging_v1',
     // description: 'brasil_forest_logging_ano_prodes_v1',
     // assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_ano_prodes_logging_v1',
     scale: 30,
@@ -143,7 +149,7 @@ Export.image.toAsset({
 Export.image.toAsset({
     image: selectiveLoggingEmiss,
     description: 'brasil_forest_logging_v2',
-    assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_logging_v2',
+    assetId: 'projects/ee-ipam/assets/CCAL/MODULO3/v035/CORTE_SELETIVO/FLORESTA/amazon_forest_logging_v2',
     // description: 'brasil_forest_logging_ano_prodes_v2',
     // assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_ano_prodes_logging_v2',
     // scale: 30,

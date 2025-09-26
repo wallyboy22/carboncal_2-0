@@ -28,7 +28,8 @@ var stable_florest = mask_stable.select(['SEEG_c13_1989_classification_1989'],['
   .addBands(mask_stable.select(['SEEG_c13_1989_classification_1989'],['SEEG_c13_1986_classification_1986']))
   .addBands(mask_stable.select(['SEEG_c13_1989_classification_1989'],['SEEG_c13_1987_classification_1987']))
   .addBands(mask_stable.select(['SEEG_c13_1989_classification_1989'],['SEEG_c13_1988_classification_1988']))
-  .addBands(mask_stable);
+  .addBands(mask_stable)
+  .eq(4);
 
 
 //print(stable_florest);

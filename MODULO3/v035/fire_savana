@@ -1,0 +1,257 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.Polygon(
+        [[[-76.54780555077535, 6.702549891783329],
+          [-76.54780555077535, -36.49659065368281],
+          [-28.735305550775358, -36.49659065368281],
+          [-28.735305550775358, 6.702549891783329]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+//SEEG_13 emissoes por fogo em CAMPOS
+
+//_____________________________________________________________________________ 
+// GHG emissions from field fires not related to land clearance
+//
+// The model estimates emissions of non-CO2 in grasslands
+//
+//
+// Created by: Camila Silva, Aline Pontes e Wallace Silva
+// Last edited: 24 Ago 2025
+//_______________________________________________________________________________
+
+// --- --- --- ASSETS
+var annual_fire = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_annual_burned_v1').selfMask(),
+    accumulated_burned = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_accumulated_burned_v1').slice(0,40).selfMask(),
+    
+    // Mascara de florestas estaveis
+    mask_stable_col = ee.ImageCollection('projects/ee-ipam/assets/SEEG/SEEG13/13_3_Stable_cover').toBands(),
+    mask_stable = mask_stable_col.rename(mask_stable_col.bandNames().map(function(str){  return ee.String(str);})),
+    // mascara estavel do ultimo ano
+    mask_stable = mask_stable.select(['SEEG_c13_1989_classification_1989'],['SEEG_c13_1985_classification_1985'])
+      .addBands(mask_stable.select(['SEEG_c13_1989_classification_1989'],['SEEG_c13_1986_classification_1986']))
+      .addBands(mask_stable.select(['SEEG_c13_1989_classification_1989'],['SEEG_c13_1987_classification_1987']))
+      .addBands(mask_stable.select(['SEEG_c13_1989_classification_1989'],['SEEG_c13_1988_classification_1988']))
+      .addBands(mask_stable),
+    mask_stable = mask_stable.multiply(0)
+      .where(mask_stable.eq(11),1)
+      .where(mask_stable.eq(12),1)
+      .where(mask_stable.eq(50),1),
+      
+    qcn = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/RETIFICACAO/c_rect_col10'),
+
+    fwd = qcn.select('LITTER'),
+    cwd = qcn.select('CDW'),
+    
+    agb = qcn.select('AGB'), 
+    
+    agb_plus_cwd = agb.add(cwd),
+         
+    biomas = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
+    
+Map.addLayer(annual_fire,{},'annual_fire');
+// Map.addLayer(qcn,{},'qcn')
+// Map.addLayer(fwd,{},'fwd')
+// Map.addLayer(cwd,{},'cwd')
+// Map.addLayer(agb,{},'agb')
+// Map.addLayer(agb_plus_cwd,{},'agb_plus_cwd')
+
+
+// --- --- --- LOOKUP TABLES -> auxiliar
+var biome_dict = {
+  'amazonia':{
+    
+    fwd_combf: 0.883,           //ok
+    cwd_combf: 0.331,    //ok
+    
+  
+    string_list:['Amazônia'] 
+    
+  },
+  'caatinga':{
+    
+    fwd_combf: 0.883,           //ok
+    cwd_combf: 0.331,    //ok
+  
+    string_list:['Caatinga']
+  },
+  'cerrado':{
+    
+    fwd_combf: 0.883,           //ok
+    cwd_combf: 0.331,    //ok
+  
+    string_list:['Cerrado'],
+  },
+  'mata_atlantica':{
+
+    fwd_combf: 0.883,           //ok
+    cwd_combf: 0.331,    //ok
+  
+    string_list:['Mata Atlântica'] 
+    
+  },
+  'pampa':{
+    
+    fwd_combf: 0.883,           //ok
+    cwd_combf: 0.331,    //ok
+  
+    string_list:['Pampa'],
+  },
+  'pantanal':{
+    
+    fwd_combf: 0.883,           //ok
+    cwd_combf: 0.331,    //ok
+  
+    string_list:['Pantanal'],
+  },
+};
+
+var list_biomes = [
+  // 'amazonia',
+  // 'caatinga',
+  'cerrado',
+  // 'mata_atlantica',
+  // 'pampa',
+  // 'pantanal',
+];
+
+
+list_biomes.forEach(function(biome){
+  
+  // --- geometry for export
+  var featureCollection = biomas
+    .filter(ee.Filter.inList('Bioma',biome_dict[biome]['string_list']));
+  var maskRegion = ee.Image(1).paint(featureCollection).neq(1);
+  var region = featureCollection.geometry().bounds();
+
+  
+  var aREF_combF_fwd_sF = biome_dict[biome]['fwd_combf'];
+  
+  var aREF_combF_cwd_sF = biome_dict[biome]['cwd_combf'];
+  
+  
+  var bioma = biomas.filter(ee.Filter.inList('Bioma',biome_dict[biome]['string_list']));
+  
+  //__________________________________________________________________________________________________________
+  // --- --- --- --- THE MODEL STARTS HERE
+  
+  //Filtrar apenas fogo anual em areas de campo que permanecem campo em 2020!!!
+  //FWD
+  var comb_fwd = fwd.multiply(aREF_combF_fwd_sF)
+  
+  //CWD+AGB 
+  var comb_cwdplusagb = agb_plus_cwd.multiply(aREF_combF_cwd_sF)
+  
+  var comb_total = comb_fwd.add(comb_cwdplusagb)
+  
+  // --- --- --- --- EXPORT
+  
+  // --- --- --- NON_CO2
+  //Partitioning of combusted matter - following IPCC GHG emissions factors
+  //CO2=1613, CO=65, CH4=2.3, N2O= 0.21, NOX= 3.9 g/kg of dry matter burnt in savanas and grasslands
+  
+  
+  //if C content is 0.5, multiply by 2 to convert in dry matter, and by 1000 to convert from Mg to Kg
+  var CO_g_ha = comb_total.multiply(2000).multiply(65); // result in g of CO per hectare
+  
+  var CH4_g_ha = comb_total.multiply(2000).multiply(2.3); // result in g of CH4 per hectare
+  
+  var N2O_g_ha = comb_total.multiply(2000).multiply(0.21); // resullt in g N2O per hectare
+  
+  var NOX_g_ha = comb_total.multiply(2000).multiply(3.9); // result in g NOX per hectare
+  
+  var lists_gases_non_co2 = [
+    [CO_g_ha,'CO_g_ha_comb'],
+    [CH4_g_ha,'CH4_g_ha_comb'],
+    [N2O_g_ha,'N2O_g_ha_comb'],
+    [NOX_g_ha,'NOX_g_ha_comb'],
+  ];    
+  
+  lists_gases_non_co2.forEach(function(list){
+    var image = accumulated_burned.multiply(0).blend(annual_fire.multiply(list[0])) //restringe para area de fogo anual
+    .updateMask(mask_stable).updateMask(maskRegion);
+    Map.addLayer(image);
+    
+    var name = list[1];
+    var split = name.split('_');
+    // print(image)
+    
+    image.bandNames().evaluate(function(oldBands){
+      var newBands = oldBands.map(function(band){ return name + band.slice(-5)});
+       
+      image = image.select(oldBands,newBands)
+        .round()
+        .int32();
+      
+      var version = 'grassland_SEEG13';
+      var description = biome+'-'+name + '-' + version;
+      var address = 'projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/';
+      
+      var newProps = {
+        date_create:ee.Date(Date.now()).format('y-M-d'),
+        source:'SEEG',
+        theme:'Grassland fire emissions',
+        version: version,
+        unit: 'g ' + split[0] + ' ha-1', 
+        biome:biome
+      };
+
+      
+      Map.addLayer(image,{},description,false);
+      
+      // - export to asset
+      Export.image.toAsset({
+        image:image,
+        description:description,
+        assetId:address + description,
+        // pyramidingPolicy, dimensions, 
+        region:region,
+        scale:30,
+        // crs, crsTransform, 
+        maxPixels:1e13,
+        // shardSize
+      });
+      
+      // - convert table export to drive 
+      
+    
+      
+      var reduce = image
+      .multiply(ee.Image.pixelArea().divide(10000)) // convert pixel area in meters to hectare
+      .updateMask(maskRegion)
+      .reduceRegion({
+        reducer:ee.Reducer.sum(),
+        geometry:region, 
+        scale:30,
+        // crs, crsTransform, bestEffort, 
+        maxPixels:1e13, 
+        // tileScale
+      });
+      
+      reduce = ee.Dictionary(reduce);
+      
+      var table = ee.FeatureCollection(ee.List(reduce.keys()).map(function(key){
+        key = ee.String(key);
+        return ee.Feature(null).copyProperties(featureCollection.first())
+        .set('Emissions_Tg',reduce.getNumber(key).divide(1e12)) // 1e12 transforma grama para teragrama
+        .set('Biome',biome)
+        .set('Year',key.slice(-4))
+        .set('GHG',key.split('_').get(0));
+        
+      }));
+      
+      
+      Export.table.toDrive({
+        collection:table,
+        description:description,
+        folder:'SEEG13',
+        fileNamePrefix:description,
+        fileFormat:'csv',
+        // selectors:,
+        // maxVertices:
+      });
+        
+    });
+  });
+
+})

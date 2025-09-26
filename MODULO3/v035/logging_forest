@@ -1,0 +1,152 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.Polygon(
+        [[[-76.54780555077535, 6.702549891783329],
+          [-76.54780555077535, -36.49659065368281],
+          [-28.735305550775358, -36.49659065368281],
+          [-28.735305550775358, 6.702549891783329]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+//SEEG_13 emissoes por corte seletivo em FLORESTAS
+//_____________________________________________________________________________ 
+// FATE model for SEEG Selective logging emissions
+// GHG emissions from forest selective logging not related to deforestation
+// Created by: Celso Junior, Wallace Silva, Camila Silva, Bárbara Zimbres, Edriano Souza, Derly e Manu.
+// Last edited: 17 Set 2025
+//_______________________________________________________________________________
+// ======================================
+// 1. Importação de módulos e definição de parâmetros de visualização
+// ======================================
+// (100.72232818603516 - 95.26365647069115) = 5.45 * 3.67 = 20.033
+// Importa módulos customizados para estilos de mapa e paletas de cores.
+var Mapp = require('users/joaovsiqueira1/packages:Mapp.js');
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+
+// Dicionário com parâmetros de visualização para as diferentes camadas
+var visParams = {
+  lulc: {
+    min: 0,
+    max: 69,
+    palette: palettes.get('classification9'),
+    bands: ['classification_1986']
+  },
+  stock: {
+    min: 0,
+    max: 90,
+    palette: ['#ffffcc', '#41ab5d', '#006837'],
+    bands: ['selective_logging_2020']
+  }
+};
+
+// ======================================
+// 2. Carregamento dos dados e preparação das camadas base
+// ======================================
+
+// Carrega shapefile dos biomas (ex.: Amazônia, Cerrado, etc.)
+var biomes = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
+var amazonBiome = biomes.filter(ee.Filter.equals('Bioma', 'Amazônia'));
+var amazonMask = ee.Image().paint(amazonBiome).eq(0);
+var amazonBounds = amazonBiome.geometry().bounds();
+
+
+// Carrega dataset com as areas de floresta estavel em 2024. Forest Formation - Code ID 3
+var stableForest = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/13_3_Stable_cover/SEEG_c13_2024')
+  .unmask()
+  .eq(3);
+
+// Carrega dados de biomassa passada (AGB e Total) para referência
+var past_stock = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/RETIFICACAO/c_rect_col10');
+var past_stock_total = past_stock.select('TOTAL');
+var past_stock_agb = past_stock.select('AGB');
+print('past_stock_agb',past_stock_agb);
+
+// --- EXTRAÇÃO SELETIVA ---
+// Processa a perda de biomassa decorrente da extração seletiva em áreas de floresta estável.
+// São utilizados dados de desmatamento seletivo para anos específicos (2017 a 2024).
+// os pixels marcados uma vez como
+
+
+Map.addLayer(past_stock_agb,{},'past_biomas_stock_agb',false);
+// Inicializa o AGB para extração seletiva (começa com o estoque passado)
+// Inicializa a imagem que acumulará os balanços anuais da extração seletiva, essas bandas são descartadas na imagem final de corte seletivo
+var agbSelectiveLoggingUpdated = past_stock_agb;
+var selectiveLogging = ee.Image().select();
+var selectiveLoggingAcumulated = ee.Image().select();
+var selectiveLoggingEmiss = ee.Image().select();
+
+// Para cada ano de interesse, processa os dados de desmatamento seletivo
+var years = [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024];
+
+years.forEach(function (year) {
+
+  // Carrega duas imagens para cada ano: uma com dados desordenados e outra com dados geométricos
+  var slYearDis = ee.Image("projects/ee-ipam/assets/MRV_REDD_PARA/0_Activity_Year/degradation_" + year + '_sl_disordered');
+  var slYearGeo = ee.Image("projects/ee-ipam/assets/MRV_REDD_PARA/0_Activity_Year/degradation_" + year + '_sl_geometric');
+  // --- ano prodes
+  // var slYearDis = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_disordered').unmask();
+  // var slYearGeo = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + year + '_cs_geometric').unmask();
+
+  // Combina as duas fontes para identificar áreas de extração seletiva
+  var slYear = ee.Image(0)
+    .where(slYearDis.eq(1), 1)
+    .where(slYearGeo.eq(1), 1)
+    // Aplica máscara para manter somente áreas de floresta estável dentro do limite da Amazônia
+    .multiply(stableForest)
+    .multiply(amazonMask)
+    .rename('selective_logging_' + year)
+    .selfMask();
+  
+  selectiveLogging = selectiveLogging
+    .addBands(slYear);
+
+  selectiveLoggingAcumulated = selectiveLoggingAcumulated
+    .addBands(selectiveLogging.reduce('max').rename('selective_logging_' + year));
+    
+      // Calcula o balanço de carbono da extração seletiva para o ano corrente,
+  // considerando uma fração (0.196) aplicada ao AGB
+  var selectiveLoggingCarbon = agbSelectiveLoggingUpdated.multiply(slYear).multiply(0.196)
+    .rename('selective_logging_' + year)
+    .float();
+
+  // Atualiza o estoque de AGB subtraindo o balanço do ano corrente
+  // e converte a diferença para CO₂ (multiplicador 3.67)
+  agbSelectiveLoggingUpdated = agbSelectiveLoggingUpdated.subtract(selectiveLoggingCarbon.unmask());
+  
+  // Acumula o balanço da extração seletiva ao longo dos anos
+  selectiveLoggingEmiss = selectiveLoggingEmiss.addBands(selectiveLoggingCarbon.multiply(3.67));
+
+});
+
+
+selectiveLoggingEmiss = selectiveLoggingAcumulated.multiply(0)
+  .add(selectiveLoggingEmiss.unmask())
+  .rename(selectiveLoggingEmiss.bandNames());
+
+Map.addLayer(agbSelectiveLoggingUpdated,{},'agbSelectiveLoggingUpdated',false);
+Map.addLayer(selectiveLogging,{},'selectiveLogging',false);
+Map.addLayer(selectiveLoggingAcumulated,{},'selectiveLoggingAcumulated',false);
+Map.addLayer(selectiveLoggingEmiss, visParams.stock, 'selectiveLoggingEmiss', true);
+
+// Adiciona a camada de balanço da extração seletiva ao mapa (opcional, desabilitada por padrão)
+Export.image.toAsset({
+    image: selectiveLoggingEmiss.multiply(ee.Image.pixelArea().divide(10000)),
+    description: 'brasil_forest_logging_v1',
+    assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_logging_v1',
+    // description: 'brasil_forest_logging_ano_prodes_v1',
+    // assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_ano_prodes_logging_v1',
+    scale: 30,
+    region: amazonBounds,
+    maxPixels: 1e13
+});
+
+Export.image.toAsset({
+    image: selectiveLoggingEmiss,
+    description: 'brasil_forest_logging_v2',
+    assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_logging_v2',
+    // description: 'brasil_forest_logging_ano_prodes_v2',
+    // assetId: 'projects/ee-ipam/assets/SEEG/SEEG13/CORTE_SELETIVO/FLORESTA/amazon_forest_ano_prodes_logging_v2',
+    // scale: 30,
+    region: amazonBounds,
+    maxPixels: 1e13
+});

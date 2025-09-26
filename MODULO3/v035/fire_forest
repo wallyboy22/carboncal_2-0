@@ -217,12 +217,12 @@ var biome_dict = {
 };
 
 var list_biomes = [
-  // 'amazonia',
-  // 'caatinga',
+  'amazonia',
+  'caatinga',
   'cerrado',
-  // 'mata_atlantica',
-  // 'pampa',
-  // 'pantanal',
+  'mata_atlantica',
+  'pampa',
+  'pantanal',
 ];
 
 
@@ -516,7 +516,7 @@ list_biomes.forEach(function(biome){
       print('image ' + name, image);
       
       var description = biome+'-'+name + '-' + version;
-      var address = 'projects/ee-ipam/assets/CCAL/MODULO3/v035/FLORESTA/';
+      var address = 'projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/FLORESTA';
       
       // Map.addLayer(image,{},description,false);
       
@@ -562,15 +562,15 @@ list_biomes.forEach(function(biome){
 
       // - convert table export to drive 
       description = description.replace('g_ha','Tg');
-      Export.table.toDrive({
-        collection:table,
-        description:description,
-        folder:'SEEG13',
-        fileNamePrefix:description,
-        fileFormat:'csv',
-        selectors:['Biome','Emissions_Tg','GHG','Year'],
-        // maxVertices:
-      });
+      // Export.table.toDrive({
+      //   collection:table,
+      //   description:description,
+      //   folder:'SEEG13',
+      //   fileNamePrefix:description,
+      //   fileFormat:'csv',
+      //   selectors:['Biome','Emissions_Tg','GHG','Year'],
+      //   // maxVertices:
+      // });
         
     });
   });
@@ -652,15 +652,15 @@ list_biomes.forEach(function(biome){
 
       print('table',table);
 
-      Export.table.toDrive({
-        collection:table,
-        description:description,
-        folder:'SEEG13',
-        fileNamePrefix:description,
-        fileFormat:'csv',
-        selectors:['Biome','Emissions_Tg','GHG','Year'],
-        // maxVertices:
-      });
+      // Export.table.toDrive({
+      //   collection:table,
+      //   description:description,
+      //   folder:'SEEG13',
+      //   fileNamePrefix:description,
+      //   fileFormat:'csv',
+      //   selectors:['Biome','Emissions_Tg','GHG','Year'],
+      //   // maxVertices:
+      // });
   
   });
   
@@ -787,14 +787,14 @@ list_biomes.forEach(function(biome){
   
   var description = biome + '-Fate_model_output_metadata-' + version;
   
-  Export.table.toDrive({
-    collection:metadata,
-    description:description,
-    folder:'SEEG13',
-    fileNamePrefix:description,
-    fileFormat:'csv',
-    // selectors:,
-    // maxVertices:
-  });
+  // Export.table.toDrive({
+  //   collection:metadata,
+  //   description:description,
+  //   folder:'SEEG13',
+  //   fileNamePrefix:description,
+  //   fileFormat:'csv',
+  //   // selectors:,
+  //   // maxVertices:
+  // });
   
 });

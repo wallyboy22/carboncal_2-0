@@ -203,8 +203,8 @@ iterateYears(1986, 2025); // O ano final é exclusivo, então este intervalo cob
 // Exportar imagens com bandas para cada gás
 Export.image.toAsset({
     image: co2_bands.toFloat(),
-    description: 'brasil_savanas_co2_all_years_v2',
-    assetId: 'projects/ee-ipam/assets/CCAL/MODULO3/v035FOGO/SAVANA/brasil_savanas_co2_all_years_v2',
+    description: 'brasil_savanas_co2_all_years_v1',
+    assetId: 'projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/SAVANA/brasil_savanas_co2_all_years_v1',
     scale: 30,
     region: stable_florest.geometry().bounds(),
     maxPixels: 1e13
@@ -212,8 +212,8 @@ Export.image.toAsset({
 
 Export.image.toAsset({
     image: co_bands.toFloat(),
-    description: 'brasil_savanas_co_all_years_v2',
-    assetId: 'projects/ee-ipam/assets/CCAL/MODULO3/v035FOGO/SAVANA/brasil_savanas_co_all_years_v2',
+    description: 'brasil_savanas_co_all_years_v1',
+    assetId: 'projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/SAVANA/brasil_savanas_co_all_years_v1',
     scale: 30,
     region: stable_florest.geometry().bounds(),
     maxPixels: 1e13
@@ -221,8 +221,8 @@ Export.image.toAsset({
 
 Export.image.toAsset({
     image: ch4_bands.toFloat(),
-    description: 'brasil_savanas_ch4_all_years_v2',
-    assetId: 'projects/ee-ipam/assets/CCAL/MODULO3/v035FOGO/SAVANA/brasil_savanas_ch4_all_years_v2',
+    description: 'brasil_savanas_ch4_all_years_v1',
+    assetId: 'projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/SAVANA/brasil_savanas_ch4_all_years_v1',
     scale: 30,
     region: stable_florest.geometry().bounds(),
     maxPixels: 1e13
@@ -230,8 +230,8 @@ Export.image.toAsset({
 
 Export.image.toAsset({
     image: n2o_bands.toFloat(),
-    description: 'brasil_savanas_n2o_all_years_v2',
-    assetId: 'projects/ee-ipam/assets/CCAL/MODULO3/v035FOGO/SAVANA/brasil_savanas_n2o_all_years_v2',
+    description: 'brasil_savanas_n2o_all_years_v1',
+    assetId: 'projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/SAVANA/brasil_savanas_n2o_all_years_v1',
     scale: 30,
     region: stable_florest.geometry().bounds(),
     maxPixels: 1e13
@@ -239,8 +239,8 @@ Export.image.toAsset({
 
 Export.image.toAsset({
     image: nox_bands.toFloat(),
-    description: 'brasil_savanas_nox_all_years_v2',
-    assetId: 'projects/ee-ipam/assets/CCAL/MODULO3/v035FOGO/SAVANA/brasil_savanas_nox_all_years_v2',
+    description: 'brasil_savanas_nox_all_years_v1',
+    assetId: 'projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/SAVANA/brasil_savanas_nox_all_years_v1',
     scale: 30,
     region: stable_florest.geometry().bounds(),
     maxPixels: 1e13

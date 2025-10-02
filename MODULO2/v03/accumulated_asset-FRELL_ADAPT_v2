@@ -43,25 +43,95 @@ var geometry = /* color: #d63000 */ee.Geometry.MultiPoint(
           [-54.68685511163323, -9.93907119269885]]], null, false);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 var mod_01 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/ccal_frel_brasil_2017_2023_V3');
-var mod_02 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/ccal_modulo2_brasil_2017_2023_v2');
+// var mod_01 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/ccal_modulo2_brasil_2017_2023_v2');
 // 
 print('mod_01',mod_01);
-print('mod_02',mod_02);
+print('mod_01',mod_01);
 
 Map.addLayer(mod_01,{},'mod_01');
-Map.addLayer(mod_02,{},'mod_02');
-
-var final_image_modulo2 = mod_02;
+Map.addLayer(mod_01,{},'mod_01');
 
 
 var biomass_palette = ["#440154","#46327e","#365c8d", "#277f8e", "#1fa187", "#4ac16d","#a0da39","#fde725"];
 var yearVis = 2022;
 
-Map.addLayer(final_image_modulo2.select('loss_fire.*'), {min:0,max:90,bands:['loss_fire_'+yearVis],palette:biomass_palette}, 'co2e_fire', false);
-Map.addLayer(final_image_modulo2.select('loss_selective_logging.*'), {min:0,max:90,bands:['loss_selective_logging_'+yearVis],palette:biomass_palette}, 'co2e_logging', false);
-// Map.addLayer(final_image_modulo2.select('loss_convergence_degradation.*'), {min:0,max:90,bands:['loss_convergence_degradation_'+yearVis],palette:biomass_palette}, 'co2e_convergence', false);
-Map.addLayer(final_image_modulo2.select('loss_deforestation.*'), {min:0,max:90,bands:['loss_deforestation_'+yearVis],palette:biomass_palette}, 'co2e_deforestation', false);
-Map.addLayer(final_image_modulo2, {}, 'final_image_modulo2', false);
+Map.addLayer(mod_01.select('loss_fire.*'), {min:0,max:90,bands:['loss_fire_'+yearVis],palette:biomass_palette}, 'co2e_fire', false);
+Map.addLayer(mod_01.select('loss_selective_logging.*'), {min:0,max:90,bands:['loss_selective_logging_'+yearVis],palette:biomass_palette}, 'co2e_logging', false);
+// Map.addLayer(mod_01.select('loss_convergence.*'), {min:0,max:90,bands:['loss_convergence'+yearVis],palette:biomass_palette}, 'co2e_convergence', false);
+Map.addLayer(mod_01.select('loss_deforestation.*'), {min:0,max:90,bands:['loss_deforestation_'+yearVis],palette:biomass_palette}, 'co2e_deforestation', false);
+Map.addLayer(mod_01, {}, 'mod_01', false);
+
+
+
+var loss_fire = mod_01.select('loss_fire.*').selfMask();
+
+loss_fire = ee.Image(loss_fire.slice(1).bandNames().iterate(function(current,previous){
+  var bandname = ee.String(current);
+  var iterate = ee.Image(previous);
+  var newImage = iterate
+    .slice(-1)
+    .rename(bandname)
+    .multiply(0)
+    .blend(loss_fire.select(bandname).gt(0).selfMask());
+  
+  return iterate.addBands(newImage);
+},loss_fire.select(0).gt(0).selfMask()));
+
+
+var loss_selective_logging = mod_01.select('loss_selective_logging.*').selfMask();
+
+loss_selective_logging = ee.Image(loss_selective_logging.slice(1).bandNames().iterate(function(current,previous){
+  var bandname = ee.String(current);
+  var iterate = ee.Image(previous);
+  var newImage = iterate
+    .slice(-1)
+    .rename(bandname)
+    .multiply(0)
+    .blend(loss_selective_logging.select(bandname).gt(0).selfMask());
+  
+  return iterate.addBands(newImage);
+},loss_selective_logging.select(0).gt(0).selfMask()));
+
+var loss_convergence_degradation = loss_fire.add(loss_selective_logging).selfMask();
+
+loss_convergence_degradation = loss_convergence_degradation.rename(loss_convergence_degradation.bandNames().map(function(str){return ee.String('loss_convergence').cat(ee.String(str).slice(-5))}));
+
+var stock = mod_01.select('stock.*');
+var loss_deforestation = mod_01.select('loss_deforestation.*');
+
+var final_image_modulo2 = loss_deforestation 
+    .addBands(loss_fire)
+    .addBands(loss_selective_logging)
+    .addBands(loss_convergence_degradation)
+    .addBands(stock)
+    .float();
+    
+
+var final_name = 'CCAL_MODULO1-v03_a';
+var assetId = 'projects/ee-ipam/assets/CCAL/MODELOS/' + final_name;
+
+print('final_name',final_name);
+print('assetId',assetId);
+print('final_image_modulo2',final_image_modulo2);
+
+// Exporta a imagem final de emissões líquidas para um asset,
+// definindo política de piramidação, escala e extensão
+Export.image.toAsset(
+  {
+  image: final_image_modulo2,
+  description: 'W-SEEG_CCAL-' + final_name,
+  assetId: assetId,
+  pyramidingPolicy: 'median',
+  region: bounds,  // Certifique-se de que 'bounds' esteja definido previamente no script
+  scale: 30,
+  maxPixels: 1e13
+});
+
+
+    
+// --- FINAL DAS CORREÇÕES
+/////////////////////// para testes
+
 
 // --- opções
 var scale = 30;
@@ -102,16 +172,11 @@ Map.addLayer(landCover_original, {
 
 // Nova coleção de carbono na biomassa
 
-// var final_image_modulo2 = ee.Image("projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO3-v035_a");
-// var final_image_modulo2 = ee.Image("projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO3-v035_a");
+// var mod_01 = ee.Image("projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO3-v035_a");
+// var mod_01 = ee.Image("projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO3-v035_a");
 
-print('final_image_modulo2',final_image_modulo2);
+print('mod_01',mod_01);
 
-var loss_fire = final_image_modulo2.select('loss_fire.*');
-var loss_selective_logging = final_image_modulo2.select('loss_selective_logging.*');
-// var loss_convergence_degradation = final_image_modulo2.select('loss_convergence_degradation.*');
-var loss_deforestation = final_image_modulo2.select('loss_deforestation.*');
-var stock = final_image_modulo2.select('stock.*');
 
 // Cálculo da área em hectares
 var pixelAreaHa = ee.Image.pixelArea().divide(1e4); // Converter m² para hectares
@@ -120,10 +185,19 @@ var pixelAreaHa = ee.Image.pixelArea().divide(1e4); // Converter m² para hectar
 var pixelTonelada = stock.divide(pixelAreaHa)
     .addBands(loss_fire)
     .addBands(loss_selective_logging)
-    // .addBands(loss_convergence_degradation)
+    .addBands(loss_convergence_degradation)
     .addBands(loss_deforestation);
 
 print('bandnames',pixelTonelada.bandNames(),pixelTonelada.bandNames().map(function(s){return ee.String(s).slice(0,-5);}).distinct());
+
+
+
+Map.addLayer(pixelTonelada.select('loss_fire.*'), {min:0,max:90,bands:['loss_fire_'+yearVis],palette:biomass_palette}, 'co2e_fire', false);
+Map.addLayer(pixelTonelada.select('loss_selective_logging.*'), {min:0,max:90,bands:['loss_selective_logging_'+yearVis],palette:biomass_palette}, 'co2e_logging', false);
+Map.addLayer(pixelTonelada.select('loss_convergence_.*'), {min:0,max:90,bands:['loss_convergence_'+yearVis],palette:biomass_palette}, 'co2e_convergence', false);
+Map.addLayer(pixelTonelada.select('loss_deforestation.*'), {min:0,max:90,bands:['loss_deforestation_'+yearVis],palette:biomass_palette}, 'co2e_deforestation', false);
+Map.addLayer(pixelTonelada, {}, 'mod_01', false);
+
 
 // Imagens dos biomas e estados para mapeamento territorial
 var biomas_img = ee.Image().paint(biomas, 'CD_Bioma');
@@ -219,8 +293,8 @@ var  niveis = ee.Dictionary(legends.get('lulc_mbc10_niveis')),
 /*************** CONFIG ***************/
 var metrics = [
   'loss_fire',
-  // 'loss_selective_logging',
-  // 'loss_convergence_degradation',
+  'loss_selective_logging',
+  'loss_convergence',
   'loss_deforestation',
   'stock' // se quiser; será convertido para tons_stock
 ];

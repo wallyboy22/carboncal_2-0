@@ -266,12 +266,12 @@ bandnames.forEach(function(bandname,i){
       
       var grass_increment_table = increment
         .filter(ee.Filter.equals('Bioma',biome_str))
-        .filter(ee.Filter.equals('﻿Classe','G'))
+        .filter(ee.Filter.equals('Classe','G'))
         .first();
         
       var forest_increment_table = increment
         .filter(ee.Filter.equals('Bioma',biome_str))
-        .filter(ee.Filter.equals('﻿Classe','F'))
+        .filter(ee.Filter.equals('Classe','F'))
         .first();
       
       

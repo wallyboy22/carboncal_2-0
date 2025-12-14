@@ -1,10 +1,16 @@
 /**** Start of imports. If edited, may not auto-convert in the playground. ****/
-var geometry_ = /* color: #d63000 */ee.Geometry.Polygon(
+var geometry_ = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.Polygon(
         [[[-75.5859593542602, 8.421940683829648],
           [-75.4541234167602, -34.14946064530846],
           [-33.6181859167602, -34.14946064530846],
           [-34.1894749792602, 8.378466825928149]]], null, false),
-    test_geometry = /* color: #0800d6 */ee.Geometry.Polygon(
+    test_geometry = 
+    /* color: #0800d6 */
+    /* shown: false */
+    ee.Geometry.Polygon(
         [[[-48.31581919756238, -15.601119422109141],
           [-48.31581919756238, -15.926242868524081],
           [-47.07985728349988, -15.926242868524081],
@@ -267,9 +273,9 @@ var personal_layers = [
 // - Cobertura Principal
     {
       type:'IMAGE',
-      supergroup:'USE AND COVER',
+      supergroup:'LAND USE AND LAND COVER',
       group:'Main cover',
-      name: 'Use and cover',
+      name: 'Land use and land cover',
       id:'projects/mapbiomas-public/assets/brazil/lulc/collection10/mapbiomas_brazil_collection10_integration_v2',
       // info:'Módulo de dados produzidos pela Rede MapBiomas (https://mapbiomas.org/). Atualmente para a predição dos estoques de carbono são utilizados os dados da Coleção 7 - publicada em agosto de 2022, com 27 classes de legenda cobrindo o período de 1985 - 2021.',
       bandName:'classification',
@@ -282,7 +288,7 @@ var personal_layers = [
 // - Corte Seletivo
     {
       type:'IMAGE',
-      supergroup:'USE AND COVER',
+      supergroup:'LAND USE AND LAND COVER',
       group:'Selective logging',
       name: 'Selective logging annual frequency',
       // info:'Módulo de dados produzidos pela Rede MapBiomas (https://mapbiomas.org/). Atualmente para a predição dos estoques de carbono são utilizados os dados da Coleção 7 - publicada em agosto de 2022, com 27 classes de legenda cobrindo o período de 1985 - 2021.',
@@ -294,7 +300,7 @@ var personal_layers = [
     },
     {
       type:'IMAGE',
-      supergroup:'USE AND COVER',
+      supergroup:'LAND USE AND LAND COVER',
       group:'Selective logging',
       name: 'Last year of selective logging',
       // info:'Módulo de dados produzidos pela Rede MapBiomas (https://mapbiomas.org/). Atualmente para a predição dos estoques de carbono são utilizados os dados da Coleção 7 - publicada em agosto de 2022, com 27 classes de legenda cobrindo o período de 1985 - 2021.',
@@ -306,7 +312,7 @@ var personal_layers = [
     },
     {
       type:'IMAGE',
-      supergroup:'USE AND COVER',
+      supergroup:'LAND USE AND LAND COVER',
       group:'Selective logging',
       name: 'Annual selective logging',
       // info:'Módulo de dados produzidos pela Rede MapBiomas (https://mapbiomas.org/). Atualmente para a predição dos estoques de carbono são utilizados os dados da Coleção 7 - publicada em agosto de 2022, com 27 classes de legenda cobrindo o período de 1985 - 2021.',
@@ -319,7 +325,7 @@ var personal_layers = [
 // - Dinâmica e Regeneração
     {
       type:'IMAGE',
-      supergroup:'USE AND COVER',
+      supergroup:'LAND USE AND LAND COVER',
       group:'Dynamics',
       name: 'Deforestation and regrowth',
       bandName:'classification',
@@ -339,7 +345,7 @@ var personal_layers = [
    },
   {
       type:'IMAGE',
-      supergroup:'USE AND COVER',
+      supergroup:'LAND USE AND LAND COVER',
       group:'Dynamics',
       name: 'Time since primary veg deforestation',
       bandName:'classification',
@@ -361,7 +367,7 @@ var personal_layers = [
    },
    {
       type:'IMAGE',
-      supergroup:'USE AND COVER',
+      supergroup:'LAND USE AND LAND COVER',
       group:'Dynamics',
       name: 'Age of secondary vegetation',
       bandName:'classification',
@@ -384,7 +390,7 @@ var personal_layers = [
 // - Trajetórias
     {
       type:'IMAGE',
-      supergroup:'USE AND COVER',
+      supergroup:'LAND USE AND LAND COVER',
       group:'Trajectories',
       name: 'Natural class trajectories (85-24)',
       // info:'Módulo de dados produzidos pela Rede MapBiomas (https://mapbiomas.org/). Atualmente para a predição dos estoques de carbono são utilizados os dados da Coleção 7 - publicada em agosto de 2022, com 27 classes de legenda cobrindo o período de 1985 - 2021.',
@@ -397,7 +403,7 @@ var personal_layers = [
     },
     {
       type:'IMAGE',
-      supergroup:'USE AND COVER',
+      supergroup:'LAND USE AND LAND COVER',
       group:'Trajectories',
       name: 'Water and wetland trajectories  (85-24)',
       id:'projects/mapbiomas-public/assets/brazil/lulc/collection10/mapbiomas_brazil_collection10_integration_v2',
@@ -409,8 +415,8 @@ var personal_layers = [
     },
     {
       type:'IMAGE',
-      supergroup:'USE AND COVER',
-      group:'Trajetories',
+      supergroup:'LAND USE AND LAND COVER',
+      group:'Trajectories',
       name: 'Water, wetland and grassland trajectories  (85-24)',
       id:'projects/mapbiomas-public/assets/brazil/lulc/collection10/mapbiomas_brazil_collection10_integration_v2',
        bandName:'trajectories',

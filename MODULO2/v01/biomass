@@ -1,0 +1,98 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var aoi = 
+    /* color: #d63000 */
+    /* shown: false */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[-74.95293871838383, 10.634746454667736],
+          [-74.95293871838383, -34.61869995524019],
+          [-32.94121996838384, -34.61869995524019],
+          [-32.94121996838384, 10.634746454667736]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var brasil = ee.Image.constant(1).rename('Constante');
+
+// Estoques
+var stock_2016 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/stock_total_2016');
+brasil = brasil.addBands(stock_2016.rename("stock_2016"));
+for (var ano = 2017; ano < 2024; ano++) {
+    
+    print(ano);
+    var b1 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/' + 'florestas_stock_' + ano);
+    
+    var b2 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/' + 'savanas_stock_' + ano);
+    
+    var br = b1.add(b2);
+    brasil = brasil.addBands(br.rename("stock_" + ano));
+}
+
+// Desmatamento
+for (var ano = 2017; ano < 2024; ano++) {
+    
+    print(ano);
+    var b1 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/' + 'florestas_def_ch4_loss_comb_' + ano);
+    var b2 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/' + 'florestas_def_n2o_loss_comb_' + ano);
+    var b3 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/' + 'florestas_def_co2_loss_other_' + ano);
+    
+    var b4 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/' + 'savanas_def_ch4_loss_comb_' + ano);
+    var b5 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/' + 'savanas_def_n2o_loss_comb_' + ano);
+    var b6 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/' + 'savanas_def_co2_loss_other_' + ano);
+    
+    var br = b1.add(b2).add(b3).add(b4).add(b5).add(b6);
+    brasil = brasil.addBands(br.rename("loss_deforestation_" + ano));
+}
+
+
+
+
+var aoi = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil').geometry().bounds();
+brasil = brasil.slice(1).unmask(0).clip(aoi);
+
+//var fundo = ee.Image.constant(0).clip(aoi);
+
+// Fogo
+for (var ano = 2017; ano < 2024; ano++) {
+    
+    print(ano);
+    
+    var b1 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/' + 'florestas_fire_ch4_loss_comb_' + ano);
+    var b2 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/' + 'florestas_fire_n2o_loss_comb_' + ano);
+    var b3 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/' + 'florestas_fire_co2_loss_comb_' + ano);
+    
+    var b4 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/' + 'savanas_fire_ch4_loss_comb_' + ano);
+    var b5 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/' + 'savanas_fire_n2o_loss_comb_' + ano);
+    var b6 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/' + 'savanas_fire_co2_loss_late_' + ano);
+    var b7 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/' + 'savanas_fire_co2_gain_late_' + ano);
+    
+    var br = b1.add(b2).add(b3).add(b4).add(b5).add(b6).add(b7);
+    brasil = brasil.addBands(br.rename("loss_fire_" + ano));
+}
+
+// Corte Seletivo
+for (var ano = 2017; ano < 2024; ano++) {
+    
+    print(ano);
+    var b1 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/' + 'savanas_sl_co2_loss_other_' + ano);
+    var b2 = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/' + 'savanas_sl_co2_loss_other_' + ano);
+    
+    
+    var br = b1.add(b2);
+    brasil = brasil.addBands(br.rename("loss_selective_logging_" + ano));
+}
+
+print(brasil);
+
+Map.addLayer(brasil);
+
+
+Export.image.toAsset({
+      image: brasil,
+      description: 'ccal_modulo2_brasil_2017_2023_v2',
+      assetId: 'projects/ee-ipam/assets/CCAL/MODELOS/ccal_modulo2_brasil_2017_2023_v2',
+      region: aoi,
+      scale: 30,
+      maxPixels: 1e13
+    });

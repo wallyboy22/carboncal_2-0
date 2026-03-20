@@ -1,0 +1,464 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var aoi = 
+    /* color: #d63000 */
+    /* shown: false */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[-74.95293871838383, 10.634746454667736],
+          [-74.95293871838383, -34.61869995524019],
+          [-32.94121996838384, -34.61869995524019],
+          [-32.94121996838384, 10.634746454667736]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Carregando os Dados de Entrada no Modelo
+//
+var ProdesMaior625ha = ee.Image("projects/ee-ipam/assets/REDD/prodes_brasil_2023");
+
+//
+var ProdesMenor625ha = ee.Image("projects/ee-ipam/assets/CCAL/DATASETS/PRODES/yearly_deforestation_smaller_than_625ha_biome");
+
+//
+var cFactor = ee.Image("projects/ee-ipam/assets/BRAZIL_CF_BIOMES_QCN_FREL");
+
+//
+var ManagedLand = ee.Image("projects/ee-ipam/assets/Managed_Land_Brazil").unmask(0);
+
+//
+var brazil_forests = ee.Image("projects/ee-ipam/assets/CCAL/DATASETS/UKPact_MRV/brazil_pret_vegetation_qcn_v2")
+                    .unmask(0)
+                    .remap([1, 2], [0, 1], 0) //1 - Florestas; 2 - Savanas Arborizadas
+                    .clip(aoi);
+Map.addLayer(brazil_forests, {}, "brazil_forests");
+
+// Filtrando o PRODES para as áreas de floresta (segundo o 4 Inventário Nacional de GEE)
+//var aoi = aoi.bounds(); 
+var mask  = ee.Image(0).clip(aoi);
+
+
+ProdesMaior625ha = ProdesMaior625ha
+					.unmask(0)
+					.remap([16,17,18,19,20,21,22,23,99,100], [2016,2017,2018,2019,2020,2021,2022,2023,100,100], 0)
+					.clip(aoi);
+           
+ProdesMenor625ha = mask
+                  .blend(ProdesMenor625ha)
+                  .selfMask()
+                  .clip(aoi);
+Map.addLayer(ProdesMenor625ha, {}, "ProdesMenor625ha");
+
+var prodes_def = ProdesMaior625ha
+                .blend(ProdesMenor625ha)
+                .remap([2016,2017,2018,2019,2020,2021,2022,2023,100], [2016,2017,2018,2019,2020,2021,2022,2023,100], 0)
+                .multiply(brazil_forests)
+                .clip(aoi);
+                
+
+                
+var prodes_forest = prodes_def.remap([2016,2017,2018,2019,2020,2021,2022,2023,100], [1,1,1,1,1,1,1,1,1], 0);
+
+//prodes_def = mask.blend(prodes_def).clip(aoi);
+Map.addLayer(prodes_def, {}, "prodes_def"); 
+//Map.addLayer(ProdesMaior625ha, {}, "ProdesMaior625ha"); 
+Map.addLayer(prodes_forest, {}, "prodes_forest"); 
+
+// Pará aois delimitation
+// var para = ee.FeatureCollection("projects/ee-ipam/assets/PA_UF_2022");
+
+// Carbon Map from FREL Nacional (Amazon EBA/INPE Map)
+var agb1 = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/FREL/EBA_AB_30m');
+agb1 = agb1.updateMask(agb1.gte(0));
+    
+var bgb1 = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/FREL/EBA_BB_30m');
+bgb1 = bgb1.updateMask(bgb1.gte(0));
+    
+var dw1 = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/FREL/EBA_DW_30m');
+dw1 = dw1.updateMask(dw1.gte(0));
+    
+var litter1 = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/FREL/EBA_LI_30m');
+litter1 = litter1.updateMask(litter1.gte(0));
+
+// Carbon Map from FREL Nacional
+var agb = ee.ImageCollection('projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1').select('cagb').mosaic() //.mosaic() // 'total'; 'cagb'; 'cbgb'; 'cdw'; 'clitter'
+          .blend(agb1)
+          .multiply(prodes_forest)
+          .multiply(brazil_forests)
+          .clip(aoi);
+    
+var bgb = ee.ImageCollection('projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1').select('cbgb').mosaic()
+          .blend(bgb1)
+          .multiply(prodes_forest)
+          .multiply(brazil_forests)
+          .clip(aoi);
+    
+var dw = ee.ImageCollection('projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1').select('cdw').mosaic()
+          .blend(dw1)
+          .multiply(prodes_forest)
+          .multiply(brazil_forests)
+          .clip(aoi);
+    
+var litter = ee.ImageCollection('projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1').select('clitter').mosaic()
+          .blend(litter1)
+          .multiply(prodes_forest)
+          .multiply(brazil_forests)
+          .clip(aoi);
+
+var agb_dw_l = agb.add(dw).add(litter);
+var agb26 = agb.multiply(0.26); // FWD (+26% da agb / Ribeiro et al. (2011)); https://doi.org/10.1016/j.foreco.2011.04.017
+//Map.addLayer(agb_dw_l, {}, "agb_dw_l");
+Map.addLayer(agb, {}, "agb_inicial");
+Map.addLayer(agb_dw_l, {}, "agb_dw_l_inicial");
+
+// Estoque Total Inicial (AGB+BGB+DW+L)
+Export.image.toAsset({
+  image: agb_dw_l.add(bgb),
+  description: 'savanas_stock_' + 2016,
+  assetId: 'projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/savanas_stock_' + 2016,
+  region: aoi,  // converte a coleção de áreas para uma geometria (união)
+  scale: 30,
+  crs: 'EPSG:4326',
+  maxPixels: 1e13
+});
+
+///////////// Regime do Fogo ////////////////////
+var importarDados = function() {
+    var fogo_ac = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/MAPBIOMAS/mapbiomas_fire_collection31_fire_recurrence_v2_prodes_year')
+        .multiply(prodes_forest)
+        .multiply(brazil_forests)
+        .int();
+    fogo_ac = fogo_ac.select(fogo_ac.bandNames().remove('fire_recurrence_1986_1986_1'));
+
+    var ysf = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/MAPBIOMAS/mapbiomas_fire_collection31_time_after_fire_v2_prodes_year')
+        .slice(0,-1)
+        .selfMask()
+        .multiply(prodes_forest)
+        .multiply(brazil_forests);
+    
+
+    return {
+        //fogo: fogo.clip(aoi),
+        fogo_ac: fogo_ac.clip(aoi),
+        ysf: ysf.clip(aoi),
+    };
+};
+
+// Reclassificação da Frequência de Fogo
+var reclassificarFrequenciaFogo = function(fogo_ac_sav) {
+    var fogo_ac_mean = fogo_ac_sav.reduce("mean");
+    
+    return fogo_ac_mean
+        .where(fogo_ac_mean.gte(1).and(fogo_ac_mean.lt(3)), 1) // baixa severidade
+        .where(fogo_ac_mean.gte(3).and(fogo_ac_mean.lt(5)), 2) // media-baixa
+        .where(fogo_ac_mean.gte(5).and(fogo_ac_mean.lt(7)), 3) // media-alta
+        .where(fogo_ac_mean.gte(7), 4); // alta
+  
+};
+
+// Fator de perdas espacializados com base no regime do fogo
+var calcularMudanca = function(fogo_sev) {
+    var agb_loss = fogo_sev
+        .where(fogo_sev.gte(2).and(fogo_sev.lte(3)), 0.021) // 
+        .where(fogo_sev.gt(3).and(fogo_sev.lte(6)), -0.004)
+        .where(fogo_sev.gt(6), -0.02);
+
+    return agb_loss;
+    
+};
+
+
+// Código Principal
+var main = function() {
+    var dados = importarDados();
+    var fogo_ac = dados.fogo_ac;
+    var fogo_ac_reclassificado = reclassificarFrequenciaFogo(fogo_ac);
+    
+    var ysf_reclassificado = dados.ysf
+        .where(dados.ysf.gte(0).and(dados.ysf.lt(4)), 4) // baixo tempo de recuperacao
+        .where(dados.ysf.gte(4).and(dados.ysf.lt(7)), 3) // medio-baixo tempo
+        .where(dados.ysf.gte(7).and(dados.ysf.lt(10)), 2) // medio-alto tempo
+        .where(dados.ysf.gte(10), 1); // alto tempo
+    
+    var fogo_sev = ysf_reclassificado.add(fogo_ac_reclassificado);
+    
+    var factors = calcularMudanca(fogo_sev);
+
+    return factors
+};
+
+print(main())
+
+var emission_factors = main().unmask(0).clip(aoi); //
+
+Map.addLayer(emission_factors, {}, "emission_factors");
+print(emission_factors)
+//print(fire)
+
+////////////////////////////////////////////////////////////
+////////// Calculando as emissões de GEE em CO2eq /////////
+//////////////////////////////////////////////////////////
+
+
+//var substring = 'cs_disordered';
+//var substring = 'fire'
+//var substring = 'cs_geometric'
+
+
+/////// Selective Logging t0 (2017)
+var sl_year_dis = ee.Image("projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_2017_cs_disordered")
+              .multiply(brazil_forests)
+              .clip(aoi);
+
+var sl_year_geo = ee.Image("projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_2017_cs_geometric")
+              .multiply(brazil_forests)
+              .clip(aoi);
+
+var sl_year = mask.blend(sl_year_dis).blend(sl_year_geo);
+
+Map.addLayer(sl_year, {}, "sl_year_2017");
+
+Map.addLayer(sl_year_dis, {}, "sl_year_dis");
+
+function calculateCO2Emissions(Year) {
+  //var co2_total = ee.Image('projects/ee-celsojunior/assets/co2_total_image'); // Substitua pelo caminho correto para a imagem CO2 total
+  //var aoi = ee.FeatureCollection('projects/ee-celsojunior/assets/aoi_boundary'); // Substitua pela coleção de geometrias da Amazônia
+  //var br_aois = ee.FeatureCollection('projects/ee-celsojunior/assets/brazil_aois_boundary'); // Substitua pela coleção de geometrias dos estados brasileiros
+  /////// Emissões por Incêndios Florestais ///////
+  /// Fatores de Emissão para o Ano "Year" ///
+  var emission_factors_year = emission_factors.select('time_after_fire_' + Year);
+  var fire_year = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/MAPBIOMAS/mapbiomas_fire_collection31_annual_burned_areas_v2_prodes_year')
+                .select('burned_year_' + Year)
+                .unmask(0)
+                .multiply(brazil_forests)
+                .multiply(prodes_forest)
+                .clip(aoi);
+  Map.addLayer(fire_year, {}, "fire_year_" + Year);
+  /// Aplicando o Fator de Perda (Emissão) ///
+  // Combustão
+  var fire_co2_comb_l = litter.multiply(fire_year).multiply(0.873).multiply(44/12); // CF from SEEG
+  var fire_co2_comb_dw = dw.multiply(fire_year).multiply(0.459).multiply(44/12); // CF from SEEG
+  
+  var fire_ch4_comb_l = litter.multiply(fire_year).multiply(0.873).multiply(1/0.47).multiply(6.8).multiply(0.001).multiply(28); // 28 - factor ch4 to co2 (IPCC, 2013 – AR5) 
+  var fire_ch4_comb_agb26 = agb26.multiply(fire_year).multiply(0.873).multiply(1/0.47).multiply(6.8).multiply(0.001).multiply(28);
+  var fire_ch4_comb_dw = dw.multiply(fire_year).multiply(0.459).multiply(1/0.47).multiply(6.8).multiply(0.001).multiply(28); // 28 - factor ch4 to co2 (IPCC, 2013 – AR5) 
+  
+  var fire_n2o_comb_l = litter.multiply(fire_year).multiply(0.873).multiply(1/0.47).multiply(0.2).multiply(0.001).multiply(265); // 265 - factor n2o to co2 (IPCC, 2013 – AR5)
+  var fire_n2o_comb_agb26 = agb26.multiply(fire_year).multiply(0.873).multiply(1/0.47).multiply(0.2).multiply(0.001).multiply(265);
+  var fire_n2o_comb_dw = dw.multiply(fire_year).multiply(0.459).multiply(1/0.47).multiply(0.2).multiply(0.001).multiply(265); // 265 - factor n2o to co2 (IPCC, 2013 – AR5)
+  
+  var fire_co2_comb = fire_co2_comb_l.add(fire_co2_comb_dw);
+  var fire_ch4_comb = fire_ch4_comb_l.add(fire_ch4_comb_dw).add(fire_ch4_comb_agb26);
+  var fire_n2o_comb = fire_n2o_comb_l.add(fire_n2o_comb_dw).add(fire_n2o_comb_agb26);
+  
+  // Tardias
+  var fire_co2_late = agb.multiply(fire_year).multiply(emission_factors_year).multiply(44/12);
+  
+  // Atualizando os Compartimentos de Carbono (Degradação)
+  agb = agb.add(agb.multiply(fire_year).multiply(emission_factors_year));
+  agb26 = agb.multiply(0.26);
+  var agb_dw_l = dw.add(litter).add(agb);
+  
+  /////// Selective Logging emissions ///////
+  var sl_factor_year = sl_year.remap([0,1,2,3,4,5,6,7,8,9,10], [0,0.29,0.27,0.26,0.22,0.22,0.22,0.22,0.22,0.22,0.22]);
+  
+  var sl_co2 = agb.multiply(sl_factor_year);
+  
+  var sl_year_dis = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + (Year + 1) + '_cs_disordered')
+              .multiply(brazil_forests)
+              .clip(aoi);
+  var sl_year_geo = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + (Year + 1) + '_cs_geometric')
+              .multiply(brazil_forests)
+              .clip(aoi);
+  
+  var sl_year2 = mask.blend(sl_year_dis).blend(sl_year_geo);
+  
+  sl_year = sl_year.add(sl_year2).multiply(sl_year2).clip(aoi);
+  
+  // Updating carbon stock (Selective Logging)
+  agb = agb.subtract(sl_co2);
+  
+  
+  /////// Deforestation emissions
+  var deforestation_year = prodes_def.eq(Year);
+  
+  var total = agb_dw_l.add(bgb);
+  //Map.addLayer(total, {}, "total " + Year);
+  
+  var def_co2 = total.multiply(deforestation_year);
+  var def_ch4 = agb_dw_l.multiply(deforestation_year).multiply(1/0.47).multiply(0.368).multiply(6.8).multiply(0.001);
+  var def_n2o = agb_dw_l.multiply(deforestation_year).multiply(1/0.47).multiply(0.368).multiply(0.2).multiply(0.001);
+  
+  // Updating carbon stock (Deforestation)
+  agb_dw_l = agb_dw_l.multiply(deforestation_year.neq(1));
+  agb = agb.multiply(deforestation_year.neq(1));
+  bgb = bgb.multiply(deforestation_year.neq(1));
+
+/////// Export GEE emissions as Table (.csv)
+  // Fire
+  var fire_co2_late_gain = fire_co2_late.multiply(-1).multiply(fire_co2_late.gt(0)); // Resultado: Ganhos = Valores Negativos
+  var fire_co2_late_loss = fire_co2_late.multiply(-1).multiply(fire_co2_late.lt(0)); // Resultado: Perdas = Valores Positivos
+  
+  var emission_fire_co2_late_gain = fire_co2_late_gain.multiply(ee.Image.pixelArea().multiply(0.0001));
+  var emission_fire_co2_late_loss = fire_co2_late_loss.multiply(ee.Image.pixelArea().multiply(0.0001));
+  
+  var emission_fire_co2_comb = fire_co2_comb.multiply(ee.Image.pixelArea().multiply(0.0001));
+  var emission_fire_ch4_comb = fire_ch4_comb.multiply(ee.Image.pixelArea().multiply(0.0001));
+  var emission_fire_n2o_comb = fire_n2o_comb.multiply(ee.Image.pixelArea().multiply(0.0001));
+  
+
+// Estoque Total (AGB+BGB+DW+L)
+Export.image.toAsset({
+  image: agb_dw_l.add(bgb),
+  description: 'savanas_stock_' + Year,
+  assetId: 'projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/savanas_stock_' + Year,
+  region: aoi,  // converte a coleção de áreas para uma geometria (união)
+  scale: 30,
+  crs: 'EPSG:4326',
+  maxPixels: 1e13
+});
+
+// CO2 Tardias - Ganhos (+)
+Export.image.toAsset({
+  image: emission_fire_co2_late_gain,
+  description: 'savanas_fire_co2_gain_late_' + Year,
+  assetId: 'projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/savanas_fire_co2_gain_late_' + Year,
+  region: aoi,  // converte a coleção de áreas para uma geometria (união)
+  scale: 30,
+  crs: 'EPSG:4326',
+  maxPixels: 1e13
+});
+
+// Fogo CO2 Tardias - Perdas (-)
+Export.image.toAsset({
+  image: emission_fire_co2_late_loss,
+  description: 'savanas_fire_co2_loss_late_' + Year,
+  assetId: 'projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/savanas_fire_co2_loss_late_' + Year,
+  region: aoi,
+  scale: 30,
+  crs: 'EPSG:4326',
+  maxPixels: 1e13
+});
+
+// Fogo Combustão - CO2
+Export.image.toAsset({
+  image: emission_fire_co2_comb,
+  description: 'savanas_fire_co2_loss_comb_' + Year,
+  assetId: 'projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/savanas_fire_co2_loss_comb_' + Year,
+  region: aoi,
+  scale: 30,
+  crs: 'EPSG:4326',
+  maxPixels: 1e13
+});
+
+// Fogo Combustão - CH4
+Export.image.toAsset({
+  image: emission_fire_ch4_comb,
+  description: 'savanas_fire_ch4_loss_comb_' + Year,
+  assetId: 'projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/savanas_fire_ch4_loss_comb_' + Year,
+  region: aoi,
+  scale: 30,
+  crs: 'EPSG:4326',
+  maxPixels: 1e13
+});
+
+// Fogo Combustão - N2O
+Export.image.toAsset({
+  image: emission_fire_n2o_comb,
+  description: 'savanas_fire_n2o_loss_comb_' + Year,
+  assetId: 'projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/savanas_fire_n2o_loss_comb_' + Year,
+  region: aoi,
+  scale: 30,
+  crs: 'EPSG:4326',
+  maxPixels: 1e13
+});
+
+// Corte Seletivo - CO2
+var emission_sl_co2 = sl_co2
+  .multiply(ee.Image.pixelArea().multiply(0.0001))
+  .multiply(44/12); // Conversão de C para CO2
+
+Export.image.toAsset({
+  image: emission_sl_co2,
+  description: 'savanas_sl_co2_loss_other_' + Year,
+  assetId: 'projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/savanas_sl_co2_loss_other_' + Year,
+  region: aoi,
+  scale: 30,
+  crs: 'EPSG:4326',
+  maxPixels: 1e13
+});
+
+  
+   
+  // Deforestation
+  var emission_def_co2 = def_co2.multiply(ee.Image.pixelArea().multiply(0.0001)).multiply(44/12); // "44/12" - C to CO2
+  var emission_def_ch4 = def_ch4.multiply(ee.Image.pixelArea().multiply(0.0001)).multiply(28); // 28 - factor ch4 to co2 (IPCC, 2013 – AR5)
+  var emission_def_n2o = def_n2o.multiply(ee.Image.pixelArea().multiply(0.0001)).multiply(265); // 265 - factor n2o to co2 (IPCC, 2013 – AR5)
+  
+  //Map.addLayer(emission_def_co2, {}, "emission_def_co2 " + Year);
+  
+// Emissão de desmatamento - CO2
+Export.image.toAsset({
+  image: emission_def_co2,
+  description: 'savanas_def_co2_loss_other_' + Year,
+  assetId: 'projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/savanas_def_co2_loss_other_' + Year,
+  region: aoi,  // Converte a coleção de áreas para uma geometria (união)
+  scale: 30,
+  crs: 'EPSG:4326',
+  maxPixels: 1e13
+});
+
+// Emissão de desmatamento - CH4
+Export.image.toAsset({
+  image: emission_def_ch4,
+  description: 'savanas_def_ch4_loss_comb_' + Year,
+  assetId: 'projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/savanas_def_ch4_loss_comb_' + Year,
+  region: aoi,
+  scale: 30,
+  crs: 'EPSG:4326',
+  maxPixels: 1e13
+});
+
+// Emissão de desmatamento - N2O
+Export.image.toAsset({
+  image: emission_def_n2o,
+  description: 'savanas_def_n2o_loss_comb_' + Year,
+  assetId: 'projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1/savanas_def_n2o_loss_comb_' + Year,
+  region: aoi,
+  scale: 30,
+  crs: 'EPSG:4326',
+  maxPixels: 1e13
+});
+
+Map.addLayer(emission_def_n2o, {}, "emission_def_n2o");
+
+
+  return Year + 1; // Retorna o próximo ano
+}
+
+
+
+// Função para iterar através dos anos
+function iterateYears(startYear, endYear) {
+  if (startYear < endYear) {
+    var nextYear = calculateCO2Emissions(startYear); 
+    iterateYears(nextYear, endYear);
+  }
+}
+// Chamando a função para calcular as emissões de CO2 no período de 2017 a 2023
+iterateYears(2017, 2024); // O ano final é exclusivo, então este intervalo cobrirá 2017 a 2023.
+
+
+Map.addLayer(agb, {}, "agb_final");
+Map.addLayer(agb_dw_l, {}, "agb_dw_l_final");
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+/// Fogo = AGB + WD + Litter (CO2, CH4 e NO2)
+/// Corte Seletivo = AGB (CO2)
+/// Desmatamento = Total (CO2)
+
+// Áreas Manejadas: Somente o Fogo
+// Áreas Manejadas e Não-manejadas: Desmatamento e Corte Seletivo Irregular

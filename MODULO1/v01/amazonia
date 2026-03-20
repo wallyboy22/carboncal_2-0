@@ -1,9 +1,3 @@
-/**** Start of imports. If edited, may not auto-convert in the playground. ****/
-var brazil_forests = ee.Image("projects/ee-celsojunior/assets/brazil_forest_pret_4Inv_v1"),
-    ManagedLand = ee.Image("projects/ee-ipam/assets/Managed_Land_Para_Final_Raster"),
-    ProdesMaior625ha = ee.Image("projects/ee-ipam/assets/REDD/prodes_brasil_2023"),
-    ProdesMenor625ha = ee.Image("projects/ee-ipam/assets/CCAL/DATASETS/PRODES/yearly_deforestation_smaller_than_625ha_biome");
-/***** End of imports. If edited, may not auto-convert in the playground. *****/
 // Importação de Imagens e Dados
 var ProdesMaior625ha = ee.Image("projects/ee-ipam/assets/REDD/prodes_brasil_2023"),
     ProdesMenor625ha = ee.Image("projects/ee-ipam/assets/CCAL/DATASETS/PRODES/yearly_deforestation_smaller_than_625ha_biome");

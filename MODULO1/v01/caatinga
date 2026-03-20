@@ -1,0 +1,124 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var brazil_forests = ee.Image("projects/ee-celsojunior/assets/brazil_forest_pret_4Inv_v1"),
+    ManagedLand = ee.Image("projects/ee-ipam/assets/Managed_Land_Para_Final_Raster"),
+    ProdesMaior625ha = ee.Image("projects/ee-ipam/assets/REDD/prodes_brasil_2023"),
+    ProdesMenor625ha = ee.Image("projects/ee-ipam/assets/CCAL/DATASETS/PRODES/yearly_deforestation_smaller_than_625ha_biome");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Importação de Imagens e Dados
+// ///// 2017-2023 ///////////
+// Delimitação do Bioma Caatinga
+var aoi = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil')
+          .filter(ee.Filter.eq('Bioma', 'Caatinga'));
+
+// Máscara de Florestas Brasileiras no Caatinga
+var brazil_forests_caatinga = ee.Image("projects/ee-ipam/assets/CCAL/DATASETS/UKPact_MRV/brazil_pret_vegetation_qcn_v2")
+                                .unmask(0)
+                                .remap([1, 2], [1, 1], 0)
+                                .clip(aoi);
+Map.addLayer(brazil_forests_caatinga, {}, "brazil_forests_caatinga");
+
+// Processamento das Imagens de Deforestação
+var prodes_def = ProdesMaior625ha
+                .unmask(0)
+                .multiply(brazil_forests_caatinga)
+                .remap([16,17,18,19,20,21,22,23,99,100], [2016,2017,2018,2019,2020,2021,2022,2023,100,100], 0)
+                .clip(aoi);
+                
+var prodes_forest = prodes_def.remap([2016,2017,2018,2019,2020,2021,2022,2023,100], [1,1,1,1,1,1,1,1,1], 0);
+
+Map.addLayer(prodes_def, {}, "prodes_def_caatinga"); 
+
+// Mapas de Carbono
+var total = ee.ImageCollection('projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1')
+            .select('total').mosaic()
+            .unmask(0)
+            .multiply(prodes_forest)
+            .multiply(brazil_forests_caatinga)
+            .clip(aoi);
+
+// Mapas Iniciais
+Map.addLayer(total, {}, "total_final_caatinga");
+Map.addLayer(brazil_forests_caatinga, {}, "brazil_forests_caatinga");
+
+// Estoque Total Inicial (AGB+BGB+DW+L)
+      Export.image.toAsset({
+        image: total,
+        description: 'caatinga_stock_stock_' + 2016,
+        assetId: 'projects/ee-ipam/assets/CCAL/FREL_BR_2017_2023/caatinga_stock_stock_' + 2016,
+        region: aoi,  // converte a coleção de áreas para uma geometria (união)
+        scale: 30,
+        crs: 'EPSG:4326',
+        maxPixels: 1e13
+});
+
+// ////////////////////////////////////////////////////////////
+// ////////// Calculando as emissões de GEE em CO2eq /////////
+// //////////////////////////////////////////////////////////
+
+function calculateCO2Emissions(Year) {
+  // Definição da Área de Interesse (Caatinga)
+  var aoi_cerrado = ee.FeatureCollection('projects/ee-ipam/assets/BR_UF_Biomas')
+                      .filter(ee.Filter.eq('Bioma', 'Caatinga')); 
+  
+  ///// Deforestation emissions ///////
+  var deforestation_year = prodes_def.eq(Year);
+  
+  var def_co2 = total.multiply(deforestation_year);
+  var def_ch4 = total.multiply(deforestation_year).multiply(1/0.47).multiply(0.379).multiply(6.8).multiply(0.001);
+  var def_n2o = total.multiply(deforestation_year).multiply(1/0.47).multiply(0.379).multiply(0.2).multiply(0.001);
+
+  // Soma das Emissões de Desmatamento
+  var emission_def = def_co2.add(def_ch4).add(def_n2o).rename('emission_def_' + Year);
+  
+  // Atualização do Estoque de Carbono após Desmatamento
+  total = total.multiply(deforestation_year.neq(1));
+  
+  ///// Exportação das Emissões como Rasters ///////
+  var prefix = 'caatinga';
+  var folder = 'CCAL/FREL_BR_2017_2023';
+  
+  // Função Auxiliar para Exportar Imagens
+  function exportImage(image, description) {
+    Export.image.toAsset({
+      image: image,
+      description: description,
+      assetId: 'projects/ee-ipam/assets/' + folder + '/' + description,
+      region: aoi.geometry().bounds(),
+      scale: 30,
+      maxPixels: 1e13
+    });
+  }
+  
+// Estoque Total (AGB+BGB+DW+L)
+      Export.image.toAsset({
+        image: total,
+        description: 'caatinga_stock_stock_' + Year,
+        assetId: 'projects/ee-ipam/assets/CCAL/FREL_BR_2017_2023/caatinga_stock_stock_' + Year,
+        region: aoi,  // converte a coleção de áreas para uma geometria (união)
+        scale: 30,
+        crs: 'EPSG:4326',
+        maxPixels: 1e13
+  });
+    
+  // Exportar Emissões de Desmatamento
+  var emission_def_sum = emission_def.rename(prefix + '_emission_def_' + Year);
+  exportImage(emission_def_sum, prefix + '_emission_def_' + Year);
+  
+  return Year + 1; // Retorna o próximo ano
+}
+
+// Função para Iterar Através dos Anos
+function iterateYears(startYear, endYear) {
+  if (startYear < endYear) {
+    var nextYear = calculateCO2Emissions(startYear); 
+    iterateYears(nextYear, endYear);
+  }
+}
+
+// Chamando a Função para Calcular as Emissões de CO2 no período de 2017 a 2023
+iterateYears(2017, 2024); // O ano final é exclusivo, então este intervalo cobrirá 2017 a 2023.
+
+Map.addLayer(total, {}, "total_final_caatinga");
+Map.addLayer(brazil_forests_caatinga, {}, "brazil_forests_caatinga");
+
+/// Deforestação = Total (CO2eq)

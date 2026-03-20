@@ -1,0 +1,249 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var aoi = 
+    /* color: #d63000 */
+    /* shown: false */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[-74.95293871838383, 10.634746454667736],
+          [-74.95293871838383, -34.61869995524019],
+          [-32.94121996838384, -34.61869995524019],
+          [-32.94121996838384, 10.634746454667736]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Importação de Imagens e Dados
+var ProdesMaior625ha = ee.Image("projects/ee-ipam/assets/REDD/prodes_brasil_2023"),
+    ProdesMenor625ha = ee.Image("projects/ee-ipam/assets/CCAL/DATASETS/PRODES/yearly_deforestation_smaller_than_625ha_biome");
+
+var ManagedLand = ee.Image("projects/ee-ipam/assets/Managed_Land_Brazil").unmask(0);
+
+///// 2017-2023 ///////////
+// Delimitação do Bioma Amazônia
+var amazonia = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil')
+            .filter(ee.Filter.eq('Bioma', 'Amazônia'));
+
+// Máscara de Florestas Brasileiras
+var brazil_forests = ee.Image("projects/ee-ipam/assets/CCAL/DATASETS/UKPact_MRV/brazil_pret_vegetation_qcn_v2")
+                    .unmask(0)
+                    .remap([1, 2], [1, 1], 0)
+                    .clip(amazonia);
+Map.addLayer(brazil_forests, {}, "brazil_forests");
+
+// Processamento das Imagens de Deforestação
+ProdesMaior625ha = ProdesMaior625ha
+                    .unmask(0)
+                    .remap([16,17,18,19,20,21,22,23,99,100], [2016,2017,2018,2019,2020,2021,2022,2023,100,100], 0)
+                    .clip(amazonia);
+                  
+ProdesMenor625ha = ProdesMenor625ha
+                .clip(amazonia);
+
+var prodes_def = ProdesMaior625ha
+                .blend(ProdesMenor625ha)
+                .remap([2016,2017,2018,2019,2020,2021,2022,2023,100], [2016,2017,2018,2019,2020,2021,2022,2023,100], 0)
+                .clip(amazonia);
+                
+var prodes_forest = prodes_def.remap([2016,2017,2018,2019,2020,2021,2022,2023,100], [1,1,1,1,1,1,1,1,1], 0);
+
+Map.addLayer(prodes_def, {}, "prodes_def"); 
+
+// Mapas de Carbono
+var agb1 = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/FREL/EBA_AB_30m');
+var bgb1 = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/FREL/EBA_BB_30m');
+var dw1 = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/FREL/EBA_DW_30m');
+var litter1 = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/FREL/EBA_LI_30m');
+
+
+agb1 = agb1.updateMask(agb1.gte(0));
+bgb1 = bgb1.updateMask(bgb1.gte(0));
+dw1 = dw1.updateMask(dw1.gte(0));
+litter1 = litter1.updateMask(litter1.gte(0));
+
+var agb = ee.ImageCollection('projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1').select('cagb').mosaic()
+          .blend(agb1)
+          .multiply(prodes_forest)
+          .multiply(brazil_forests)
+          .clip(amazonia);
+
+var bgb = ee.ImageCollection('projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1').select('cbgb').mosaic()
+          .blend(bgb1)
+          .multiply(prodes_forest)
+          .multiply(brazil_forests)
+          .clip(amazonia);
+
+var dw = ee.ImageCollection('projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1').select('cdw').mosaic()
+          .blend(dw1)
+          .multiply(prodes_forest)
+          .multiply(brazil_forests)
+          .clip(amazonia);
+
+var litter = ee.ImageCollection('projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1').select('clitter').mosaic()
+          .blend(litter1)
+          .multiply(prodes_forest)
+          .multiply(brazil_forests)
+          .clip(amazonia);
+
+var agb_dw_l = agb.add(dw).add(litter);
+//Map.addLayer(agb_dw_l, {}, "agb_dw_l");
+Map.addLayer(agb, {}, "agb_inicial");
+Map.addLayer(agb_dw_l, {}, "agb_dw_l_inicial");
+
+// Estoque Total Inicial (AGB+BGB+DW+L)
+Export.image.toAsset({
+  image: agb_dw_l.add(bgb),
+  description: 'amazonia_stock_stock_' + 2016,
+  assetId: 'projects/ee-ipam/assets/CCAL/FREL_BR_2017_2023/amazonia_stock_stock_' + 2016,
+  region: amazonia.geometry().bounds(),  // converte a coleção de áreas para uma geometria (união)
+  scale: 30,
+  crs: 'EPSG:4326',
+  maxPixels: 1e13
+});
+
+////////////////////////////////////////////////////////////
+// Calculando as emissões de GEE em CO2eq
+///////////////////////////////////////////////////////////
+
+// Selective Logging t0 (2017)
+var sl_year = ee.Image("projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_2017_cs_disordered")
+              .multiply(brazil_forests)
+              .clip(amazonia);
+sl_year = ee.Image(0).blend(sl_year).clip(amazonia);
+
+Map.addLayer(sl_year, {}, "sl_year_2017");
+
+// Função para Calcular as Emissões de CO2eq
+function calculateCO2Emissions(Year) {
+  // Definição da Área de Interesse (Amazônia)
+  var aoi = ee.FeatureCollection('projects/ee-ipam/assets/BR_UF_Biomas')
+                  .filter(ee.Filter.eq('Bioma', 'Amazônia'));
+  
+  ///// Fire emissions ///////
+  var fire_year = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + Year + '_fire')
+                  .multiply(brazil_forests)
+                  .multiply(ManagedLand)
+                  .clip(amazonia);
+  fire_year = ee.Image(0).blend(fire_year).clip(amazonia);
+      
+  var fire_co2 = agb.multiply(fire_year).multiply(0.368);
+  var fire_ch4 = agb_dw_l.multiply(fire_year).multiply(1/0.47).multiply(0.368).multiply(6.8).multiply(0.001);
+  var fire_n2o = agb_dw_l.multiply(fire_year).multiply(1/0.47).multiply(0.368).multiply(0.2).multiply(0.001);
+  
+  // Soma das Emissões de Incêndios
+  var emission_fire = fire_co2.add(fire_ch4).add(fire_n2o).rename('emission_fire_' + Year);
+  
+  // Atualização do Estoque de Carbono após Incêndios
+  agb = agb.subtract(agb.multiply(fire_year).multiply(0.368));
+  agb_dw_l = agb_dw_l.subtract(agb_dw_l.multiply(fire_year).multiply(0.368));
+  
+  //Map.addLayer(fire_year, {}, "fire_year_" + Year);
+  
+  ///// Selective Logging emissions ///////
+  var sl_factor_year = sl_year.remap([0,1,2,3,4,5,6,7,8,9,10], [0,0.29,0.27,0.26,0.22,0.22,0.22,0.22,0.22,0.22,0.22]);
+  
+  var sl_co2 = agb.multiply(sl_factor_year);
+  var sl_year2 = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_' + (Year + 1) + '_cs_disordered')
+      .unmask(0)
+      .multiply(brazil_forests)
+      .clip(amazonia);
+  sl_year2 = ee.Image(0).blend(sl_year2);
+  
+  sl_year = sl_year.add(sl_year2).multiply(sl_year2).multiply(brazil_forests).clip(amazonia);
+      
+  // Emissões de Corte Seletivo
+  var emission_sl_co2 = sl_co2.multiply(44/12); // C to CO2
+  // Se houver emissões de CH4 e N2O para corte seletivo, adicione-as aqui
+  var emission_sl = emission_sl_co2.rename('emission_sl_' + Year);
+  
+  // Atualização do Estoque de Carbono após Corte Seletivo
+  agb = agb.subtract(sl_co2);
+  
+  ///// Deforestation emissions ///////
+  var deforestation_year = prodes_def.eq(Year);
+  
+  var total = agb_dw_l.add(bgb);
+  
+  var def_co2 = total.multiply(deforestation_year);
+  var def_ch4 = agb_dw_l.multiply(deforestation_year).multiply(1/0.47).multiply(0.368).multiply(6.8).multiply(0.001);
+  var def_n2o = agb_dw_l.multiply(deforestation_year).multiply(1/0.47).multiply(0.368).multiply(0.2).multiply(0.001);
+
+  // Soma das Emissões de Desmatamento
+  var emission_def = def_co2.add(def_ch4).add(def_n2o).rename('emission_def_' + Year);
+  emission_def = emission_def.subtract(emission_def.multiply(0.042));
+  
+  // Atualização do Estoque de Carbono após Desmatamento
+  agb_dw_l = agb_dw_l.multiply(deforestation_year.neq(1));
+  agb = agb.multiply(deforestation_year.neq(1));
+  bgb = bgb.multiply(deforestation_year.neq(1));
+
+  ///// Exportação das Emissões como Rasters ///////
+  var prefix = 'amazonia';
+  var folder = 'CCAL/FREL_BR_2017_2023';
+  
+  // Função Auxiliar para Exportar Imagens
+  function exportImage(image, description) {
+    Export.image.toAsset({
+      image: image,
+      description: description,
+      assetId: 'projects/ee-ipam/assets/' + folder + '/' + description,
+      region: amazonia.geometry().bounds(),
+      scale: 30,
+      maxPixels: 1e13
+    });
+  }
+  
+  // Estoque Total (AGB+BGB+DW+L)
+      Export.image.toAsset({
+        image: agb_dw_l.add(bgb),
+        description: 'amazonia_stock_stock_' + Year,
+        assetId: 'projects/ee-ipam/assets/CCAL/FREL_BR_2017_2023/amazonia_stock_stock_' + Year,
+        region: amazonia.geometry().bounds(),  // converte a coleção de áreas para uma geometria (união)
+        scale: 30,
+        crs: 'EPSG:4326',
+        maxPixels: 1e13
+  });
+  
+  // Exportar Emissões de Incêndios
+  var emission_fire_sum = emission_fire.rename('amazonia_emission_fire_' + Year);
+  exportImage(emission_fire_sum, 'amazonia_emission_fire_' + Year);
+  
+  // Exportar Emissões de Corte Seletivo
+  var emission_sl_sum = emission_sl.rename('amazonia_emission_sl_' + Year);
+  exportImage(emission_sl_sum, 'amazonia_emission_sl_' + Year);
+  
+  // Exportar Emissões de Desmatamento
+  var emission_def_sum = emission_def.rename('amazonia_emission_def_' + Year);
+  exportImage(emission_def_sum, 'amazonia_emission_def_' + Year);
+  
+  return Year + 1; // Retorna o próximo ano
+}
+
+// Função para Iterar Através dos Anos
+function iterateYears(startYear, endYear) {
+  if (startYear < endYear) {
+    var nextYear = calculateCO2Emissions(startYear); 
+    iterateYears(nextYear, endYear);
+  }
+}
+// Chamando a Função para Calcular as Emissões de CO2 no período de 2017 a 2023
+iterateYears(2017, 2024); // O ano final é exclusivo, então este intervalo cobrirá 2017 a 2023.
+
+Map.addLayer(agb, {}, "agb_final");
+Map.addLayer(agb_dw_l, {}, "agb_dw_l_final");
+
+/// Fogo = AGB + WD + Litter (CO2, CH4 e NO2)
+/// Corte Seletivo = AGB (CO2)
+/// Desmatamento = Total (CO2)
+
+
+// Áreas Manejadas: Somente o Fogo
+// Áreas Manejadas e Não-manejadas: Desmatamento e Corte Seletivo Irregular
+
+/*
+Bioma
+Ano
+Estado
+TipoFonte
+Valor
+*/

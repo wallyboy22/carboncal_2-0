@@ -1,0 +1,75 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var brazil_forests = ee.Image("projects/ee-celsojunior/assets/brazil_forest_pret_4Inv_v1"),
+    ManagedLand = ee.Image("projects/ee-ipam/assets/Managed_Land_Para_Final_Raster"),
+    ProdesMaior625ha = ee.Image("projects/ee-ipam/assets/REDD/prodes_brasil_2023"),
+    ProdesMenor625ha = ee.Image("projects/ee-ipam/assets/CCAL/DATASETS/PRODES/yearly_deforestation_smaller_than_625ha_biome");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var brasil = ee.Image.constant(1).rename('Constante');
+
+// Desmatamento
+for (var ano = 2017; ano < 2024; ano++) {
+    
+    print(ano);
+    var amz = ee.Image('projects/ee-ipam/assets/CCAL/FREL_BR_2021_2023/' + 'amazonia_emission_def_' + ano);
+    var cer = ee.Image('projects/ee-ipam/assets/CCAL/FREL_BR_2021_2023/' + 'cerrado_emission_def_' + ano);
+    var caa = ee.Image('projects/ee-ipam/assets/CCAL/FREL_BR_2021_2023/' + 'caatinga_emission_def_' + ano);
+    var ma = ee.Image('projects/ee-ipam/assets/CCAL/FREL_BR_2021_2023/' + 'ma_emission_def_' + ano);
+    var pam = ee.Image('projects/ee-ipam/assets/CCAL/FREL_BR_2021_2023/' + 'pam_emission_def_' + ano);
+    var pan = ee.Image('projects/ee-ipam/assets/CCAL/FREL_BR_2021_2023/' + 'pan_emission_def_' + ano);
+    var br = amz.addBands(cer).addBands(caa).addBands(ma).addBands(pam).addBands(pan);
+    br = br.reduce(ee.Reducer.max());
+    brasil = brasil.addBands(br.rename("loss_deforestation_" + ano));
+}
+
+// Estoques
+for (var ano = 2016; ano < 2024; ano++) {
+    
+    print(ano);
+    var amz = ee.Image('projects/ee-ipam/assets/CCAL/FREL_BR_2017_2023/' + 'amazonia_stock_stock_' + ano);
+    var cer = ee.Image('projects/ee-ipam/assets/CCAL/FREL_BR_2017_2023/' + 'cerrado_stock_stock_' + ano);
+    var caa = ee.Image('projects/ee-ipam/assets/CCAL/FREL_BR_2017_2023/' + 'caatinga_stock_stock_' + ano);
+    var ma = ee.Image('projects/ee-ipam/assets/CCAL/FREL_BR_2017_2023/' + 'ma_stock_stock_' + ano);
+    var pam = ee.Image('projects/ee-ipam/assets/CCAL/FREL_BR_2017_2023/' + 'pam_stock_stock_' + ano);
+    var pan = ee.Image('projects/ee-ipam/assets/CCAL/FREL_BR_2017_2023/' + 'pan_stock_stock_' + ano);
+    var br = amz.addBands(cer).addBands(caa).addBands(ma).addBands(pam).addBands(pan);
+    br = br.reduce(ee.Reducer.max());
+    brasil = brasil.addBands(br.rename("stock_" + ano));
+}
+
+
+var aoi = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil').geometry().bounds();
+brasil = brasil.slice(1).unmask(0).clip(aoi);
+
+var fundo = ee.Image.constant(0).clip(aoi);
+
+// Corte Seletivo
+for (var ano = 2017; ano < 2024; ano++) {
+    
+    print(ano);
+    var br = ee.Image('projects/ee-ipam/assets/CCAL/FREL_BR_2021_2023/' + 'amazonia_emission_sl_' + ano);
+    br = fundo.blend(br).clip(aoi);
+    brasil = brasil.addBands(br.rename("loss_selective_logging_" + ano));
+}
+
+// Fogo
+for (var ano = 2017; ano < 2024; ano++) {
+    
+    print(ano);
+    var br = ee.Image('projects/ee-ipam/assets/CCAL/FREL_BR_2021_2023/' + 'amazonia_emission_fire_' + ano);
+    br = fundo.blend(br).clip(aoi);
+    brasil = brasil.addBands(br.rename("loss_fire_" + ano));
+}
+
+print(brasil);
+
+Map.addLayer(brasil);
+
+
+Export.image.toAsset({
+      image: brasil,
+      description: 'ccal_frel_brasil_2017_2023_v2',
+      assetId: 'projects/ee-ipam/assets/CCAL/MODELOS/ccal_frel_brasil_2017_2023_v2',
+      region: aoi,
+      scale: 30,
+      maxPixels: 1e13
+    });

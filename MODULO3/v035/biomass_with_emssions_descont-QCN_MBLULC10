@@ -311,7 +311,7 @@ var fireForestBalance_co2e = fireForestBalance_co2
 // EMISSÕES PARA SAVANAS
 
 var pixel_area_ha = ee.Image.pixelArea().divide(10000);
-
+// !!! verificar versão das emissões de savana estão em total ou toneladas
 // Emissões para savanas (CO₂)
 var fireSavannaBalance_co2 = ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/FOGO/SAVANA/brasil_savanas_co2_all_years_v1').float();
 // Emissões para savanas (CH₄)

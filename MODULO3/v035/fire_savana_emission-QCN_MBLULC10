@@ -136,7 +136,7 @@ function calculateCEmissions(Year) {
   var fire_co2_late = agb.multiply(fire_year).multiply(emission_factors_year).multiply(44/12);
 
   // Combustão
-  // CO
+  // CO fatores de combustão -> 0.873 e 0.459 || conteudo de carbono -> 1/0.47 || fator de emissão -> 65 || convertendo a unidade -> 0.0001
   var fire_co_comb_l = litter.multiply(fire_year).multiply(0.873).multiply(1/0.47).multiply(65).multiply(0.001);
   var fire_co_comb_agb26 = agb26.multiply(fire_year).multiply(0.873).multiply(1/0.47).multiply(65).multiply(0.001);
   var fire_co_comb_dw = dw.multiply(fire_year).multiply(0.459).multiply(1/0.47).multiply(65).multiply(0.001);

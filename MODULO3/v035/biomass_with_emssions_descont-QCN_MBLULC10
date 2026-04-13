@@ -502,7 +502,8 @@ var final_image_modulo3 = fireEmiss_co2e.rename(fireEmiss_co2e.bandNames().map(f
   .addBands(selectiveLoggingEmiss.rename(selectiveLoggingEmiss.bandNames().map(function(s) {
     return ee.String('loss_selective_logging').cat(ee.String(s).slice(-5));
   })).slice(31)) // representa as emissões por corte seletivo
-
+  
+  // !!!! investigar se entram os dados de remoção por fogo em savana.
   .addBands(def_reg_balance.updateMask(def_reg_balance.lt(0)).rename(def_reg_balance.bandNames().map(function(s) {
     return ee.String('gain_secondary_vegetation').cat(ee.String(s).slice(-5));
   })).slice(1)) // representa remoção de carbono por recrescimento da vegetação secundaria

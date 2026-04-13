@@ -614,7 +614,7 @@ list_biomes.forEach(function(biome){
         image:image,
         description:description,
         assetId:address + description,
-        pyramidingPolicy: 'median', 
+        pyramidingPolicy: 'median', // !!! mean
         //dimensions, 
         region:region,
         scale:30,

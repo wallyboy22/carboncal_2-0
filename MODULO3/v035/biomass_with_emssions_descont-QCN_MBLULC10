@@ -408,6 +408,7 @@ Map.addLayer(past_stock_agb,{},'past_stock_agb');
 // Inicializa o AGB para extração seletiva (começa com o estoque passado)
 
 
+// estoque de corte seletivo 
 var selectiveLoggingEmiss = ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/CORTE_SELETIVO/FLORESTA/amazon_forest_logging_v2')
   .divide(3.67);
   

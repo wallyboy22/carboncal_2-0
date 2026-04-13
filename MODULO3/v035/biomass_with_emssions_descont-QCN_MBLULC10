@@ -409,8 +409,9 @@ Map.addLayer(past_stock_agb,{},'past_stock_agb');
 
 
 // estoque de corte seletivo 
-var selectiveLoggingEmiss = ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/CORTE_SELETIVO/FLORESTA/amazon_forest_logging_v2')
-  .divide(3.67);
+var selectiveLoggingEmiss = ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/CORTE_SELETIVO/FLORESTA/amazon_forest_logging_v2') // !!! toneladas por hectare
+// var selectiveLoggingEmiss = ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/v035/CORTE_SELETIVO/FLORESTA/amazon_forest_logging_v1') // total de toneladas
+  .divide(3.67); // !!!!!!
   
 selectiveLoggingEmiss = ee.Image(selectiveLoggingEmiss.bandNames().iterate(function(current,previous){
   var band = ee.String(current);
@@ -469,7 +470,7 @@ Map.addLayer(accumulated_degradation,{},'accumulated_degradation');
 var stock_updated = stock.slice(1)
   .where(
     deforestationSecondaryVeg_corrected.eq(2),
-    stock.slice(1).add(accumulated_degradation.unmask())
+    stock.slice(1).add(accumulated_degradation.unmask()) // ! é total ou densidade?
   );// adiciona degradação apenas em vegetação nativa
 
 // // Atualiza o estoque de biomassa subtraindo as emissões de fogo e extração seletiva

@@ -42,7 +42,9 @@ function savanna_fire_emission_calculate (annual_fire,frequency_fire,time_after_
   var dw = historic_carbon.select("CDW");
   var litter = historic_carbon.select("LITTER");
   
-  // Reclassificação da Frequência de Fogo
+  // Reclassificação da Frequência e do tempo desde o ultimo fogo para calcular o indice de severidade do fogo para savanas conservadas,
+  // referencia: Gomes et al (2024
+
   var frequency_fire_mean = fogo_ac_sav
     .reduce("mean");
   var frequency_fire_reclassified = frequency_fire
@@ -57,7 +59,7 @@ function savanna_fire_emission_calculate (annual_fire,frequency_fire,time_after_
       .where(time_after_fire.gte(7).and(time_after_fire.lt(10)), 2) // medio-alto tempo
       .where(time_after_fire.gte(10), 1); // alto tempo
   
-  var severity_fire = time_after_fire_reclassified.add(frequency_fire_reclassified);
+  var severity_fire_index = time_after_fire_reclassified.add(frequency_fire_reclassified);
 
   // Fator de perdas espacializados com base no regime do fogo
   var agb_loss = agb_loss
@@ -66,8 +68,13 @@ function savanna_fire_emission_calculate (annual_fire,frequency_fire,time_after_
       .where(severity_fire.gt(6), -0.02)
       .unmask(0);
   
-
-  //////////////////////////////////////////////////////////////////////////////////
+  // Inicializar imagens com bandas
+  var co2_bands = ee.Image().select();
+  var co_bands = ee.Image().select();
+  var ch4_bands = ee.Image().select();
+  var n2o_bands = ee.Image().select();
+  var nox_bands = ee.Image().select();
+  
   function calculateCEmissions(Year) {
     
     /// Fatores de Emissão para o Ano "Year" ///
@@ -119,12 +126,6 @@ function savanna_fire_emission_calculate (annual_fire,frequency_fire,time_after_
     return Year + 1; // Retorna o próximo ano
   }
   
-  // Inicializar imagens com bandas
-  var co2_bands = ee.Image().select();
-  var co_bands = ee.Image().select();
-  var ch4_bands = ee.Image().select();
-  var n2o_bands = ee.Image().select();
-  var nox_bands = ee.Image().select();
   
   // Função para iterar através dos anos
   function iterateYears(startYear, endYear) {

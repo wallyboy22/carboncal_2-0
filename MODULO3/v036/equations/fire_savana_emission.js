@@ -14,13 +14,20 @@ var geometry =
 // Com o objetivo de atender as emissões referentes a área queimada do Modulo 3 para a CCAL
 
 // referências: 
-// Leticia Gomes et al (2024), acesse: https://www.mdpi.com/2571-6255/7/8/280
-// Sabina Ribeiro et al. (2011)); https://doi.org/10.1016/j.foreco.2011.04.017
+// Leticia Gomes et al (2024); artigo: https://www.mdpi.com/2571-6255/7/8/280
+// Sabina Ribeiro et al. (2011)); artigo: https://doi.org/10.1016/j.foreco.2011.04.017
+// QCN; artigo, PDF: https://www.gov.br/mcti/pt-br/centrais-de-conteudo/publicacoes-mcti/quarta-comunicacao-nacional-do-brasil-a-unfccc/sumario_executivo_4cn_brasil_web.pdf
 //_______________________________________________________________________________
-
 // inputs:
 // área queimada anual em savanas que nunca foram desmatadas
 // quantidade de toneladas por hectare de carbono nos compartimentos de biomassa acima do solo, madeira morta e serrapilheira.
+
+// Dados de input para o modelo, aqui o modelo pode assumir N versões, idealmente assumimos que as entradas seguem os seguintes formatos 
+// Para os dados de entrada sobre a área queimada,  dados de área queimada da coleção 4.1 do MapBiomas Fogo, da coleção 10.1 da cobertura e uso da terra e uma versão rasterizada
+// pelo IPAM dos compartimentos de carbono na biomassa pretérita publicados pela Quarta Comunicação Nacional do Brasil à Convenção-Quadro
+// das Nações Unidas Sobre Mudança do Clima.
+
+
 var fire = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_annual_burned_v1')
         .unmask(0)
         .multiply(stable_florest);
@@ -75,13 +82,25 @@ function savanna_fire_emission_calculate (annual_fire,frequency_fire,time_after_
   var n2o_bands = ee.Image().select();
   var nox_bands = ee.Image().select();
   
+  // Chamando a função para calcular as emissões no período de 1986 a 2024
+  iterateYears(1986, 2025); // O ano final é exclusivo, então este intervalo cobrirá 1986 a 2024. 
+
+  // Função para iterar através dos anos
+  function iterateYears(startYear, endYear) {
+    if (startYear < endYear) {
+      var nextYear = calculateCEmissions(startYear);
+      iterateYears(nextYear, endYear);
+    }
+  }
+  
+  // Função para calcular emissões por ano
   function calculateCEmissions(Year) {
     
     /// Fatores de Emissão para o Ano "Year" ///
     var emission_factors_year = emission_factors.select('classification_' + Year);
     var fire_year = fire.select('burned_area_' + Year);
     
-    // Tardias
+    // --- --- Tardias
     // CO2
     var fire_co2_late = agb.multiply(fire_year).multiply(emission_factors_year).multiply(44/12);
   
@@ -92,6 +111,7 @@ function savanna_fire_emission_calculate (annual_fire,frequency_fire,time_after_
     var fire_co_comb_dw = dw.multiply(fire_year).multiply(0.459).multiply(1/0.47).multiply(65).multiply(0.001);
     
     // CH4
+    // CH4 fatores de combustão -> 0.873 e 0.459 || conteudo de carbono -> 1/0.47 || fator de emissão -> 65 || convertendo a unidade -> 0.0001
     var fire_ch4_comb_l = litter.multiply(fire_year).multiply(0.873).multiply(1/0.47).multiply(2.3).multiply(0.001);
     var fire_ch4_comb_agb26 = agb26.multiply(fire_year).multiply(0.873).multiply(1/0.47).multiply(2.3).multiply(0.001);
     var fire_ch4_comb_dw = dw.multiply(fire_year).multiply(0.459).multiply(1/0.47).multiply(2.3).multiply(0.001);
@@ -126,16 +146,8 @@ function savanna_fire_emission_calculate (annual_fire,frequency_fire,time_after_
     return Year + 1; // Retorna o próximo ano
   }
   
-  
-  // Função para iterar através dos anos
-  function iterateYears(startYear, endYear) {
-    if (startYear < endYear) {
-      var nextYear = calculateCEmissions(startYear);
-      iterateYears(nextYear, endYear);
-    }
-  }
-  // Chamando a função para calcular as emissões no período de 1986 a 2024
-  iterateYears(1986, 2025); // O ano final é exclusivo, então este intervalo cobrirá 1986 a 2024. 
+
+
 
 }
 

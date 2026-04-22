@@ -16,11 +16,11 @@ var geometry =
 // =============================================================================
 
 // --- Módulos de equação (funções puras, sem Export.*)
-var secVegMod    = require('users/workspaceipam/CCAL:MODULO3/v036/equations/01_secondary_veg');
-var fireForestMod= require('users/workspaceipam/CCAL:MODULO3/v036/equations/02_fire_forest');
-var fireSavMod   = require('users/workspaceipam/CCAL:MODULO3/v036/equations/03_fire_savanna');
-var fireGraMod   = require('users/workspaceipam/CCAL:MODULO3/v036/equations/04_fire_grassland');
-var loggingMod   = require('users/workspaceipam/CCAL:MODULO3/v036/equations/05_logging');
+var secVegMod    = require('users/workspaceipam/CCAL:MODULO3/v036/equations/01_secondary_veg.js');
+var fireForestMod= require('users/workspaceipam/CCAL:MODULO3/v036/equations/02_fire_forest.js');
+var fireSavMod   = require('users/workspaceipam/CCAL:MODULO3/v036/equations/03_fire_savanna.js');
+var fireGraMod   = require('users/workspaceipam/CCAL:MODULO3/v036/equations/04_fire_grassland.js');
+var loggingMod   = require('users/workspaceipam/CCAL:MODULO3/v036/equations/05_logging.js');
 
 // =============================================================================
 // 1. PARÂMETROS GLOBAIS
@@ -359,7 +359,7 @@ Export.image.toAsset(Object.assign({}, common_export, {
     assetId: BASE_ASSET + 'logging_emissions_' + VERSION
 }));
 
-// --- Seção B: Produto final integrado
+.js// --- Seção B: Produto final integrado
 Export.image.toAsset(Object.assign({}, common_export, {
     image: final_image,
     description: 'CCAL_MODULO3_' + VERSION,

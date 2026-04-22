@@ -104,7 +104,12 @@ var all_to   = veg_classes.map(function(){return 2;})
     .concat(antr_classes.map(function(){return 1;}))
     .concat(water_classes.map(function(){return 0;}));
 
-var simple_lulc = lulc.remap(all_from, all_to);
+var simple_lulc = lulc.multiply(0);
+all_from.forEach(function(id,i){
+  grass_forest = grass_forest.where(lulc.eq(id),all_to[i]);
+});
+
+
 
 // --- 3c. Tipo de cobertura para cálculo de incremento: 1=Campo, 2=Floresta
 var grass_forest = lulc.multiply(0);

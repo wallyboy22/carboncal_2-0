@@ -68,8 +68,8 @@ exports.calcGrasslandFireEmissions = function(params) {
 
     years.forEach(function(year) {
 
-        var fire_year = annual_burned.select('burned_area_' + year);
-        var mask_year = grassland_mask.select('classification_' + year);
+        var fire_year = annual_burned.select('.*_' + year);
+        var mask_year = grassland_mask.select('.*_' + year);
 
         // Inicializa acumuladores por ano
         var CO_year  = ee.Image(0).rename('CO_g_ha_' + year);

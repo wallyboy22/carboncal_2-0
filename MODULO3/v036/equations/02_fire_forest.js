@@ -9,7 +9,7 @@ var geometry =
           [-28.735305550775358, 6.702549891783329]]], null, false);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 /**
- * calcForestFireEmissions — Modelo FATE v2-1 — CCAL Módulo 3 v036
+ * calcForestFireEmissions — Modelo FATE v2-1 — CCAL Módulo 3 v036 (02)
  *
  * Emissões por fogo em florestas primárias estáveis.
  * Modelo integrado: combustão + mortalidade + decomposição + regeneração.

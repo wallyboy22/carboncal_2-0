@@ -54,7 +54,7 @@ exports.calcLoggingEmissions = function(params) {
             .where(dis.eq(1), 1)
             .where(geo.eq(1), 1)
             // Restringe à floresta primária estável (Col 10.1) dentro da Amazônia
-            .multiply(forest_mask.select('classification_' + year))
+            .multiply(forest_mask.select('.*_' + year))
             .multiply(amazon_mask)
             .rename('logging_tC_ha_' + year)
             .selfMask();

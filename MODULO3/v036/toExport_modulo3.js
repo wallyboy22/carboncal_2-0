@@ -321,56 +321,89 @@ var final_image = loss_fire_bands
 // =============================================================================
 
 // --- Seção A: Assets intermediários (multibanda Brasil, por módulo)
-var common_export = { pyramidingPolicy: 'median', region: brazil_bounds, scale: SCALE, maxPixels: MAX_PIX };
+var common_export = {
+  pyramidingPolicy: 'median',
+  region: brazil_bounds, 
+  scale: SCALE, 
+  maxPixels: MAX_PIX 
+};
 
-Export.image.toAsset(Object.assign({}, common_export, {
+Export.image.toAsset({
     image: biomass_stock.float(),
     description: 'biomass_stock_' + VERSION,
-    assetId: BASE_ASSET + 'biomass_stock_' + VERSION
-}));
+    assetId: BASE_ASSET + 'biomass_stock_' + VERSION,
+    pyramidingPolicy:common_export.pyramidingPolicy,
+    region:common_export.region,
+    scale:common_export.scale,
+    maxPixels:common_export.maxPixels,
+});
 
-Export.image.toAsset(Object.assign({}, common_export, {
+Export.image.toAsset({
     image: sec_veg_increment.float(),
     description: 'secondary_veg_increment_' + VERSION,
-    assetId: BASE_ASSET + 'secondary_veg_increment_' + VERSION
-}));
+    assetId: BASE_ASSET + 'secondary_veg_increment_' + VERSION,
+    pyramidingPolicy:common_export.pyramidingPolicy,
+    region:common_export.region,
+    scale:common_export.scale,
+    maxPixels:common_export.maxPixels,
+});
 
-Export.image.toAsset(Object.assign({}, common_export, {
+Export.image.toAsset({
     image: fire_forest.float(),
     description: 'fire_forest_emissions_' + VERSION,
-    assetId: BASE_ASSET + 'fire_forest_emissions_' + VERSION
-}));
+    assetId: BASE_ASSET + 'fire_forest_emissions_' + VERSION,
+    pyramidingPolicy:common_export.pyramidingPolicy,
+    region:common_export.region,
+    scale:common_export.scale,
+    maxPixels:common_export.maxPixels,
+});
 
-Export.image.toAsset(Object.assign({}, common_export, {
+Export.image.toAsset({
     image: fire_savanna.float(),
     description: 'fire_savanna_emissions_' + VERSION,
-    assetId: BASE_ASSET + 'fire_savanna_emissions_' + VERSION
-}));
+    assetId: BASE_ASSET + 'fire_savanna_emissions_' + VERSION,
+    pyramidingPolicy:common_export.pyramidingPolicy,
+    region:common_export.region,
+    scale:common_export.scale,
+    maxPixels:common_export.maxPixels,
+});
 
-Export.image.toAsset(Object.assign({}, common_export, {
+Export.image.toAsset({
     image: fire_grassland.float(),
     description: 'fire_grassland_emissions_' + VERSION,
-    assetId: BASE_ASSET + 'fire_grassland_emissions_' + VERSION
-}));
+    assetId: BASE_ASSET + 'fire_grassland_emissions_' + VERSION,
+    pyramidingPolicy:common_export.pyramidingPolicy,
+    region:common_export.region,
+    scale:common_export.scale,
+    maxPixels:common_export.maxPixels,
+});
 
-Export.image.toAsset(Object.assign({}, common_export, {
+Export.image.toAsset({
     image: logging.float(),
     description: 'logging_emissions_' + VERSION,
-    assetId: BASE_ASSET + 'logging_emissions_' + VERSION
-}));
+    assetId: BASE_ASSET + 'logging_emissions_' + VERSION,
+    pyramidingPolicy:common_export.pyramidingPolicy,
+    region:common_export.region,
+    scale:common_export.scale,
+    maxPixels:common_export.maxPixels,
+});
 
 // --- Seção B: Produto final integrado
-Export.image.toAsset(Object.assign({}, common_export, {
+Export.image.toAsset({
     image: final_image,
     description: 'CCAL_MODULO3_' + VERSION,
-    assetId: FINAL_ASSET
-}));
+    assetId: FINAL_ASSET,
+    pyramidingPolicy:common_export.pyramidingPolicy,
+    region:common_export.region,
+    scale:common_export.scale,
+    maxPixels:common_export.maxPixels,
+});
 
 // =============================================================================
 // 9. VISUALIZAÇÃO (opcional — descomente para inspecionar no Code Editor)
 // =============================================================================
-// Map.centerObject(brazil_bounds, 4);
-// Map.addLayer(biomass_stock.select('biomass_stock_2020'), {min:0, max:200, palette:['white','green','darkgreen']}, 'Stock 2020', false);
-// Map.addLayer(final_image.select('loss_fire_2020'), {min:0, max:1e4, palette:['white','orange','red']}, 'Fire 2020', false);
-// Map.addLayer(final_image.select('stock_2020'), {min:0, max:200, palette:['white','green']}, 'Stock Final 2020', false);
-// print('Produto final', final_image);
+Map.centerObject(brazil_bounds, 4);
+Map.addLayer(biomass_stock.select('biomass_stock_2020'), {min:0, max:200, palette:['white','green','darkgreen']}, 'Stock 2020', false);
+Map.addLayer(final_image.select('loss_fire_2020'), {min:0, max:1e4, palette:['white','orange','red']}, 'Fire 2020', false);
+Map.addLayer(final_image.select('stock_2020'), {min:0, max:200, palette:['white','green']}, 'Stock Final 2020', false);
+print('Produto final', final_image);

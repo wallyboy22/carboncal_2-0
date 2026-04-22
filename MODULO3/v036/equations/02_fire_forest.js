@@ -22,8 +22,8 @@ var geometry =
  *
  * Entradas (params):
  *   annual_burned   — ee.Image, bandas "burned_area_YYYY" (selfMask aplicado)
- *   fire_frequency  — ee.Image, bandas "burned_area_YYYY" (frequência acumulada)
- *   time_since_fire — ee.Image, bandas "burned_area_YYYY" (anos desde último fogo)
+ *   fire_frequency  — ee.Image, bandas "fire_frequency_1985_YYYY" (frequência acumulada)
+ *   time_since_fire — ee.Image, bandas "classification_YYYY" (anos desde último fogo)
  *   agb             — ee.Image, banda única "AGB" (tC/ha) — QCN retificada
  *   cdw             — ee.Image, banda única "CDW" (tC/ha)
  *   litter          — ee.Image, banda única "LITTER" (tC/ha)
@@ -92,9 +92,9 @@ exports.calcForestFireEmissions = function(params) {
             var year_str    = year.format('%d');
             var prev_str    = year_prev.format('%d');
 
-            var tsf_y   = tsf_edit.select(ee.String('burned_area_').cat(year_str));
-            var freq_gte2_y = annual_fire_freq_gte2.select(ee.String('burned_area_').cat(year_str));
-            var mask_y  = forest_mask.select(ee.String('classification_').cat(year_str));
+            var tsf_y   = tsf_edit.select(ee.String('*._').cat(year_str));
+            var freq_gte2_y = annual_fire_freq_gte2.select(ee.String('*._').cat(year_str));
+            var mask_y  = forest_mask.select(ee.String('*._').cat(year_str));
 
             var aRef_loss = tsf_y.remap(tsf_values, p.AGBloss_lookup).multiply(-1)
                 .rename(ee.String('aRef_netAGBloss_').cat(year_str));

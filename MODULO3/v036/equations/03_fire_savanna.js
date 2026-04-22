@@ -88,10 +88,10 @@ exports.calcSavannaFireEmissions = function(params) {
 
     years.forEach(function(year) {
 
-        var fire_year  = annual_burned.select('burned_area_' + year);
-        var tsf_year   = tsf_edit.select('burned_area_' + year);
-        var freq_year  = fire_frequency.select('burned_area_' + year);
-        var mask_year  = savanna_mask.select('classification_' + year);
+        var fire_year  = annual_burned.select('.*_' + year);
+        var tsf_year   = tsf_edit.select('.*_' + year);
+        var freq_year  = fire_frequency.select('.*_' + year);
+        var mask_year  = savanna_mask.select('.*_' + year);
         var pixel_mask = fire_year.multiply(mask_year);
 
         // Seleciona fator de emissão pelo regime: freq 1, 2, ≥3

@@ -124,7 +124,7 @@ YEARS_ALL.forEach(function(y) {
 
     forest_mask    = forest_mask.addBands(prim.and(lulc_y.eq(3)).rename('classification_' + y));
     savanna_mask   = savanna_mask.addBands(prim.and(lulc_y.eq(4)).rename('classification_' + y));
-    grassland_mask = grassland_mask.addBands(prim.and(lulc_y.equals([11,12,50])).reduce('max').rename('classification_' + y));
+    grassland_mask = grassland_mask.addBands(prim.and(lulc_y.eq([11,12,50])).reduce('max').rename('classification_' + y));
 });
 
 // --- 3e. Máscara de área emersa (exclui pixels permanentemente submersos)

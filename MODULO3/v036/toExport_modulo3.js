@@ -107,10 +107,13 @@ var all_to   = veg_classes.map(function(){return 2;})
 var simple_lulc = lulc.remap(all_from, all_to);
 
 // --- 3c. Tipo de cobertura para cálculo de incremento: 1=Campo, 2=Floresta
-var grass_forest = lulc.remap(
-    [3,  4,  5,  6, 49, 11, 12, 50, 29, 13],
-    [2,  2,  2,  2,  2,  1,  1,  1,  1,  1]
-).rename(YEARS_ALL.map(function(y){ return 'classification_' + y; }));
+var grass_forest = lulc.multiply(0);
+[3,  4,  5,  6, 49, 11, 12, 50, 29, 13].forEach(function(id,i){
+  var new_classes = [2,  2,  2,  2,  2,  1,  1,  1,  1,  1];
+  grass_forest = grass_forest.where(lulc.eq(id),new_classes[i]);
+});
+
+
 
 // --- 3d. Máscaras por tipo de vegetação estável (classe 2 = Veg Primária no desf/reg)
 //     Combinadas com LULC para saber o tipo (floresta / savana / campo)
@@ -403,7 +406,7 @@ Export.image.toAsset({
 // 9. VISUALIZAÇÃO (opcional — descomente para inspecionar no Code Editor)
 // =============================================================================
 Map.centerObject(brazil_bounds, 4);
-Map.addLayer(biomass_stock.select('biomass_stock_2020'), {min:0, max:200, palette:['white','green','darkgreen']}, 'Stock 2020', false);
-Map.addLayer(final_image.select('loss_fire_2020'), {min:0, max:1e4, palette:['white','orange','red']}, 'Fire 2020', false);
-Map.addLayer(final_image.select('stock_2020'), {min:0, max:200, palette:['white','green']}, 'Stock Final 2020', false);
+Map.addLayer(biomass_stock, {bands:['biomass_stock_2020'],min:0, max:200, palette:['white','green','darkgreen']}, 'Stock 2020', false);
+Map.addLayer(final_image, {bands:['loss_fire_2020'],min:0, max:1e4, palette:['white','orange','red']}, 'Fire 2020', false);
+Map.addLayer(final_image, {bands:['stock_2020'],min:0, max:200, palette:['white','green']}, 'Stock Final 2020', false);
 print('Produto final', final_image);

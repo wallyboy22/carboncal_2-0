@@ -70,8 +70,8 @@ exports.calcSecondaryVegIncrement = function(params) {
 
     years.forEach(function(year, i) {
 
-        var sec_year = is_sec_veg.select('classification_' + year); // 1/0
-        var gf_year  = gf.select('classification_' + year);         // 1=Campo, 2=Floresta
+        var sec_year = is_sec_veg.select('.*_' + year); // 1/0
+        var gf_year  = gf.select('.*_' + year);         // 1=Campo, 2=Floresta
 
         // Atualiza idade: se é veg. sec. neste ano, incrementa; senão, zera
         var age_prev = age_stack.slice(-1);

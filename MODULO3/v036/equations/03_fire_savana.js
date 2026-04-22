@@ -9,7 +9,7 @@ var geometry =
           [-28.735305550775358, 6.702549891783329]]], null, false);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 /**
- * calcSavannaFireEmissions — CCAL Módulo 3 v036
+ * calcSavannaFireEmissions — CCAL Módulo 3 v036 (03)
  *
  * Emissões por fogo em savanas estáveis (fitofisionomias de Cerrado e afins).
  * Aplica modelo baseado em regime de fogo (frequência + tempo desde o fogo).

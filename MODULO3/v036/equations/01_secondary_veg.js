@@ -9,7 +9,7 @@ var geometry =
           [-28.735305550775358, 6.702549891783329]]], null, false);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 /**
- * calcSecondaryVegIncrement — CCAL Módulo 3 v036
+ * calcSecondaryVegIncrement — CCAL Módulo 3 v036 (01)
  *
  * Calcula o estoque de carbono acumulado da vegetação secundária
  * com base na idade dos pixels e nas tabelas de incremento por bioma.

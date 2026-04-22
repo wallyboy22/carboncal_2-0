@@ -9,7 +9,7 @@ var geometry =
           [-28.735305550775358, 6.702549891783329]]], null, false);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 /**
- * calcGrasslandFireEmissions — CCAL Módulo 3 v036
+ * calcGrasslandFireEmissions — CCAL Módulo 3 v036 (04)
  *
  * Emissões não-CO₂ por fogo em áreas de campo (gramíneas).
  * Campos NÃO produzem CO₂ tardio por definição do modelo IPCC.

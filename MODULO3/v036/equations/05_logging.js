@@ -1,5 +1,5 @@
 /**
- * calcLoggingEmissions — CCAL Módulo 3 v036
+ * calcLoggingEmissions — CCAL Módulo 3 v036 (05)
  *
  * Emissões por corte seletivo em florestas da Amazônia.
  * Cobertura: Amazônia Legal, 2017–2024.

@@ -399,7 +399,7 @@ Export.image.toAsset({
 // --- Seção B: Produto final integrado
 Export.image.toAsset({
     image: final_image,
-    common_export.flag + description: 'CCAL_MODULO3_' + VERSION,
+    description: common_export.flag + 'CCAL_MODULO3_' + VERSION,
     assetId: FINAL_ASSET,
     pyramidingPolicy:common_export.pyramidingPolicy,
     region:common_export.region,

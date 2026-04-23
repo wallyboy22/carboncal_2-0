@@ -16,11 +16,11 @@ var geometry =
 // =============================================================================
 
 // --- Módulos de equação (funções puras, sem Export.*)
-var secVegMod    = require('users/workspaceipam/CCAL:MODULO3/v036/equations/01_secondary_veg.js');
-var fireForestMod= require('users/workspaceipam/CCAL:MODULO3/v036/equations/02_fire_forest.js');
-var fireSavMod   = require('users/workspaceipam/CCAL:MODULO3/v036/equations/03_fire_savanna.js');
-var fireGraMod   = require('users/workspaceipam/CCAL:MODULO3/v036/equations/04_fire_grassland.js');
-var loggingMod   = require('users/workspaceipam/CCAL:MODULO3/v036/equations/05_logging.js');
+var secVegMod     = require('users/workspaceipam/CCAL:MODULO3/v036/equations/01_secondary_veg.js');
+var fireForestMod = require('users/workspaceipam/CCAL:MODULO3/v036/equations/02_fire_forest.js');
+var fireSavMod    = require('users/workspaceipam/CCAL:MODULO3/v036/equations/03_fire_savanna.js');
+var fireGraMod    = require('users/workspaceipam/CCAL:MODULO3/v036/equations/04_fire_grassland.js');
+var loggingMod    = require('users/workspaceipam/CCAL:MODULO3/v036/equations/05_logging.js');
 
 // =============================================================================
 // 1. PARÂMETROS GLOBAIS
@@ -35,6 +35,7 @@ var YEARS_ALL  = ['1985','1986','1987','1988','1989','1990','1991','1992','1993'
                   '1995','1996','1997','1998','1999','2000','2001','2002','2003','2004',
                   '2005','2006','2007','2008','2009','2010','2011','2012','2013','2014',
                   '2015','2016','2017','2018','2019','2020','2021','2022','2023','2024'];
+                  
 var YEARS_FIRE = YEARS_ALL.slice(1); // 1986–2024 (fogo começa em 1986)
 
 var GWP_CH4 = 28;
@@ -47,7 +48,7 @@ var TC_TO_TCO2 = 3.67;
 
 // --- MapBiomas Col 10.1
 var lulc     = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_coverage_v1');
-var desf_reg = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_deforestation_secondary_vegetation_v3');
+var desf_reg = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_deforestation_secondary_vegetation_v1');
 
 // --- QCN Retificada (bandas separadas para clareza de uso nos módulos)
 var qcn    = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/RETIFICACAO/c_rect_col10');
@@ -70,7 +71,7 @@ var incrementos = ee.FeatureCollection('projects/ee-ipam/assets/CCAL/incrementos
 var brazil_bounds = biomas.geometry().bounds();
 
 // =============================================================================
-// 3. PREP DE LULC — INLINE (substitui 01_lulc_prep.js)
+// 3. PREP DE LULC — INLIN
 // =============================================================================
 
 // --- 3a. Corrige classe 7 (outras transições) no desf/reg
@@ -139,17 +140,17 @@ var water_count = lulc.eq(33).reduce(ee.Reducer.sum());
 var always_submerged = water_count.gte(38); // 1 = sempre submerso → EXCLUIR
 
 // =============================================================================
-// 4. ESTOQUE DE BIOMASSA ANUAL — INLINE
+// 4. ESTOQUE DE BIOMASSA PRIMÁRIA E SECUNDÁRIA ANUAL — INLINE
 // =============================================================================
 
 // --- 4a. Incremento de veg. secundária (via módulo de equação)
 var sec_veg_increment = secVegMod.calcSecondaryVegIncrement({
-    desf_reg_corrected: desf_reg_corrected,
-    grass_forest:       grass_forest,
-    total_carbon:       total,
-    incrementos:        incrementos,
-    biomas:             biomas,
-    years:              YEARS_ALL
+    desf_reg_corrected: desf_reg_corrected, // Desmatamento e vegetação secundaria, assumindo uma outra regra para a classe 7
+    grass_forest:       grass_forest,       // imagem multibanda com a série de YEARS_ALL[0] até YEARS_ALL[-1]
+    total_carbon:       total,              // banda com o total de carbono
+    incrementos:        incrementos,        // tabela com os incrementos de carbono
+    biomas:             biomas,             // feature collection das regiões de entrada
+    years:              YEARS_ALL           // lista com a série temporal para o processamento
 });
 
 // --- 4b. Estoque anual: primária=total QCN, secundária=incremento, outros=0
@@ -163,7 +164,7 @@ YEARS_ALL.forEach(function(y) {
         .where(desf_y.eq(2), total)           // Veg. primária → estoque QCN
         .where(desf_y.eq(3).or(desf_y.eq(5)), sec_y) // Veg. sec → incremento
         .updateMask(always_submerged.not())    // Remove área permanentemente submersa
-        .rename('biomass_stock_' + y)
+        .rename('biomass_stock_' + y)           
         .float();
 
     biomass_stock = biomass_stock.addBands(stock_y);
@@ -331,12 +332,13 @@ var common_export = {
   pyramidingPolicy: 'median',
   region: brazil_bounds, 
   scale: SCALE, 
-  maxPixels: MAX_PIX 
+  maxPixels: MAX_PIX,
+  flag:'WSilva-'
 };
 
 Export.image.toAsset({
     image: biomass_stock.float(),
-    description: 'biomass_stock_' + VERSION,
+    description: common_export.flag + 'biomass_stock_' + VERSION,
     assetId: BASE_ASSET + 'biomass_stock_' + VERSION,
     pyramidingPolicy:common_export.pyramidingPolicy,
     region:common_export.region,
@@ -346,7 +348,7 @@ Export.image.toAsset({
 
 Export.image.toAsset({
     image: sec_veg_increment.float(),
-    description: 'secondary_veg_increment_' + VERSION,
+    description: common_export.flag + 'secondary_veg_increment_' + VERSION,
     assetId: BASE_ASSET + 'secondary_veg_increment_' + VERSION,
     pyramidingPolicy:common_export.pyramidingPolicy,
     region:common_export.region,
@@ -356,7 +358,7 @@ Export.image.toAsset({
 
 Export.image.toAsset({
     image: fire_forest.float(),
-    description: 'fire_forest_emissions_' + VERSION,
+    description: common_export.flag + 'fire_forest_emissions_' + VERSION,
     assetId: BASE_ASSET + 'fire_forest_emissions_' + VERSION,
     pyramidingPolicy:common_export.pyramidingPolicy,
     region:common_export.region,
@@ -366,7 +368,7 @@ Export.image.toAsset({
 
 Export.image.toAsset({
     image: fire_savanna.float(),
-    description: 'fire_savanna_emissions_' + VERSION,
+    description: common_export.flag + 'fire_savanna_emissions_' + VERSION,
     assetId: BASE_ASSET + 'fire_savanna_emissions_' + VERSION,
     pyramidingPolicy:common_export.pyramidingPolicy,
     region:common_export.region,
@@ -376,7 +378,7 @@ Export.image.toAsset({
 
 Export.image.toAsset({
     image: fire_grassland.float(),
-    description: 'fire_grassland_emissions_' + VERSION,
+    description: common_export.flag + 'fire_grassland_emissions_' + VERSION,
     assetId: BASE_ASSET + 'fire_grassland_emissions_' + VERSION,
     pyramidingPolicy:common_export.pyramidingPolicy,
     region:common_export.region,
@@ -386,7 +388,7 @@ Export.image.toAsset({
 
 Export.image.toAsset({
     image: logging.float(),
-    description: 'logging_emissions_' + VERSION,
+    description: common_export.flag + 'logging_emissions_' + VERSION,
     assetId: BASE_ASSET + 'logging_emissions_' + VERSION,
     pyramidingPolicy:common_export.pyramidingPolicy,
     region:common_export.region,
@@ -397,7 +399,7 @@ Export.image.toAsset({
 // --- Seção B: Produto final integrado
 Export.image.toAsset({
     image: final_image,
-    description: 'CCAL_MODULO3_' + VERSION,
+    common_export.flag + description: 'CCAL_MODULO3_' + VERSION,
     assetId: FINAL_ASSET,
     pyramidingPolicy:common_export.pyramidingPolicy,
     region:common_export.region,

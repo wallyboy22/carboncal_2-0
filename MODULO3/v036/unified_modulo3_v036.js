@@ -297,6 +297,11 @@ var final_image = loss_fire_bands
 // ou visualização. Isso permite testar diferentes partes do modelo alterando 
 // apenas a chave `active_export_key` abaixo.
 
+// =============================================================================
+// 8. EXPORTAÇÕES (Controlada pelo active_export_key)
+// =============================================================================
+
+
 var export_assets = {
     'biomass_stock': biomass_stock,
     'secondary_veg_increment': sec_veg_increment,
@@ -304,53 +309,49 @@ var export_assets = {
     'fire_savanna_emissions': fire_savanna,
     'fire_grassland_emissions': fire_grassland,
     'logging_emissions': logging,
-    'final_image': final_image
+    // 'final_image': final_image
 };
 
-// >> MUDE AQUI PARA EXPORTAR/VISUALIZAR DIFERENTES ASSETS
-var active_export_key = 'final_image';
-var imageToExport = export_assets[active_export_key];
+Object.keys(export_assets).forEach(function (key) {
+    var image = export_assets[key];
+    print(key, image);
 
-// =============================================================================
-// 8. EXPORTAÇÕES (Controlada pelo active_export_key)
-// =============================================================================
+    var common_export = {
+        pyramidingPolicy: 'median',
+        region: brazil_bounds,
+        scale: SCALE,
+        maxPixels: MAX_PIX,
+        flag: 'WSilva-'
+    };
 
-var common_export = {
-    pyramidingPolicy: 'median',
-    region: brazil_bounds,
-    scale: SCALE,
-    maxPixels: MAX_PIX,
-    flag: 'WSilva-'
-};
+    // Exporta apenas a imagem ativa. Para exportar todos os assets simultaneamente, 
+    // você pode iterar sobre as chaves de `export_assets`.
+    var exportName = active_export_key === 'final_image' ? 'CCAL_MODULO3_' + VERSION : active_export_key + '_' + VERSION;
+    var assetId = active_export_key === 'final_image' ? FINAL_ASSET : BASE_ASSET + exportName;
 
-// Exporta apenas a imagem ativa. Para exportar todos os assets simultaneamente, 
-// você pode iterar sobre as chaves de `export_assets`.
-var exportName = active_export_key === 'final_image' ? 'CCAL_MODULO3_' + VERSION : active_export_key + '_' + VERSION;
-var assetId = active_export_key === 'final_image' ? FINAL_ASSET : BASE_ASSET + exportName;
+    Export.image.toAsset({
+        image: imageToExport.float(),
+        description: common_export.flag + exportName,
+        assetId: assetId,
+        pyramidingPolicy: common_export.pyramidingPolicy,
+        region: common_export.region,
+        scale: common_export.scale,
+        maxPixels: common_export.maxPixels,
+    });
 
-Export.image.toAsset({
-    image: imageToExport.float(),
-    description: common_export.flag + exportName,
-    assetId: assetId,
-    pyramidingPolicy: common_export.pyramidingPolicy,
-    region: common_export.region,
-    scale: common_export.scale,
-    maxPixels: common_export.maxPixels,
-});
+    // =============================================================================
+    // 9. VISUALIZAÇÃO
+    // =============================================================================
+    Map.centerObject(brazil_bounds, 4);
+    Map.addLayer(imageToExport, {}, 'Ativo: ' + active_export_key, true);
 
-// =============================================================================
-// 9. VISUALIZAÇÃO
-// =============================================================================
-Map.centerObject(brazil_bounds, 4);
-Map.addLayer(imageToExport, {}, 'Ativo: ' + active_export_key, true);
+    // Camadas de referência opcionais
+    // Map.addLayer(biomass_stock, { bands: ['biomass_stock_2020'], min: 0, max: 200, palette: ['white', 'green', 'darkgreen'] }, 'Stock 2020', false);
+    // Map.addLayer(final_image, { bands: ['loss_fire_2020'], min: 0, max: 1e4, palette: ['white', 'orange', 'red'] }, 'Fire 2020', false);
+    // Map.addLayer(final_image, { bands: ['stock_2020'], min: 0, max: 200, palette: ['white', 'green'] }, 'Stock Final 2020', false);
+    print('Exporting asset: ' + active_export_key, imageToExport);
 
-// Camadas de referência opcionais
-// Map.addLayer(biomass_stock, { bands: ['biomass_stock_2020'], min: 0, max: 200, palette: ['white', 'green', 'darkgreen'] }, 'Stock 2020', false);
-// Map.addLayer(final_image, { bands: ['loss_fire_2020'], min: 0, max: 1e4, palette: ['white', 'orange', 'red'] }, 'Fire 2020', false);
-// Map.addLayer(final_image, { bands: ['stock_2020'], min: 0, max: 200, palette: ['white', 'green'] }, 'Stock Final 2020', false);
-print('Exporting asset: ' + active_export_key, imageToExport);
-
-
+})
 // =============================================================================
 // 10. EQUAÇÕES (FUNÇÕES PURAS)
 // =============================================================================
@@ -575,7 +576,7 @@ function calcForestFireEmissions(params) {
         var NOX_y = fAGNcomb.multiply(2000).multiply(1.6).updateMask(forest_mask.reduce(ee.Reducer.anyNonZero()));
 
         var rename_gas = function (img, prefix) {
-            var newBands = years.map(function(y) { return ee.String(prefix).cat('_').cat(y); });
+            var newBands = years.map(function (y) { return ee.String(prefix).cat('_').cat(y); });
             return img.rename(newBands).round().int32();
         };
 

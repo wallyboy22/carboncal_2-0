@@ -302,13 +302,13 @@ var final_image = loss_fire_bands
 
 
 var export_assets = {
+    'final_image': final_image,
     'biomass_stock': biomass_stock,
     'secondary_veg_increment': sec_veg_increment,
     'fire_forest_emissions': fire_forest,
     'fire_savanna_emissions': fire_savanna,
     'fire_grassland_emissions': fire_grassland,
-    'logging_emissions': logging,
-    // 'final_image': final_image
+    'logging_emissions': logging
 };
 
 Object.keys(export_assets).forEach(function (key) {

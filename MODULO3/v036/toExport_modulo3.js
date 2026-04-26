@@ -66,117 +66,6 @@ var accumulated_burned = ee.Image('projects/mapbiomas-public/assets/brazil/fire/
 
 // --- Auxiliares
 var biomas      = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
-var incrementos = ee.FeatureCollection([
-  ee.Feature(null, {
-    Ate20anos: '1.974',
-    BGB: 'mais 23,5%',
-    Bioma: 'Caatinga',
-    Ctotal_ate20: 2.43789005279541,
-    Ctotal_mais20: 0.5928000211715698,
-    Mais20anos: '0.48',
-    Classe: 'F'
-  }),
-  ee.Feature(null, {
-    Ate20anos: '2.566',
-    BGB: 'mais 23,5%',
-    Bioma: 'Mata Atlântica',
-    Ctotal_ate20: 3.1690099239349365,
-    Ctotal_mais20: 0.7780500054359436,
-    Mais20anos: '0.63',
-    Classe: 'F'
-  }),
-  ee.Feature(null, {
-    Ate20anos: '3.158',
-    BGB: 'mais 24%',
-    Bioma: 'Pantanal',
-    Ctotal_ate20: 3.9159200191497803,
-    Ctotal_mais20: 0.9622399806976318,
-    Mais20anos: '0.776',
-    Classe: 'F'
-  }),
-  ee.Feature(null, {
-    Ate20anos: '2.411',
-    BGB: 'mais 24%',
-    Bioma: 'Pampa',
-    Ctotal_ate20: 2.9896399974823,
-    Ctotal_mais20: 0.7340800166130066,
-    Mais20anos: '0.592',
-    Classe: 'F'
-  }),
-  ee.Feature(null, {
-    Ate20anos: '3.652',
-    BGB: 'mais 31%',
-    Bioma: 'Amazônia',
-    Ctotal_ate20: 4.784120082855225,
-    Ctotal_mais20: 1.1698299646377563,
-    Mais20anos: '0.893',
-    Classe: 'F'
-  }),
-  ee.Feature(null, {
-    Ate20anos: '2.961',
-    BGB: 'mais 31%',
-    Bioma: 'Cerrado',
-    Ctotal_ate20: 3.8789100646972656,
-    Ctotal_mais20: 0.9484400153160095,
-    Mais20anos: '0.724',
-    Classe: 'F'
-  }),
-  ee.Feature(null, {
-    Ate20anos: 'na',
-    BGB: 'na',
-    Bioma: 'Amazônia',
-    Ctotal_ate20: 1.7000000476837158,
-    Ctotal_mais20: 0,
-    Mais20anos: 'na',
-    Classe: 'G'
-  }),
-  ee.Feature(null, {
-    Ate20anos: 'na',
-    BGB: 'na',
-    Bioma: 'Cerrado',
-    Ctotal_ate20: 1.7000000476837158,
-    Ctotal_mais20: 0,
-    Mais20anos: 'na',
-    Classe: 'G'
-  }),
-  ee.Feature(null, {
-    Ate20anos: 'na',
-    BGB: 'na',
-    Bioma: 'Pantanal',
-    Ctotal_ate20: 1.7000000476837158,
-    Ctotal_mais20: 0,
-    Mais20anos: 'na',
-    Classe: 'G'
-  }),
-  ee.Feature(null, {
-    Ate20anos: 'na',
-    BGB: 'na',
-    Bioma: 'Caatinga',
-    Ctotal_ate20: 0.6000000238418579,
-    Ctotal_mais20: 0,
-    Mais20anos: 'na',
-    Classe: 'G'
-  }),
-  ee.Feature(null, {
-    Ate20anos: 'na',
-    BGB: 'na',
-    Bioma: 'Mata Atlântica',
-    Ctotal_ate20: 0.6000000238418579,
-    Ctotal_mais20: 0,
-    Mais20anos: 'na',
-    Classe: 'G'
-  }),
-  ee.Feature(null, {
-    Ate20anos: 'na',
-    BGB: 'na',
-    Bioma: 'Pampa',
-    Ctotal_ate20: 1.7000000476837158,
-    Ctotal_mais20: 0,
-    Mais20anos: 'na',
-    Classe: 'G'
-  })
-]);
-
 var brazil_bounds = biomas.geometry().bounds();
 
 // =============================================================================
@@ -258,14 +147,9 @@ var sec_veg_increment = {
     desf_reg_corrected: desf_reg_corrected, // Desmatamento e vegetação secundaria, assumindo uma outra regra para a classe 7
     grass_forest:       grass_forest,       // imagem multibanda com a série de YEARS_ALL[0] até YEARS_ALL[-1]
     total_carbon:       total,              // banda com o total de carbono
-    incrementos:        incrementos,        // tabela com os incrementos de carbono
     biomas:             biomas,             // feature collection das regiões de entrada
     years:              YEARS_ALL           // lista com a série temporal para o processamento
 };
-
-print('incrementos',incrementos,incrementos.first(),incrementos
-                .filter(ee.Filter.eq('Bioma', 'Caatinga'))
-                .filter(ee.Filter.eq('Classe', 'F')));
 
 print("sec_veg_increment",sec_veg_increment);
 

@@ -48,116 +48,25 @@ exports.calcSecondaryVegIncrement = function(params) {
     var total    = params.total_carbon;
     var biomas   = params.biomas;
     var years    = params.years;
-    var incr     = ee.FeatureCollection([
-        ee.Feature(null, {
-          Ate20anos: '1.974',
-          BGB: 'mais 23,5%',
-          Bioma: 'Caatinga',
-          Ctotal_ate20: 2.43789005279541,
-          Ctotal_mais20: 0.5928000211715698,
-          Mais20anos: '0.48',
-          Classe: 'F'
-        }),
-        ee.Feature(null, {
-          Ate20anos: '2.566',
-          BGB: 'mais 23,5%',
-          Bioma: 'Mata Atlântica',
-          Ctotal_ate20: 3.1690099239349365,
-          Ctotal_mais20: 0.7780500054359436,
-          Mais20anos: '0.63',
-          Classe: 'F'
-        }),
-        ee.Feature(null, {
-          Ate20anos: '3.158',
-          BGB: 'mais 24%',
-          Bioma: 'Pantanal',
-          Ctotal_ate20: 3.9159200191497803,
-          Ctotal_mais20: 0.9622399806976318,
-          Mais20anos: '0.776',
-          Classe: 'F'
-        }),
-        ee.Feature(null, {
-          Ate20anos: '2.411',
-          BGB: 'mais 24%',
-          Bioma: 'Pampa',
-          Ctotal_ate20: 2.9896399974823,
-          Ctotal_mais20: 0.7340800166130066,
-          Mais20anos: '0.592',
-          Classe: 'F'
-        }),
-        ee.Feature(null, {
-          Ate20anos: '3.652',
-          BGB: 'mais 31%',
-          Bioma: 'Amazônia',
-          Ctotal_ate20: 4.784120082855225,
-          Ctotal_mais20: 1.1698299646377563,
-          Mais20anos: '0.893',
-          Classe: 'F'
-        }),
-        ee.Feature(null, {
-          Ate20anos: '2.961',
-          BGB: 'mais 31%',
-          Bioma: 'Cerrado',
-          Ctotal_ate20: 3.8789100646972656,
-          Ctotal_mais20: 0.9484400153160095,
-          Mais20anos: '0.724',
-          Classe: 'F'
-        }),
-        ee.Feature(null, {
-          Ate20anos: 'na',
-          BGB: 'na',
-          Bioma: 'Amazônia',
-          Ctotal_ate20: 1.7000000476837158,
-          Ctotal_mais20: 0,
-          Mais20anos: 'na',
-          Classe: 'G'
-        }),
-        ee.Feature(null, {
-          Ate20anos: 'na',
-          BGB: 'na',
-          Bioma: 'Cerrado',
-          Ctotal_ate20: 1.7000000476837158,
-          Ctotal_mais20: 0,
-          Mais20anos: 'na',
-          Classe: 'G'
-        }),
-        ee.Feature(null, {
-          Ate20anos: 'na',
-          BGB: 'na',
-          Bioma: 'Pantanal',
-          Ctotal_ate20: 1.7000000476837158,
-          Ctotal_mais20: 0,
-          Mais20anos: 'na',
-          Classe: 'G'
-        }),
-        ee.Feature(null, {
-          Ate20anos: 'na',
-          BGB: 'na',
-          Bioma: 'Caatinga',
-          Ctotal_ate20: 0.6000000238418579,
-          Ctotal_mais20: 0,
-          Mais20anos: 'na',
-          Classe: 'G'
-        }),
-        ee.Feature(null, {
-          Ate20anos: 'na',
-          BGB: 'na',
-          Bioma: 'Mata Atlântica',
-          Ctotal_ate20: 0.6000000238418579,
-          Ctotal_mais20: 0,
-          Mais20anos: 'na',
-          Classe: 'G'
-        }),
-        ee.Feature(null, {
-          Ate20anos: 'na',
-          BGB: 'na',
-          Bioma: 'Pampa',
-          Ctotal_ate20: 1.7000000476837158,
-          Ctotal_mais20: 0,
-          Mais20anos: 'na',
-          Classe: 'G'
-        })
-      ]);
+    var incr_table     = {
+      "Amazônia":       { "F": { "gte20": 1.1698299646377563, "lt20": 4.784120082855225  }, 
+                          "G": { "gte20": 0,                  "lt20": 1.7000000476837158 } },
+    
+      "Caatinga":       { "F": { "gte20": 0.5928000211715698, "lt20": 2.43789005279541   }, 
+                          "G": { "gte20": 0,                  "lt20": 0.6000000238418579 } },
+    
+      "Cerrado":        { "F": { "gte20": 0.9484400153160095, "lt20": 3.8789100646972656 }, 
+                          "G": { "gte20": 0,                  "lt20": 1.7000000476837158 } },
+    
+      "Mata Atlântica": { "F": { "gte20": 0.7780500054359436, "lt20": 3.1690099239349365 }, 
+                          "G": { "gte20": 0,                  "lt20": 0.6000000238418579 } },
+    
+      "Pampa":          { "F": { "gte20": 0.7340800166130066, "lt20": 2.9896399974823   }, 
+                          "G": { "gte20": 0,                  "lt20": 1.7000000476837158 } },
+    
+      "Pantanal":       { "F": { "gte20": 0.9622399806976318, "lt20": 3.9159200191497803 }, 
+                          "G": { "gte20": 0,                  "lt20": 1.7000000476837158 } }
+    };
 
     var biome_list = ['Amazônia', 'Caatinga', 'Cerrado', 'Mata Atlântica', 'Pampa', 'Pantanal'];
 
@@ -165,23 +74,6 @@ exports.calcSecondaryVegIncrement = function(params) {
     var biome_images = {};
     biome_list.forEach(function(b) {
         biome_images[b] = ee.Image(1).paint(biomas.filter(ee.Filter.equals('Bioma', b))).neq(1);
-    });
-
-    // Pre-compute increment table: {bioma: {F: {lt20, gte20}, G: {lt20, gte20}}}
-    var incr_table = {};
-    biome_list.forEach(function(b) {
-        incr_table[b] = {};
-        ['F', 'G'].forEach(function(cls) {
-            var row = incr
-            .filter(ee.Filter.eq('Bioma', b))
-            .filter(ee.Filter.eq('Classe', cls))
-            .first();
-            
-            incr_table[b][cls] = {
-                lt20:  row.getNumber('Ctotal_ate20'),
-                gte20: row.getNumber('Ctotal_mais20')
-            };
-        });
     });
 
     // Pixels de veg. sec.: classe 3 (estável) ou 5 (regrowth)

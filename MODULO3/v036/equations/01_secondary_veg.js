@@ -46,6 +46,8 @@ exports.calcSecondaryVegIncrement = function(params) {
     var desf_reg = params.desf_reg_corrected;
     var gf       = params.grass_forest;
     var total    = params.total_carbon;
+    var biomas   = params.biomas;
+    var years    = params.years;
     var incr     = ee.FeatureCollection([
         ee.Feature(null, {
           Ate20anos: '1.974',
@@ -156,8 +158,6 @@ exports.calcSecondaryVegIncrement = function(params) {
           Classe: 'G'
         })
       ]);
-    var biomas   = params.biomas;
-    var years    = params.years;
 
     var biome_list = ['Amazônia', 'Caatinga', 'Cerrado', 'Mata Atlântica', 'Pampa', 'Pantanal'];
 

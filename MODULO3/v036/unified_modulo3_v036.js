@@ -216,7 +216,7 @@ YEARS_FIRE.forEach(function (y, i) {
 
     var fire_forest_tC = fire_forest.select('CO2_tC_ha_' + y).unmask(0);
     var fire_savanna_tC = fire_savanna.select('CO2_tCO2e_ha_' + y).unmask(0).divide(TC_TO_TCO2);
-    
+
     // Corte seletivo só ocorre a partir de 2017. 
     // YEARS_FIRE inicia em 1986 (i = 0), logo 2017 corresponde a i = 31.
     var logging_tC = (i >= 31)
@@ -308,7 +308,7 @@ var export_assets = {
 };
 
 // >> MUDE AQUI PARA EXPORTAR/VISUALIZAR DIFERENTES ASSETS
-var active_export_key = 'final_image'; 
+var active_export_key = 'final_image';
 var imageToExport = export_assets[active_export_key];
 
 // =============================================================================
@@ -363,12 +363,12 @@ function calcSecondaryVegIncrement(params) {
     var biomas = params.biomas;
     var years = params.years;
     var incr_table = {
-        "Amazônia":       { "F": { "gte20": 1.1698, "lt20": 4.7841 }, "G": { "gte20": 0, "lt20": 1.7000 } },
-        "Caatinga":       { "F": { "gte20": 0.5928, "lt20": 2.4378 }, "G": { "gte20": 0, "lt20": 0.6000 } },
-        "Cerrado":        { "F": { "gte20": 0.9484, "lt20": 3.8789 }, "G": { "gte20": 0, "lt20": 1.7000 } },
+        "Amazônia": { "F": { "gte20": 1.1698, "lt20": 4.7841 }, "G": { "gte20": 0, "lt20": 1.7000 } },
+        "Caatinga": { "F": { "gte20": 0.5928, "lt20": 2.4378 }, "G": { "gte20": 0, "lt20": 0.6000 } },
+        "Cerrado": { "F": { "gte20": 0.9484, "lt20": 3.8789 }, "G": { "gte20": 0, "lt20": 1.7000 } },
         "Mata Atlântica": { "F": { "gte20": 0.7780, "lt20": 3.1690 }, "G": { "gte20": 0, "lt20": 0.6000 } },
-        "Pampa":          { "F": { "gte20": 0.7340, "lt20": 2.9896 }, "G": { "gte20": 0, "lt20": 1.7000 } },
-        "Pantanal":       { "F": { "gte20": 0.9622, "lt20": 3.9159 }, "G": { "gte20": 0, "lt20": 1.7000 } }
+        "Pampa": { "F": { "gte20": 0.7340, "lt20": 2.9896 }, "G": { "gte20": 0, "lt20": 1.7000 } },
+        "Pantanal": { "F": { "gte20": 0.9622, "lt20": 3.9159 }, "G": { "gte20": 0, "lt20": 1.7000 } }
     };
 
     var biome_list = ['Amazônia', 'Caatinga', 'Cerrado', 'Mata Atlântica', 'Pampa', 'Pantanal'];
@@ -565,11 +565,8 @@ function calcForestFireEmissions(params) {
             .multiply(-1) // positivo = emissão
             .updateMask(forest_mask.reduce(ee.Reducer.anyNonZero()));
 
-        var oldBands = CO2_tC_ha.bandNames();
-        var newBands = oldBands.map(function (b) {
-            return ee.String(b).replace('fCBalance', 'CO2_tC_ha');
-        });
-        CO2_tC_ha = CO2_tC_ha.select(oldBands, newBands).float();
+        var co2_bands = years.map(function (y) { return ee.String('CO2_tC_ha_').cat(y); });
+        CO2_tC_ha = CO2_tC_ha.rename(co2_bands).float();
 
         // Gases não-CO₂: tC × 2000 kg/t × EF g/kg → g/ha
         var CH4_y = fAGNcomb.multiply(2000).multiply(6.8).updateMask(forest_mask.reduce(ee.Reducer.anyNonZero()));
@@ -577,22 +574,21 @@ function calcForestFireEmissions(params) {
         var CO_y = fAGNcomb.multiply(2000).multiply(104).updateMask(forest_mask.reduce(ee.Reducer.anyNonZero()));
         var NOX_y = fAGNcomb.multiply(2000).multiply(1.6).updateMask(forest_mask.reduce(ee.Reducer.anyNonZero()));
 
-        var rename = function (img, prefix) {
-            var old = img.bandNames();
-            var neu = old.map(function (b) { return ee.String(b).replace('fAGNcomb', prefix); });
-            return img.select(old, neu).round().int32();
+        var rename_gas = function (img, prefix) {
+            var newBands = years.map(function(y) { return ee.String(prefix).cat('_').cat(y); });
+            return img.rename(newBands).round().int32();
         };
 
         CO2_mosaic = CO2_mosaic.bandNames().size().eq(0)
             ? CO2_tC_ha : CO2_mosaic.unmask(0).add(CO2_tC_ha.unmask(0));
         CH4_mosaic = CH4_mosaic.bandNames().size().eq(0)
-            ? rename(CH4_y, 'CH4_g_ha') : CH4_mosaic.unmask(0).add(rename(CH4_y, 'CH4_g_ha').unmask(0));
+            ? rename_gas(CH4_y, 'CH4_g_ha') : CH4_mosaic.unmask(0).add(rename_gas(CH4_y, 'CH4_g_ha').unmask(0));
         N2O_mosaic = N2O_mosaic.bandNames().size().eq(0)
-            ? rename(N2O_y, 'N2O_g_ha') : N2O_mosaic.unmask(0).add(rename(N2O_y, 'N2O_g_ha').unmask(0));
+            ? rename_gas(N2O_y, 'N2O_g_ha') : N2O_mosaic.unmask(0).add(rename_gas(N2O_y, 'N2O_g_ha').unmask(0));
         CO_mosaic = CO_mosaic.bandNames().size().eq(0)
-            ? rename(CO_y, 'CO_g_ha') : CO_mosaic.unmask(0).add(rename(CO_y, 'CO_g_ha').unmask(0));
+            ? rename_gas(CO_y, 'CO_g_ha') : CO_mosaic.unmask(0).add(rename_gas(CO_y, 'CO_g_ha').unmask(0));
         NOX_mosaic = NOX_mosaic.bandNames().size().eq(0)
-            ? rename(NOX_y, 'NOX_g_ha') : NOX_mosaic.unmask(0).add(rename(NOX_y, 'NOX_g_ha').unmask(0));
+            ? rename_gas(NOX_y, 'NOX_g_ha') : NOX_mosaic.unmask(0).add(rename_gas(NOX_y, 'NOX_g_ha').unmask(0));
     });
 
     return CO2_mosaic.addBands(CH4_mosaic).addBands(N2O_mosaic).addBands(CO_mosaic).addBands(NOX_mosaic);
@@ -620,16 +616,16 @@ function calcSavannaFireEmissions(params) {
     // As posições nos vetores correspondem aos anos decorridos desde o último fogo (TSF).
     var agb_factor_table = [
         // Frequência = 1: primeiro fogo (impacto base)
-        [0, 0.10, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01, 
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-         
+        [0, 0.10, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+
         // Frequência = 2: segundo fogo (impacto maior)
-        [0, 0.12, 0.11, 0.10, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 
-         0.02, 0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-         
+        [0, 0.12, 0.11, 0.10, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.03,
+            0.02, 0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+
         // Frequência >= 3: fogo recorrente (impacto severo)
-        [0, 0.15, 0.13, 0.11, 0.09, 0.07, 0.05, 0.03, 0.01, 
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        [0, 0.15, 0.13, 0.11, 0.09, 0.07, 0.05, 0.03, 0.01,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     ];
 
     var tsf_values = [
@@ -698,12 +694,12 @@ function calcGrasslandFireEmissions(params) {
 
     // Fatores de combustão para Campos (fração da biomassa que efetivamente queima)
     var BIOME_DICT = {
-        'Amazônia':       { fwd_combf: 0.883, cwd_combf: 0.331 },
-        'Caatinga':       { fwd_combf: 0.883, cwd_combf: 0.331 },
-        'Cerrado':        { fwd_combf: 0.883, cwd_combf: 0.331 },
+        'Amazônia': { fwd_combf: 0.883, cwd_combf: 0.331 },
+        'Caatinga': { fwd_combf: 0.883, cwd_combf: 0.331 },
+        'Cerrado': { fwd_combf: 0.883, cwd_combf: 0.331 },
         'Mata Atlântica': { fwd_combf: 0.883, cwd_combf: 0.331 },
-        'Pampa':          { fwd_combf: 0.883, cwd_combf: 0.331 },
-        'Pantanal':       { fwd_combf: 0.883, cwd_combf: 0.331 },
+        'Pampa': { fwd_combf: 0.883, cwd_combf: 0.331 },
+        'Pantanal': { fwd_combf: 0.883, cwd_combf: 0.331 },
     };
 
     var EF = { CO: 65, CH4: 2.3, N2O: 0.21, NOX: 3.9 };

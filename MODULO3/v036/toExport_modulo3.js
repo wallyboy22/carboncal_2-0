@@ -66,7 +66,116 @@ var accumulated_burned = ee.Image('projects/mapbiomas-public/assets/brazil/fire/
 
 // --- Auxiliares
 var biomas      = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
-var incrementos = ee.FeatureCollection('projects/ee-ipam/assets/CCAL/incrementos_modulo3');
+var incrementos = ee.FeatureCollection([
+  ee.Feature(null, {
+    Ate20anos: '1.974',
+    BGB: 'mais 23,5%',
+    Bioma: 'Caatinga',
+    Ctotal_ate20: 2.43789005279541,
+    Ctotal_mais20: 0.5928000211715698,
+    Mais20anos: '0.48',
+    Classe: 'F'
+  }),
+  ee.Feature(null, {
+    Ate20anos: '2.566',
+    BGB: 'mais 23,5%',
+    Bioma: 'Mata Atlântica',
+    Ctotal_ate20: 3.1690099239349365,
+    Ctotal_mais20: 0.7780500054359436,
+    Mais20anos: '0.63',
+    Classe: 'F'
+  }),
+  ee.Feature(null, {
+    Ate20anos: '3.158',
+    BGB: 'mais 24%',
+    Bioma: 'Pantanal',
+    Ctotal_ate20: 3.9159200191497803,
+    Ctotal_mais20: 0.9622399806976318,
+    Mais20anos: '0.776',
+    Classe: 'F'
+  }),
+  ee.Feature(null, {
+    Ate20anos: '2.411',
+    BGB: 'mais 24%',
+    Bioma: 'Pampa',
+    Ctotal_ate20: 2.9896399974823,
+    Ctotal_mais20: 0.7340800166130066,
+    Mais20anos: '0.592',
+    Classe: 'F'
+  }),
+  ee.Feature(null, {
+    Ate20anos: '3.652',
+    BGB: 'mais 31%',
+    Bioma: 'Amazônia',
+    Ctotal_ate20: 4.784120082855225,
+    Ctotal_mais20: 1.1698299646377563,
+    Mais20anos: '0.893',
+    Classe: 'F'
+  }),
+  ee.Feature(null, {
+    Ate20anos: '2.961',
+    BGB: 'mais 31%',
+    Bioma: 'Cerrado',
+    Ctotal_ate20: 3.8789100646972656,
+    Ctotal_mais20: 0.9484400153160095,
+    Mais20anos: '0.724',
+    Classe: 'F'
+  }),
+  ee.Feature(null, {
+    Ate20anos: 'na',
+    BGB: 'na',
+    Bioma: 'Amazônia',
+    Ctotal_ate20: 1.7000000476837158,
+    Ctotal_mais20: 0,
+    Mais20anos: 'na',
+    Classe: 'G'
+  }),
+  ee.Feature(null, {
+    Ate20anos: 'na',
+    BGB: 'na',
+    Bioma: 'Cerrado',
+    Ctotal_ate20: 1.7000000476837158,
+    Ctotal_mais20: 0,
+    Mais20anos: 'na',
+    Classe: 'G'
+  }),
+  ee.Feature(null, {
+    Ate20anos: 'na',
+    BGB: 'na',
+    Bioma: 'Pantanal',
+    Ctotal_ate20: 1.7000000476837158,
+    Ctotal_mais20: 0,
+    Mais20anos: 'na',
+    Classe: 'G'
+  }),
+  ee.Feature(null, {
+    Ate20anos: 'na',
+    BGB: 'na',
+    Bioma: 'Caatinga',
+    Ctotal_ate20: 0.6000000238418579,
+    Ctotal_mais20: 0,
+    Mais20anos: 'na',
+    Classe: 'G'
+  }),
+  ee.Feature(null, {
+    Ate20anos: 'na',
+    BGB: 'na',
+    Bioma: 'Mata Atlântica',
+    Ctotal_ate20: 0.6000000238418579,
+    Ctotal_mais20: 0,
+    Mais20anos: 'na',
+    Classe: 'G'
+  }),
+  ee.Feature(null, {
+    Ate20anos: 'na',
+    BGB: 'na',
+    Bioma: 'Pampa',
+    Ctotal_ate20: 1.7000000476837158,
+    Ctotal_mais20: 0,
+    Mais20anos: 'na',
+    Classe: 'G'
+  })
+]);
 
 var brazil_bounds = biomas.geometry().bounds();
 
@@ -139,279 +248,379 @@ YEARS_ALL.forEach(function(y) {
 var water_count = lulc.eq(33).reduce(ee.Reducer.sum());
 var always_submerged = water_count.gte(38); // 1 = sempre submerso → EXCLUIR
 
+
 // =============================================================================
 // 4. ESTOQUE DE BIOMASSA PRIMÁRIA E SECUNDÁRIA ANUAL — INLINE
 // =============================================================================
 
 // --- 4a. Incremento de veg. secundária (via módulo de equação)
-var sec_veg_increment = secVegMod.calcSecondaryVegIncrement({
+var sec_veg_increment = {
     desf_reg_corrected: desf_reg_corrected, // Desmatamento e vegetação secundaria, assumindo uma outra regra para a classe 7
     grass_forest:       grass_forest,       // imagem multibanda com a série de YEARS_ALL[0] até YEARS_ALL[-1]
     total_carbon:       total,              // banda com o total de carbono
     incrementos:        incrementos,        // tabela com os incrementos de carbono
     biomas:             biomas,             // feature collection das regiões de entrada
     years:              YEARS_ALL           // lista com a série temporal para o processamento
-});
-
-// --- 4b. Estoque anual: primária=total QCN, secundária=incremento, outros=0
-var biomass_stock = ee.Image().select();
-
-YEARS_ALL.forEach(function(y) {
-    var desf_y = desf_reg_corrected.select('classification_' + y);
-    var sec_y  = sec_veg_increment.select('sec_veg_increment_' + y).unmask(0);
-
-    var stock_y = ee.Image(0)
-        .where(desf_y.eq(2), total)           // Veg. primária → estoque QCN
-        .where(desf_y.eq(3).or(desf_y.eq(5)), sec_y) // Veg. sec → incremento
-        .updateMask(always_submerged.not())    // Remove área permanentemente submersa
-        .rename('biomass_stock_' + y)           
-        .float();
-
-    biomass_stock = biomass_stock.addBands(stock_y);
-});
-
-// =============================================================================
-// 5. EMISSÕES POR DEGRADAÇÃO (via módulos de equação)
-// =============================================================================
-
-var fire_forest = fireForestMod.calcForestFireEmissions({
-    annual_burned:   annual_burned,
-    fire_frequency:  fire_frequency,
-    time_since_fire: time_since_fire,
-    agb:    agb, cdw: cdw, litter: litter,
-    forest_mask: forest_mask,
-    biomas: biomas,
-    years:  YEARS_FIRE
-});
-
-var fire_savanna = fireSavMod.calcSavannaFireEmissions({
-    annual_burned:   annual_burned,
-    fire_frequency:  fire_frequency,
-    time_since_fire: time_since_fire,
-    agb: agb, cdw: cdw, litter: litter,
-    savanna_mask: savanna_mask,
-    years: YEARS_FIRE
-});
-
-var fire_grassland = fireGraMod.calcGrasslandFireEmissions({
-    annual_burned:      annual_burned,
-    accumulated_burned: accumulated_burned,
-    agb: agb, cdw: cdw, litter: litter,
-    grassland_mask: grassland_mask,
-    biomas: biomas,
-    years: YEARS_FIRE
-});
-
-var logging = loggingMod.calcLoggingEmissions({
-    agb:          agb,
-    forest_mask:  forest_mask,
-    amazon_mask:  ee.Image(1).paint(biomas.filter(ee.Filter.equals('Bioma', 'Amazônia'))).neq(1),
-    loss_fraction:0.196,
-    years: ['2017','2018','2019','2020','2021','2022','2023','2024']
-});
-
-// =============================================================================
-// 6. INTEGRAÇÃO: DESCONTO DE DEGRADAÇÃO E BALANÇO DESMAT/REG
-// =============================================================================
-
-var pixel_area_ha = ee.Image.pixelArea().divide(10000);
-
-// Acumula degradação em tC/ha (domínio de carbono — sem ×3.67)
-var accumulated_degradation = ee.Image(0).rename('dummy');
-
-// Bandas finais do produto
-var loss_fire_bands         = ee.Image().select();
-var loss_logging_bands      = ee.Image().select();
-var loss_convergence_bands  = ee.Image().select();
-var loss_grassland_bands    = ee.Image().select();
-var loss_deforestation_bands= ee.Image().select();
-var gain_sec_veg_bands      = ee.Image().select();
-var stock_bands             = ee.Image().select();
-
-// Estoque do primeiro ano (1985) como referência para o balanço anual
-var past_stock = biomass_stock.select('biomass_stock_1985');
-
-YEARS_FIRE.forEach(function(y, i) {
-
-    // --- Degradação em tC/ha (domínio C puro)
-    // Floresta: CO2_tC_ha_YYYY já em tC/ha (saída do FATE sem ×3.67)
-    var fire_forest_tC   = fire_forest.select('CO2_tC_ha_' + y).unmask(0);
-    // Savana: CO2_tCO2e_ha_YYYY em tCO₂e/ha → converte para tC/ha
-    var fire_savanna_tC  = fire_savanna.select('CO2_tCO2e_ha_' + y).unmask(0).divide(TC_TO_TCO2);
-    // Logging: logging_tC_ha_YYYY já em tC/ha
-    var logging_tC       = (i >= 32)
-        ? logging.select('logging_tC_ha_' + y).unmask(0)
-        : ee.Image(0); // zeros para anos anteriores a 2017
-
-    // Acumula degradação (negativo = perda de C)
-    var accum_prev = accumulated_degradation.slice(-1);
-    var accum_y    = accum_prev
-        .subtract(fire_forest_tC)
-        .subtract(fire_savanna_tC)
-        .subtract(logging_tC)
-        .rename('accum_' + y);
-
-    accumulated_degradation = accumulated_degradation.addBands(accum_y);
-
-    // --- Estoque atualizado (aplica desconto apenas em veg. primária)
-    var stock_bruto_y = biomass_stock.select('biomass_stock_' + y);
-    var desf_y        = desf_reg_corrected.select('classification_' + y);
-
-    var stock_updated_y = stock_bruto_y.where(
-        desf_y.eq(2),
-        stock_bruto_y.add(accum_y.unmask(0))
-    ).rename('stock_' + y).float();
-
-    // --- Balanço desmatamento/regeneração (tCO₂e/ha, depois ×área)
-    var def_reg_balance_y = past_stock.subtract(stock_updated_y).multiply(TC_TO_TCO2);
-    // positivo = emissão (desmatamento); negativo = remoção (regeneração)
-
-    past_stock = stock_updated_y;
-
-    // --- Monta bandas do produto final (×pixel_area_ha para converter em total)
-    // Emissões de fogo (floresta + savana, em tCO₂e total por pixel)
-    var fire_co2e_y = fire_forest_tC.add(fire_savanna_tC).multiply(TC_TO_TCO2);
-    var fire_ch4    = fire_forest.select('CH4_g_ha_' + y).unmask(0).multiply(GWP_CH4).divide(1e6);
-    var fire_n2o    = fire_forest.select('N2O_g_ha_' + y).unmask(0).multiply(GWP_N2O).divide(1e6);
-    var fire_total_co2e = fire_co2e_y.add(fire_ch4).add(fire_n2o); // tCO₂e/ha
-
-    loss_fire_bands = loss_fire_bands.addBands(
-        fire_total_co2e.multiply(pixel_area_ha).rename('loss_fire_' + y).float()
-    );
-
-    // Corte seletivo (tCO₂e total por pixel)
-    var log_co2e_y = logging_tC.multiply(TC_TO_TCO2);
-    loss_logging_bands = loss_logging_bands.addBands(
-        log_co2e_y.multiply(pixel_area_ha).rename('loss_selective_logging_' + y).float()
-    );
-
-    // Convergência: fogo + corte seletivo
-    loss_convergence_bands = loss_convergence_bands.addBands(
-        fire_total_co2e.add(log_co2e_y).multiply(pixel_area_ha).rename('loss_convergence_degradation_' + y).float()
-    );
-
-    // Fogo em campos (CH4 + N2O + CO, sem CO₂ tardio)
-    var grass_ch4 = fire_grassland.select('CH4_g_ha_' + y).unmask(0).multiply(GWP_CH4).divide(1e6);
-    var grass_n2o = fire_grassland.select('N2O_g_ha_' + y).unmask(0).multiply(GWP_N2O).divide(1e6);
-    loss_grassland_bands = loss_grassland_bands.addBands(
-        grass_ch4.add(grass_n2o).multiply(pixel_area_ha).rename('loss_grassland_' + y).float()
-    );
-
-    // Desmatamento (positivo) e remoção por veg. sec. (negativo)
-    loss_deforestation_bands = loss_deforestation_bands.addBands(
-        def_reg_balance_y.max(0).multiply(pixel_area_ha).rename('loss_deforestation_' + y).float()
-    );
-    gain_sec_veg_bands = gain_sec_veg_bands.addBands(
-        def_reg_balance_y.min(0).multiply(pixel_area_ha).rename('gain_secondary_vegetation_' + y).float()
-    );
-
-    // Estoque (tC/ha — densidade, sem ×área)
-    stock_bands = stock_bands.addBands(stock_updated_y);
-});
-
-// =============================================================================
-// 7. PRODUTO FINAL
-// =============================================================================
-
-var final_image = loss_fire_bands
-    .addBands(loss_logging_bands)
-    .addBands(loss_convergence_bands)
-    .addBands(gain_sec_veg_bands)
-    .addBands(loss_grassland_bands)
-    .addBands(loss_deforestation_bands)
-    .addBands(stock_bands)
-    .updateMask(always_submerged.not())
-    .float();
-
-// =============================================================================
-// 8. EXPORTAÇÕES
-// =============================================================================
-
-// --- Seção A: Assets intermediários (multibanda Brasil, por módulo)
-var common_export = {
-  pyramidingPolicy: 'median',
-  region: brazil_bounds, 
-  scale: SCALE, 
-  maxPixels: MAX_PIX,
-  flag:'WSilva-'
 };
 
-Export.image.toAsset({
-    image: biomass_stock.float(),
-    description: common_export.flag + 'biomass_stock_' + VERSION,
-    assetId: BASE_ASSET + 'biomass_stock_' + VERSION,
-    pyramidingPolicy:common_export.pyramidingPolicy,
-    region:common_export.region,
-    scale:common_export.scale,
-    maxPixels:common_export.maxPixels,
-});
+print('incrementos',incrementos,incrementos.first(),incrementos
+                .filter(ee.Filter.eq('Bioma', 'Caatinga'))
+                .filter(ee.Filter.eq('Classe', 'F')));
 
-Export.image.toAsset({
-    image: sec_veg_increment.float(),
-    description: common_export.flag + 'secondary_veg_increment_' + VERSION,
-    assetId: BASE_ASSET + 'secondary_veg_increment_' + VERSION,
-    pyramidingPolicy:common_export.pyramidingPolicy,
-    region:common_export.region,
-    scale:common_export.scale,
-    maxPixels:common_export.maxPixels,
-});
+print("sec_veg_increment",sec_veg_increment);
 
-Export.image.toAsset({
-    image: fire_forest.float(),
-    description: common_export.flag + 'fire_forest_emissions_' + VERSION,
-    assetId: BASE_ASSET + 'fire_forest_emissions_' + VERSION,
-    pyramidingPolicy:common_export.pyramidingPolicy,
-    region:common_export.region,
-    scale:common_export.scale,
-    maxPixels:common_export.maxPixels,
-});
 
-Export.image.toAsset({
-    image: fire_savanna.float(),
-    description: common_export.flag + 'fire_savanna_emissions_' + VERSION,
-    assetId: BASE_ASSET + 'fire_savanna_emissions_' + VERSION,
-    pyramidingPolicy:common_export.pyramidingPolicy,
-    region:common_export.region,
-    scale:common_export.scale,
-    maxPixels:common_export.maxPixels,
-});
+var calcSecondaryVegIncrement = function(params) {
 
-Export.image.toAsset({
-    image: fire_grassland.float(),
-    description: common_export.flag + 'fire_grassland_emissions_' + VERSION,
-    assetId: BASE_ASSET + 'fire_grassland_emissions_' + VERSION,
-    pyramidingPolicy:common_export.pyramidingPolicy,
-    region:common_export.region,
-    scale:common_export.scale,
-    maxPixels:common_export.maxPixels,
-});
+    var desf_reg = params.desf_reg_corrected;
+    var gf       = params.grass_forest;
+    var total    = params.total_carbon;
+    var incr     = params.incrementos;
+    var biomas   = params.biomas;
+    var years    = params.years;
 
-Export.image.toAsset({
-    image: logging.float(),
-    description: common_export.flag + 'logging_emissions_' + VERSION,
-    assetId: BASE_ASSET + 'logging_emissions_' + VERSION,
-    pyramidingPolicy:common_export.pyramidingPolicy,
-    region:common_export.region,
-    scale:common_export.scale,
-    maxPixels:common_export.maxPixels,
-});
+    var biome_list = ['Amazônia', 'Caatinga', 'Cerrado', 'Mata Atlântica', 'Pampa', 'Pantanal'];
+    
+    // Pre-compute biome images to avoid recomputing inside nested loops
+    var biome_images = {};
+    biome_list.forEach(function(b) {
+        biome_images[b] = ee.Image().paint(biomas.filter(ee.Filter.eq('Bioma', b))).eq(0);
+    });
 
-// --- Seção B: Produto final integrado
-Export.image.toAsset({
-    image: final_image,
-    description: common_export.flag + 'CCAL_MODULO3_' + VERSION,
-    assetId: FINAL_ASSET,
-    pyramidingPolicy:common_export.pyramidingPolicy,
-    region:common_export.region,
-    scale:common_export.scale,
-    maxPixels:common_export.maxPixels,
-});
+    // Pre-compute increment table: {bioma: {F: {lt20, gte20}, G: {lt20, gte20}}}
+    var incr_table = {};
+    biome_list.forEach(function(b) {
+        incr_table[b] = {};
+        ['F', 'G'].forEach(function(cls) {
+            var row = incr
+            .filter(ee.Filter.eq('Bioma', b))
+            .filter(ee.Filter.eq('Classe', 'F'))
+            // .first();
+            print(b,cls,row);
+            incr_table[b][cls] = {
+                lt20:  row.getNumber('Ctotal_ate20'),
+                gte20: row.getNumber('Ctotal_mais20')
+            };
+        });
+    });
 
-// =============================================================================
-// 9. VISUALIZAÇÃO (opcional — descomente para inspecionar no Code Editor)
-// =============================================================================
-Map.centerObject(brazil_bounds, 4);
-Map.addLayer(biomass_stock, {bands:['biomass_stock_2020'],min:0, max:200, palette:['white','green','darkgreen']}, 'Stock 2020', false);
-Map.addLayer(final_image, {bands:['loss_fire_2020'],min:0, max:1e4, palette:['white','orange','red']}, 'Fire 2020', false);
-Map.addLayer(final_image, {bands:['stock_2020'],min:0, max:200, palette:['white','green']}, 'Stock Final 2020', false);
-print('Produto final', final_image);
+    // // Pixels de veg. sec.: classe 3 (estável) ou 5 (regrowth)
+    // var is_sec_veg = desf_reg.eq(3).or(desf_reg.eq(5));
+
+    // var age_stack   = ee.Image(0); // contador de idade acumulada (anos consecutivos como veg.sec.)
+    // var stock_stack = ee.Image().select(); // resultado acumulado
+
+    // years.forEach(function(year, i) {
+
+    //     var sec_year = is_sec_veg.select('.*_' + year); // 1/0
+    //     var gf_year  = gf.select('.*_' + year);         // 1=Campo, 2=Floresta
+
+    //     // Atualiza idade: se é veg. sec. neste ano, incrementa; senão, zera
+    //     var age_prev = age_stack.slice(-1);
+    //     var age_year = age_prev.add(1).multiply(sec_year); // zero onde não é veg sec
+
+    //     age_stack = i === 0 ? age_year : age_stack.addBands(age_year);
+
+    //     // Calcula incremento acumulado com base na idade e bioma
+    //     var lt20  = age_year.lt(20).and(age_year.gt(0));
+    //     var gte20 = age_year.gte(20);
+
+    //     var prev_stock = (i === 0) ? ee.Image(0) : stock_stack.slice(-1);
+
+    //     var increment_year = ee.Image(0).rename('sec_veg_increment_' + year);
+
+    //     biome_list.forEach(function(b) {
+    //         var bm = biome_images[b];
+
+    //         var f_lt20  = ee.Image(incr_table[b]['F'].lt20);
+    //         var f_gte20 = ee.Image(incr_table[b]['F'].gte20);
+    //         var g_lt20  = ee.Image(incr_table[b]['G'].lt20);
+    //         var g_gte20 = ee.Image(incr_table[b]['G'].gte20);
+
+    //         // Calcula estoque acumulado = estoque anterior + incremento anual
+    //         var result_biome = prev_stock.rename('sec_veg_increment_' + year)
+    //             .where(gf_year.eq(2).and(lt20).and(bm),  prev_stock.add(f_lt20))
+    //             .where(gf_year.eq(2).and(gte20).and(bm), prev_stock.add(f_gte20))
+    //             .where(gf_year.eq(1).and(lt20).and(bm),  prev_stock.add(g_lt20))
+    //             .where(gf_year.eq(1).and(gte20).and(bm), prev_stock.add(g_gte20));
+
+    //         increment_year = increment_year.where(bm.and(sec_year), result_biome);
+    //     });
+
+    //     // Aplica máscara de veg. sec. e teto do estoque QCN
+    //     increment_year = increment_year
+    //         .updateMask(sec_year)
+    //         .where(increment_year.gt(total), total)
+    //         .float();
+
+    //     stock_stack = stock_stack.addBands(increment_year);
+    // });
+
+    // return stock_stack;
+};
+sec_veg_increment = calcSecondaryVegIncrement(sec_veg_increment);
+
+print("sec_veg_increment",sec_veg_increment);
+
+// // --- 4b. Estoque anual: primária=total QCN, secundária=incremento, outros=0
+// var biomass_stock = ee.Image().select();
+
+// YEARS_ALL.forEach(function(y) {
+//     var desf_y = desf_reg_corrected.select('classification_' + y);
+//     var sec_y  = sec_veg_increment.select('sec_veg_increment_' + y).unmask(0);
+
+//     var stock_y = ee.Image(0)
+//         .where(desf_y.eq(2), total)           // Veg. primária → estoque QCN
+//         .where(desf_y.eq(3).or(desf_y.eq(5)), sec_y) // Veg. sec → incremento
+//         .updateMask(always_submerged.not())    // Remove área permanentemente submersa
+//         .rename('biomass_stock_' + y)           
+//         .float();
+
+//     biomass_stock = biomass_stock.addBands(stock_y);
+// });
+
+// // =============================================================================
+// // 5. EMISSÕES POR DEGRADAÇÃO (via módulos de equação)
+// // =============================================================================
+
+// var fire_forest = fireForestMod.calcForestFireEmissions({
+//     annual_burned:   annual_burned,
+//     fire_frequency:  fire_frequency,
+//     time_since_fire: time_since_fire,
+//     agb:    agb, cdw: cdw, litter: litter,
+//     forest_mask: forest_mask,
+//     biomas: biomas,
+//     years:  YEARS_FIRE
+// });
+
+// var fire_savanna = fireSavMod.calcSavannaFireEmissions({
+//     annual_burned:   annual_burned,
+//     fire_frequency:  fire_frequency,
+//     time_since_fire: time_since_fire,
+//     agb: agb, cdw: cdw, litter: litter,
+//     savanna_mask: savanna_mask,
+//     years: YEARS_FIRE
+// });
+
+// var fire_grassland = fireGraMod.calcGrasslandFireEmissions({
+//     annual_burned:      annual_burned,
+//     accumulated_burned: accumulated_burned,
+//     agb: agb, cdw: cdw, litter: litter,
+//     grassland_mask: grassland_mask,
+//     biomas: biomas,
+//     years: YEARS_FIRE
+// });
+
+// var logging = loggingMod.calcLoggingEmissions({
+//     agb:          agb,
+//     forest_mask:  forest_mask,
+//     amazon_mask:  ee.Image(1).paint(biomas.filter(ee.Filter.equals('Bioma', 'Amazônia'))).neq(1),
+//     loss_fraction:0.196,
+//     years: ['2017','2018','2019','2020','2021','2022','2023','2024']
+// });
+
+// // =============================================================================
+// // 6. INTEGRAÇÃO: DESCONTO DE DEGRADAÇÃO E BALANÇO DESMAT/REG
+// // =============================================================================
+
+// var pixel_area_ha = ee.Image.pixelArea().divide(10000);
+
+// // Acumula degradação em tC/ha (domínio de carbono — sem ×3.67)
+// var accumulated_degradation = ee.Image(0).rename('dummy');
+
+// // Bandas finais do produto
+// var loss_fire_bands         = ee.Image().select();
+// var loss_logging_bands      = ee.Image().select();
+// var loss_convergence_bands  = ee.Image().select();
+// var loss_grassland_bands    = ee.Image().select();
+// var loss_deforestation_bands= ee.Image().select();
+// var gain_sec_veg_bands      = ee.Image().select();
+// var stock_bands             = ee.Image().select();
+
+// // Estoque do primeiro ano (1985) como referência para o balanço anual
+// var past_stock = biomass_stock.select('biomass_stock_1985');
+
+// YEARS_FIRE.forEach(function(y, i) {
+
+//     // --- Degradação em tC/ha (domínio C puro)
+//     // Floresta: CO2_tC_ha_YYYY já em tC/ha (saída do FATE sem ×3.67)
+//     var fire_forest_tC   = fire_forest.select('CO2_tC_ha_' + y).unmask(0);
+//     // Savana: CO2_tCO2e_ha_YYYY em tCO₂e/ha → converte para tC/ha
+//     var fire_savanna_tC  = fire_savanna.select('CO2_tCO2e_ha_' + y).unmask(0).divide(TC_TO_TCO2);
+//     // Logging: logging_tC_ha_YYYY já em tC/ha
+//     var logging_tC       = (i >= 32)
+//         ? logging.select('logging_tC_ha_' + y).unmask(0)
+//         : ee.Image(0); // zeros para anos anteriores a 2017
+
+//     // Acumula degradação (negativo = perda de C)
+//     var accum_prev = accumulated_degradation.slice(-1);
+//     var accum_y    = accum_prev
+//         .subtract(fire_forest_tC)
+//         .subtract(fire_savanna_tC)
+//         .subtract(logging_tC)
+//         .rename('accum_' + y);
+
+//     accumulated_degradation = accumulated_degradation.addBands(accum_y);
+
+//     // --- Estoque atualizado (aplica desconto apenas em veg. primária)
+//     var stock_bruto_y = biomass_stock.select('biomass_stock_' + y);
+//     var desf_y        = desf_reg_corrected.select('classification_' + y);
+
+//     var stock_updated_y = stock_bruto_y.where(
+//         desf_y.eq(2),
+//         stock_bruto_y.add(accum_y.unmask(0))
+//     ).rename('stock_' + y).float();
+
+//     // --- Balanço desmatamento/regeneração (tCO₂e/ha, depois ×área)
+//     var def_reg_balance_y = past_stock.subtract(stock_updated_y).multiply(TC_TO_TCO2);
+//     // positivo = emissão (desmatamento); negativo = remoção (regeneração)
+
+//     past_stock = stock_updated_y;
+
+//     // --- Monta bandas do produto final (×pixel_area_ha para converter em total)
+//     // Emissões de fogo (floresta + savana, em tCO₂e total por pixel)
+//     var fire_co2e_y = fire_forest_tC.add(fire_savanna_tC).multiply(TC_TO_TCO2);
+//     var fire_ch4    = fire_forest.select('CH4_g_ha_' + y).unmask(0).multiply(GWP_CH4).divide(1e6);
+//     var fire_n2o    = fire_forest.select('N2O_g_ha_' + y).unmask(0).multiply(GWP_N2O).divide(1e6);
+//     var fire_total_co2e = fire_co2e_y.add(fire_ch4).add(fire_n2o); // tCO₂e/ha
+
+//     loss_fire_bands = loss_fire_bands.addBands(
+//         fire_total_co2e.multiply(pixel_area_ha).rename('loss_fire_' + y).float()
+//     );
+
+//     // Corte seletivo (tCO₂e total por pixel)
+//     var log_co2e_y = logging_tC.multiply(TC_TO_TCO2);
+//     loss_logging_bands = loss_logging_bands.addBands(
+//         log_co2e_y.multiply(pixel_area_ha).rename('loss_selective_logging_' + y).float()
+//     );
+
+//     // Convergência: fogo + corte seletivo
+//     loss_convergence_bands = loss_convergence_bands.addBands(
+//         fire_total_co2e.add(log_co2e_y).multiply(pixel_area_ha).rename('loss_convergence_degradation_' + y).float()
+//     );
+
+//     // Fogo em campos (CH4 + N2O + CO, sem CO₂ tardio)
+//     var grass_ch4 = fire_grassland.select('CH4_g_ha_' + y).unmask(0).multiply(GWP_CH4).divide(1e6);
+//     var grass_n2o = fire_grassland.select('N2O_g_ha_' + y).unmask(0).multiply(GWP_N2O).divide(1e6);
+//     loss_grassland_bands = loss_grassland_bands.addBands(
+//         grass_ch4.add(grass_n2o).multiply(pixel_area_ha).rename('loss_grassland_' + y).float()
+//     );
+
+//     // Desmatamento (positivo) e remoção por veg. sec. (negativo)
+//     loss_deforestation_bands = loss_deforestation_bands.addBands(
+//         def_reg_balance_y.max(0).multiply(pixel_area_ha).rename('loss_deforestation_' + y).float()
+//     );
+//     gain_sec_veg_bands = gain_sec_veg_bands.addBands(
+//         def_reg_balance_y.min(0).multiply(pixel_area_ha).rename('gain_secondary_vegetation_' + y).float()
+//     );
+
+//     // Estoque (tC/ha — densidade, sem ×área)
+//     stock_bands = stock_bands.addBands(stock_updated_y);
+// });
+
+// // =============================================================================
+// // 7. PRODUTO FINAL
+// // =============================================================================
+
+// var final_image = loss_fire_bands
+//     .addBands(loss_logging_bands)
+//     .addBands(loss_convergence_bands)
+//     .addBands(gain_sec_veg_bands)
+//     .addBands(loss_grassland_bands)
+//     .addBands(loss_deforestation_bands)
+//     .addBands(stock_bands)
+//     .updateMask(always_submerged.not())
+//     .float();
+
+// // =============================================================================
+// // 8. EXPORTAÇÕES
+// // =============================================================================
+
+// // --- Seção A: Assets intermediários (multibanda Brasil, por módulo)
+// var common_export = {
+//   pyramidingPolicy: 'median',
+//   region: brazil_bounds, 
+//   scale: SCALE, 
+//   maxPixels: MAX_PIX,
+//   flag:'WSilva-'
+// };
+
+// Export.image.toAsset({
+//     image: biomass_stock.float(),
+//     description: common_export.flag + 'biomass_stock_' + VERSION,
+//     assetId: BASE_ASSET + 'biomass_stock_' + VERSION,
+//     pyramidingPolicy:common_export.pyramidingPolicy,
+//     region:common_export.region,
+//     scale:common_export.scale,
+//     maxPixels:common_export.maxPixels,
+// });
+
+// Export.image.toAsset({
+//     image: sec_veg_increment.float(),
+//     description: common_export.flag + 'secondary_veg_increment_' + VERSION,
+//     assetId: BASE_ASSET + 'secondary_veg_increment_' + VERSION,
+//     pyramidingPolicy:common_export.pyramidingPolicy,
+//     region:common_export.region,
+//     scale:common_export.scale,
+//     maxPixels:common_export.maxPixels,
+// });
+
+// Export.image.toAsset({
+//     image: fire_forest.float(),
+//     description: common_export.flag + 'fire_forest_emissions_' + VERSION,
+//     assetId: BASE_ASSET + 'fire_forest_emissions_' + VERSION,
+//     pyramidingPolicy:common_export.pyramidingPolicy,
+//     region:common_export.region,
+//     scale:common_export.scale,
+//     maxPixels:common_export.maxPixels,
+// });
+
+// Export.image.toAsset({
+//     image: fire_savanna.float(),
+//     description: common_export.flag + 'fire_savanna_emissions_' + VERSION,
+//     assetId: BASE_ASSET + 'fire_savanna_emissions_' + VERSION,
+//     pyramidingPolicy:common_export.pyramidingPolicy,
+//     region:common_export.region,
+//     scale:common_export.scale,
+//     maxPixels:common_export.maxPixels,
+// });
+
+// Export.image.toAsset({
+//     image: fire_grassland.float(),
+//     description: common_export.flag + 'fire_grassland_emissions_' + VERSION,
+//     assetId: BASE_ASSET + 'fire_grassland_emissions_' + VERSION,
+//     pyramidingPolicy:common_export.pyramidingPolicy,
+//     region:common_export.region,
+//     scale:common_export.scale,
+//     maxPixels:common_export.maxPixels,
+// });
+
+// Export.image.toAsset({
+//     image: logging.float(),
+//     description: common_export.flag + 'logging_emissions_' + VERSION,
+//     assetId: BASE_ASSET + 'logging_emissions_' + VERSION,
+//     pyramidingPolicy:common_export.pyramidingPolicy,
+//     region:common_export.region,
+//     scale:common_export.scale,
+//     maxPixels:common_export.maxPixels,
+// });
+
+// // --- Seção B: Produto final integrado
+// Export.image.toAsset({
+//     image: final_image,
+//     description: common_export.flag + 'CCAL_MODULO3_' + VERSION,
+//     assetId: FINAL_ASSET,
+//     pyramidingPolicy:common_export.pyramidingPolicy,
+//     region:common_export.region,
+//     scale:common_export.scale,
+//     maxPixels:common_export.maxPixels,
+// });
+
+// // =============================================================================
+// // 9. VISUALIZAÇÃO (opcional — descomente para inspecionar no Code Editor)
+// // =============================================================================
+// Map.centerObject(brazil_bounds, 4);
+// Map.addLayer(biomass_stock, {bands:['biomass_stock_2020'],min:0, max:200, palette:['white','green','darkgreen']}, 'Stock 2020', false);
+// Map.addLayer(final_image, {bands:['loss_fire_2020'],min:0, max:1e4, palette:['white','orange','red']}, 'Fire 2020', false);
+// Map.addLayer(final_image, {bands:['stock_2020'],min:0, max:200, palette:['white','green']}, 'Stock Final 2020', false);
+// print('Produto final', final_image);

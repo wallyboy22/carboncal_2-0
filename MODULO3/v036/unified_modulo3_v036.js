@@ -242,8 +242,12 @@ YEARS_FIRE.forEach(function (y, i) {
     past_stock = stock_updated_y;
 
     var fire_co2e_y = fire_forest_tC.add(fire_savanna_tC).multiply(TC_TO_TCO2);
-    var fire_ch4 = fire_forest.select('CH4_g_ha_' + y).unmask(0).multiply(GWP_CH4).divide(1e6);
-    var fire_n2o = fire_forest.select('N2O_g_ha_' + y).unmask(0).multiply(GWP_N2O).divide(1e6);
+    var fire_ch4 = fire_forest.select('CH4_t_ha_' + y).unmask(0)
+        .add(fire_savanna.select('CH4_t_ha_' + y).unmask(0))
+        .multiply(GWP_CH4);
+    var fire_n2o = fire_forest.select('N2O_t_ha_' + y).unmask(0)
+        .add(fire_savanna.select('N2O_t_ha_' + y).unmask(0))
+        .multiply(GWP_N2O);
     var fire_total_co2e = fire_co2e_y.add(fire_ch4).add(fire_n2o);
 
     loss_fire_bands = loss_fire_bands.addBands(
@@ -259,8 +263,8 @@ YEARS_FIRE.forEach(function (y, i) {
         fire_total_co2e.add(log_co2e_y).multiply(pixel_area_ha).rename('loss_convergence_degradation_' + y).float()
     );
 
-    var grass_ch4 = fire_grassland.select('CH4_g_ha_' + y).unmask(0).multiply(GWP_CH4).divide(1e6);
-    var grass_n2o = fire_grassland.select('N2O_g_ha_' + y).unmask(0).multiply(GWP_N2O).divide(1e6);
+    var grass_ch4 = fire_grassland.select('CH4_t_ha_' + y).unmask(0).multiply(GWP_CH4);
+    var grass_n2o = fire_grassland.select('N2O_t_ha_' + y).unmask(0).multiply(GWP_N2O);
     loss_grassland_bands = loss_grassland_bands.addBands(
         grass_ch4.add(grass_n2o).multiply(pixel_area_ha).rename('loss_grassland_' + y).float()
     );
@@ -308,7 +312,7 @@ var export_assets = {
     'fire_savanna_emissions': fire_savanna,
     'fire_grassland_emissions': fire_grassland,
     'logging_emissions': logging,
-    // 'final_image': final_image
+    'final_image': final_image
 };
 
 Object.keys(export_assets).forEach(function (key) {
@@ -567,27 +571,27 @@ function calcForestFireEmissions(params) {
         var co2_bands = years.map(function (y) { return ee.String('CO2_tC_ha_').cat(y); });
         CO2_tC_ha = CO2_tC_ha.rename(co2_bands).float();
 
-        // Gases não-CO₂: tC × 2000 kg/t × EF g/kg → g/ha
-        var CH4_y = fAGNcomb.multiply(2000).multiply(6.8).updateMask(forest_mask.reduce(ee.Reducer.anyNonZero()));
-        var N2O_y = fAGNcomb.multiply(2000).multiply(0.2).updateMask(forest_mask.reduce(ee.Reducer.anyNonZero()));
-        var CO_y = fAGNcomb.multiply(2000).multiply(104).updateMask(forest_mask.reduce(ee.Reducer.anyNonZero()));
-        var NOX_y = fAGNcomb.multiply(2000).multiply(1.6).updateMask(forest_mask.reduce(ee.Reducer.anyNonZero()));
+        // Gases não-CO₂: tC × 2000 kg/t × EF g/kg ÷ 1e6 -> t/ha
+        var CH4_y = fAGNcomb.multiply(2000).multiply(6.8).divide(1e6).updateMask(forest_mask.reduce(ee.Reducer.anyNonZero()));
+        var N2O_y = fAGNcomb.multiply(2000).multiply(0.2).divide(1e6).updateMask(forest_mask.reduce(ee.Reducer.anyNonZero()));
+        var CO_y = fAGNcomb.multiply(2000).multiply(104).divide(1e6).updateMask(forest_mask.reduce(ee.Reducer.anyNonZero()));
+        var NOX_y = fAGNcomb.multiply(2000).multiply(1.6).divide(1e6).updateMask(forest_mask.reduce(ee.Reducer.anyNonZero()));
 
         var rename_gas = function (img, prefix) {
             var newBands = years.map(function (y) { return ee.String(prefix).cat('_').cat(y); });
-            return img.rename(newBands).round().int32();
+            return img.rename(newBands).float();
         };
 
         CO2_mosaic = CO2_mosaic.bandNames().size().eq(0)
             ? CO2_tC_ha : CO2_mosaic.unmask(0).add(CO2_tC_ha.unmask(0));
         CH4_mosaic = CH4_mosaic.bandNames().size().eq(0)
-            ? rename_gas(CH4_y, 'CH4_g_ha') : CH4_mosaic.unmask(0).add(rename_gas(CH4_y, 'CH4_g_ha').unmask(0));
+            ? rename_gas(CH4_y, 'CH4_t_ha') : CH4_mosaic.unmask(0).add(rename_gas(CH4_y, 'CH4_t_ha').unmask(0));
         N2O_mosaic = N2O_mosaic.bandNames().size().eq(0)
-            ? rename_gas(N2O_y, 'N2O_g_ha') : N2O_mosaic.unmask(0).add(rename_gas(N2O_y, 'N2O_g_ha').unmask(0));
+            ? rename_gas(N2O_y, 'N2O_t_ha') : N2O_mosaic.unmask(0).add(rename_gas(N2O_y, 'N2O_t_ha').unmask(0));
         CO_mosaic = CO_mosaic.bandNames().size().eq(0)
-            ? rename_gas(CO_y, 'CO_g_ha') : CO_mosaic.unmask(0).add(rename_gas(CO_y, 'CO_g_ha').unmask(0));
+            ? rename_gas(CO_y, 'CO_t_ha') : CO_mosaic.unmask(0).add(rename_gas(CO_y, 'CO_t_ha').unmask(0));
         NOX_mosaic = NOX_mosaic.bandNames().size().eq(0)
-            ? rename_gas(NOX_y, 'NOX_g_ha') : NOX_mosaic.unmask(0).add(rename_gas(NOX_y, 'NOX_g_ha').unmask(0));
+            ? rename_gas(NOX_y, 'NOX_t_ha') : NOX_mosaic.unmask(0).add(rename_gas(NOX_y, 'NOX_t_ha').unmask(0));
     });
 
     return CO2_mosaic.addBands(CH4_mosaic).addBands(N2O_mosaic).addBands(CO_mosaic).addBands(NOX_mosaic);
@@ -665,10 +669,10 @@ function calcSavannaFireEmissions(params) {
         var comb_cwd = cdw.add(agb.multiply(0.1)).multiply(combf_cwd);
         var comb_total = comb_fwd.add(comb_cwd);
 
-        var ch4_year = comb_total.multiply(2000).multiply(EF.CH4).multiply(pixel_mask).rename('CH4_g_ha_' + year).round().int32();
-        var n2o_year = comb_total.multiply(2000).multiply(EF.N2O).multiply(pixel_mask).rename('N2O_g_ha_' + year).round().int32();
-        var co_year = comb_total.multiply(2000).multiply(EF.CO).multiply(pixel_mask).rename('CO_g_ha_' + year).round().int32();
-        var nox_year = comb_total.multiply(2000).multiply(EF.NOX).multiply(pixel_mask).rename('NOX_g_ha_' + year).round().int32();
+        var ch4_year = comb_total.multiply(2000).multiply(EF.CH4).divide(1e6).multiply(pixel_mask).rename('CH4_t_ha_' + year).float();
+        var n2o_year = comb_total.multiply(2000).multiply(EF.N2O).divide(1e6).multiply(pixel_mask).rename('N2O_t_ha_' + year).float();
+        var co_year = comb_total.multiply(2000).multiply(EF.CO).divide(1e6).multiply(pixel_mask).rename('CO_t_ha_' + year).float();
+        var nox_year = comb_total.multiply(2000).multiply(EF.NOX).divide(1e6).multiply(pixel_mask).rename('NOX_t_ha_' + year).float();
 
         CO2_bands = CO2_bands.addBands(co2_year);
         CH4_bands = CH4_bands.addBands(ch4_year);
@@ -715,10 +719,10 @@ function calcGrasslandFireEmissions(params) {
         var fire_year = annual_burned.select('.*_' + year);
         var mask_year = grassland_mask.select('.*_' + year);
 
-        var CO_year = ee.Image(0).rename('CO_g_ha_' + year);
-        var CH4_year = ee.Image(0).rename('CH4_g_ha_' + year);
-        var N2O_year = ee.Image(0).rename('N2O_g_ha_' + year);
-        var NOX_year = ee.Image(0).rename('NOX_g_ha_' + year);
+        var CO_year = ee.Image(0).rename('CO_t_ha_' + year);
+        var CH4_year = ee.Image(0).rename('CH4_t_ha_' + year);
+        var N2O_year = ee.Image(0).rename('N2O_t_ha_' + year);
+        var NOX_year = ee.Image(0).rename('NOX_t_ha_' + year);
 
         Object.keys(BIOME_DICT).forEach(function (biome_str) {
 
@@ -735,16 +739,16 @@ function calcGrasslandFireEmissions(params) {
 
             var pixel_mask = fire_year.multiply(mask_year).multiply(biome_mask);
 
-            CO_year = CO_year.add(comb_total.multiply(2000).multiply(EF.CO).multiply(pixel_mask).rename('CO_g_ha_' + year));
-            CH4_year = CH4_year.add(comb_total.multiply(2000).multiply(EF.CH4).multiply(pixel_mask).rename('CH4_g_ha_' + year));
-            N2O_year = N2O_year.add(comb_total.multiply(2000).multiply(EF.N2O).multiply(pixel_mask).rename('N2O_g_ha_' + year));
-            NOX_year = NOX_year.add(comb_total.multiply(2000).multiply(EF.NOX).multiply(pixel_mask).rename('NOX_g_ha_' + year));
+            CO_year = CO_year.add(comb_total.multiply(2000).multiply(EF.CO).divide(1e6).multiply(pixel_mask).rename('CO_t_ha_' + year));
+            CH4_year = CH4_year.add(comb_total.multiply(2000).multiply(EF.CH4).divide(1e6).multiply(pixel_mask).rename('CH4_t_ha_' + year));
+            N2O_year = N2O_year.add(comb_total.multiply(2000).multiply(EF.N2O).divide(1e6).multiply(pixel_mask).rename('N2O_t_ha_' + year));
+            NOX_year = NOX_year.add(comb_total.multiply(2000).multiply(EF.NOX).divide(1e6).multiply(pixel_mask).rename('NOX_t_ha_' + year));
         });
 
-        CO_bands = CO_bands.addBands(CO_year.round().int32());
-        CH4_bands = CH4_bands.addBands(CH4_year.round().int32());
-        N2O_bands = N2O_bands.addBands(N2O_year.round().int32());
-        NOX_bands = NOX_bands.addBands(NOX_year.round().int32());
+        CO_bands = CO_bands.addBands(CO_year.float());
+        CH4_bands = CH4_bands.addBands(CH4_year.float());
+        N2O_bands = N2O_bands.addBands(N2O_year.float());
+        NOX_bands = NOX_bands.addBands(NOX_year.float());
     });
 
     return CO_bands.addBands(CH4_bands).addBands(N2O_bands).addBands(NOX_bands);

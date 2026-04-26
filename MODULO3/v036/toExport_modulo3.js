@@ -153,7 +153,7 @@ var sec_veg_increment = {
 
 print("sec_veg_increment",sec_veg_increment);
 
-sec_veg_increment = calcSecondaryVegIncrement(sec_veg_increment);
+sec_veg_increment = secVegMod.calcSecondaryVegIncrement(sec_veg_increment);
 
 print("sec_veg_increment",sec_veg_increment);
 

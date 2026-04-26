@@ -29,6 +29,16 @@ var geometry =
  *   bandas: "sec_veg_increment_YYYY" (tC/ha, float32)
  *   Somente pixels de veg. sec. têm valores; restante é masked.
  */
+ 
+// 'Ate20anos': 2.411
+// 'BGB': mais 24%
+// 'Bioma': Pampa
+// 'Ctotal_ate20': 2.9896399974823
+// 'Ctotal_mais20': 0.7340800166130066
+// 'Mais20anos': 0.592
+// 'Classe': F
+
+ 
 exports.calcSecondaryVegIncrement = function(params) {
 
     var desf_reg = params.desf_reg_corrected;
@@ -55,6 +65,7 @@ exports.calcSecondaryVegIncrement = function(params) {
                 ee.Filter.equals('Bioma', b),
                 ee.Filter.equals('Classe', cls)
             )).first();
+            print(b,cls,row);
             incr_table[b][cls] = {
                 lt20:  row.getNumber('Ctotal_ate20'),
                 gte20: row.getNumber('Ctotal_mais20')

@@ -61,10 +61,10 @@ exports.calcSecondaryVegIncrement = function(params) {
     biome_list.forEach(function(b) {
         incr_table[b] = {};
         ['F', 'G'].forEach(function(cls) {
-            var row = incr.filter(ee.Filter.and(
-                ee.Filter.eq('Bioma', b),
-                ee.Filter.eq('Classe', cls)
-            )).first();
+            var row = incr
+            .filter(ee.Filter.eq('Bioma', b))
+            .filter(ee.Filter.eq('Classe', cls))
+            .first();
             // print(b,cls,row);
             incr_table[b][cls] = {
                 lt20:  row.getNumber('Ctotal_ate20'),

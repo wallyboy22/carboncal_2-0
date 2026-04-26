@@ -176,7 +176,7 @@ exports.calcSecondaryVegIncrement = function(params) {
             .filter(ee.Filter.eq('Bioma', b))
             .filter(ee.Filter.eq('Classe', cls))
             .first();
-            print(b,cls,row);
+            
             incr_table[b][cls] = {
                 lt20:  row.getNumber('Ctotal_ate20'),
                 gte20: row.getNumber('Ctotal_mais20')

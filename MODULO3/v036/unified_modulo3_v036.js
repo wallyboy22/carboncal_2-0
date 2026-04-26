@@ -217,9 +217,7 @@ YEARS_FIRE.forEach(function (y, i) {
     var fire_forest_tC = fire_forest.select('CO2_tC_ha_' + y).unmask(0);
     var fire_savanna_tC = fire_savanna.select('CO2_tCO2e_ha_' + y).unmask(0).divide(TC_TO_TCO2);
 
-    // Corte seletivo só ocorre a partir de 2017. 
-    // YEARS_FIRE inicia em 1986 (i = 0), logo 2017 corresponde a i = 31.
-    var logging_tC = (i >= 31)
+    var logging_tC = (i >= YEARS_FIRE.indexOf('2017'))
         ? logging.select('logging_tC_ha_' + y).unmask(0)
         : ee.Image(0);
 
@@ -270,8 +268,9 @@ YEARS_FIRE.forEach(function (y, i) {
     loss_deforestation_bands = loss_deforestation_bands.addBands(
         def_reg_balance_y.max(0).multiply(pixel_area_ha).rename('loss_deforestation_' + y).float()
     );
+    var sec_veg_mask = desf_y.eq(3).or(desf_y.eq(5));
     gain_sec_veg_bands = gain_sec_veg_bands.addBands(
-        def_reg_balance_y.min(0).multiply(pixel_area_ha).rename('gain_secondary_vegetation_' + y).float()
+        def_reg_balance_y.min(0).multiply(sec_veg_mask).multiply(pixel_area_ha).rename('gain_secondary_vegetation_' + y).float()
     );
 
     stock_bands = stock_bands.addBands(stock_updated_y);
@@ -314,7 +313,7 @@ var export_assets = {
 
 Object.keys(export_assets).forEach(function (key) {
     var image = export_assets[key];
-    print(key, image);
+    print('Processing asset for Export/Map:', key, image);
 
     var common_export = {
         pyramidingPolicy: 'median',
@@ -324,8 +323,7 @@ Object.keys(export_assets).forEach(function (key) {
         flag: 'WSilva-'
     };
 
-    // Exporta apenas a imagem ativa. Para exportar todos os assets simultaneamente, 
-    // você pode iterar sobre as chaves de `export_assets`.
+    // Define nomes de exportação e IDs de Asset baseados na chave
     var exportName = key === 'final_image' ? 'CCAL_MODULO3_' + VERSION : key + '_' + VERSION;
     var assetId = key === 'final_image' ? FINAL_ASSET : BASE_ASSET + exportName;
 

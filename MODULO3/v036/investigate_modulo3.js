@@ -158,7 +158,7 @@ var mapa_layers = {
   trans_estavel: ui.Map.Layer(desf_reg_estavel, { bands: ['classification_' + ano_alvo], min: 1, max: 7, palette: paletaTransicoes }, 'Transição Estável', config.trans_estavel),
   fogo_anual: ui.Map.Layer(fogo_anual, { bands: ['burned_area_' + ano_alvo], min: 0, max: 12, palette: ['white', 'orange', 'red'] }, 'Área Queimada', config.fogo_anual),
   fogo_frequencia: ui.Map.Layer(fogo_frequencia, { bands: ['fire_frequency_1985_' + ano_alvo], min: 0, max: 10, palette: ['white', 'yellow', 'red'] }, 'Freq. Fogo', config.fogo_frequencia),
-  fogo_recuperacao: ui.Map.Layer(fogo_tempo_recuperacao, { bands: ['time_after_fire_' + ano_alvo], min: 0, max: 40, palette: ['red', 'yellow', 'green'] }, 'Tempo Recuperação', config.fogo_recuperacao),
+  fogo_recuperacao: ui.Map.Layer(fogo_tempo_recuperacao, { bands: ['classification_' + ano_alvo], min: 0, max: 40, palette: ['red', 'yellow', 'green'] }, 'Tempo Recuperação', config.fogo_recuperacao),
   estoque_base: ui.Map.Layer(estoque_biomassa_bruto, { bands: ['biomass_stock_' + ano_alvo], min: 0, max: 200, palette: ['white', 'green'] }, 'Estoque Base', config.estoque_base),
   madeira_densidade: ui.Map.Layer(madeira_deter, { bands: ['logging_tC_ha_' + ano_alvo], min: 0, max: 30, palette: ['white', 'purple'] }, 'Densidade Madeira', config.madeira_densidade),
   saida_estoque: ui.Map.Layer(imagem_final, { bands: ['estoque_' + ano_alvo], min: 0, max: 200, palette: ['white', 'green'] }, 'Estoque Final', config.saida_estoque),
@@ -353,9 +353,9 @@ Map.onClick(function(c) {
     .addBands(fogo_frequencia.rename(ANOS_SERIE.map(function(y){return 'fire_freq_'+y})))
     .addBands(fogo_tempo_recuperacao.rename(ANOS_SERIE.map(function(y){return 'fire_tsf_'+y})))
     .addBands(madeira_deter.rename(ANOS_SERIE.map(function(y){return 'madeira_tC_ha_'+y})))
-    .addBands(fogo_floresta.select('CO2_tC_ha_.*', ANOS_FOGO.map(function(y){return 'fogo_floresta_co2_'+y})))
-    .addBands(fogo_floresta.select('CH4_t_ha_.*', ANOS_FOGO.map(function(y){return 'fogo_floresta_ch4_'+y})))
-    .addBands(fogo_floresta.select('N2O_t_ha_.*', ANOS_FOGO.map(function(y){return 'fogo_floresta_n2o_'+y})));
+    .addBands(fogo_floresta.select('CO2_tC_ha_.*').rename(ANOS_FOGO.map(function(y){return 'fogo_floresta_co2_'+y})))
+    .addBands(fogo_floresta.select('CH4_t_ha_.*').rename(ANOS_FOGO.map(function(y){return 'fogo_floresta_ch4_'+y})))
+    .addBands(fogo_floresta.select('N2O_t_ha_.*').rename(ANOS_FOGO.map(function(y){return 'fogo_floresta_n2o_'+y})));
 
   amostra.reduceRegion({ reducer: ee.Reducer.first(), geometry: ponto, scale: 30 }).evaluate(function(obj) {
     if (!obj) return;

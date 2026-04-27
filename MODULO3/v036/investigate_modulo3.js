@@ -47,6 +47,10 @@ var biomas = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_
 var fire_freq = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/fire_frequency_v1');
 var fire_tsf = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/time_after_fire_v1');
 
+// Paletas
+var paletaMapBiomas = require('users/mapbiomas/modules:Palettes.js').get('brazil');
+var paletaTrans = ['#000000', '#27ae60', '#c8e6c9', '#e74c3c', '#ffccbc', '#c0392b', '#ffffff'];
+
 // =============================================================================
 // 2. CORREÇÃO TÉCNICA (DESF_REG)
 // =============================================================================
@@ -103,9 +107,10 @@ var final_image = loss_deforestation_bands.addBands(gain_sec_veg_bands).addBands
 // =============================================================================
 // 4. INTERFACE E CONFIGURAÇÃO
 // =============================================================================
-var panel = ui.Panel({ style: {} });
+var panel = ui.Panel({ style: { width: '480px', padding: '8px' } });
 var is_transposed = true;
 var last_data = null;
+var target_year = '2023';
 
 var config = {
   lulc_orig: true,
@@ -113,15 +118,15 @@ var config = {
   trans_adj: true,
   fire_freq: false,
   fire_tsf: false,
-  stock_in: true,
+  stock_in: false,
   stock_out: true,
-  fire_forest: true,
+  fire_forest: false,
   fire_forest_co2: false, fire_forest_ch4: false, fire_forest_n2o: false,
-  fire_savanna: true,
+  fire_savanna: false,
   fire_savanna_co2: false, fire_savanna_ch4: false, fire_savanna_n2o: false,
-  fire_grassland: true,
+  fire_grassland: false,
   fire_grassland_ch4: false, fire_grassland_n2o: false,
-  logging: true,
+  logging: false,
   defor: true,
   year: true,
   unit: 'tCO2e/ha'
@@ -214,6 +219,26 @@ var toggle_gaveta = ui.Button({
 panel.add(toggle_gaveta);
 panel.add(gaveta_panel);
 
+// --- Função de Atualização de Camadas no Mapa ---
+function updateLayers() {
+  Map.layers().reset();
+  Map.addLayer(biomas, {}, 'Brasil Biomas', false);
+  
+  if (config.lulc_orig) Map.addLayer(lulc.select('classification_' + target_year), { min: 0, max: 62, palette: paletaMapBiomas }, 'LULC ' + target_year);
+  if (config.trans_orig) Map.addLayer(desf_reg.select('classification_' + target_year), { min: 1, max: 7, palette: paletaTrans }, 'TRANS.O ' + target_year);
+  if (config.trans_adj) Map.addLayer(desf_reg_corrected.select('classification_' + target_year), { min: 1, max: 7, palette: paletaTrans }, 'TRANS.C ' + target_year);
+  if (config.fire_freq) Map.addLayer(fire_freq.select('fire_frequency_1985_2023'), { min: 0, max: 10, palette: ['white', 'orange', 'red'] }, 'FREQ FOGO');
+  if (config.fire_tsf) Map.addLayer(fire_tsf.select('time_after_fire_' + target_year), { min: 0, max: 40, palette: ['red', 'yellow', 'green'] }, 'TSF ' + target_year);
+  if (config.stock_in) Map.addLayer(biomass_stock_bruto.select('biomass_stock_' + target_year), { min: 0, max: 200, palette: ['white', 'green'] }, 'Estoque Base ' + target_year);
+  if (config.stock_out) Map.addLayer(final_image.select('stock_' + target_year), { min: 0, max: 200, palette: ['white', 'green'] }, 'Estoque Final ' + target_year);
+  if (config.logging) Map.addLayer(logging.select('logging_tC_ha_' + target_year), { min: 0, max: 20, palette: ['white', 'red'] }, 'Logging ' + target_year);
+  if (config.defor) Map.addLayer(final_image.select('loss_deforestation_' + target_year), { min: 0, max: 50, palette: ['white', 'red'] }, 'Balanço Desmat ' + target_year);
+  
+  // Gases Individuais
+  if (config.fire_forest) Map.addLayer(fire_forest.select('CO2_tC_ha_' + target_year), { min: 0, max: 100, palette: ['white', 'orange'] }, 'Fogo Floresta ' + target_year);
+  if (config.fire_savanna) Map.addLayer(fire_savanna.select('CO2_tCO2e_ha_' + target_year), { min: 0, max: 100, palette: ['white', 'orange'] }, 'Fogo Savana ' + target_year);
+}
+
 function createConfigRow(key, label_text, is_sub) {
   var row = ui.Panel({ layout: ui.Panel.Layout.flow('horizontal'), style: { margin: is_sub ? '1px 0 1px 20px' : '3px 0' } });
   var cb = ui.Checkbox({
@@ -221,6 +246,7 @@ function createConfigRow(key, label_text, is_sub) {
     value: config[key],
     onChange: function (checked) {
       config[key] = checked;
+      updateLayers();
       if (last_data) renderMatrix(last_data);
     },
     style: { fontSize: is_sub ? '10px' : '11px', fontWeight: is_sub ? 'normal' : 'bold', width: is_sub ? '135px' : '160px' }
@@ -268,7 +294,6 @@ createConfigRow('fire_grassland_n2o', '↳ N2O (t)', true);
 ui.root.insert(0, panel);
 
 // --- Lógica de Matriz ---
-var paletaMapBiomas = require('users/mapbiomas/modules:Palettes.js').get('brazil');
 var row_titles = {
   'year': 'Year',
   'lulc_orig': 'LULC', 'trans_orig': 'TRANS.O', 'trans_adj': 'TRANS.C', 
@@ -364,7 +389,6 @@ Map.onClick(function (coords) {
   matrix_outer.add(ui.Label('Carregando...', { color: 'gray' }));
   var point = ee.Geometry.Point(coords.lon, coords.lat);
   
-  // Build names for unambiguous selection
   var combined = final_image
     .addBands(biomass_stock_bruto)
     .addBands(lulc.rename(YEARS_ALL.map(function(y){return 'lulc_'+y})))
@@ -376,6 +400,7 @@ Map.onClick(function (coords) {
 
   combined.reduceRegion({ reducer: ee.Reducer.first(), geometry: point, scale: 30, maxPixels: 1e13 }).evaluate(function (obj) {
     if (!obj) return;
+    inspector_results.clear();
     inspector_results.add(ui.Label('📍 ' + coords.lon.toFixed(4) + ', ' + coords.lat.toFixed(4), { fontWeight: 'bold' }));
     last_data = obj;
     renderMatrix(obj);
@@ -384,4 +409,5 @@ Map.onClick(function (coords) {
   });
 });
 
+updateLayers();
 Map.style().set('cursor', 'crosshair');

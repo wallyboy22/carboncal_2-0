@@ -212,6 +212,7 @@ var stock_bands = ee.Image().select();
 
 var past_stock = biomass_stock.select('biomass_stock_1985');
 
+// [ ] Wallace verificar funcionamento 
 YEARS_FIRE.forEach(function (y, i) {
 
     var fire_forest_tC = fire_forest.select('CO2_tC_ha_' + y).unmask(0);

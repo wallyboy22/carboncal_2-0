@@ -6,28 +6,30 @@
 //   and forest degradation jeopardize Brazil's REDD+ results in 2022.
 //   Nature Communications.
 //
-// Changes from v1:
-//   - Outputs exported as GEE Assets (ImageCollection) instead of CSV
-//   - Export region is always Brazil-wide (all images co-registered)
-//   - Carbon stock snapshots exported at each time step;
-//     initial snapshot assigned to START_YEAR - 1
+// Workflow:
+//   1. Each biome is processed independently and exported as
+//      biome-clipped images into EXPORT_ASSET_ROOT
+//   2. After all biome exports complete, run the MOSAIC section
+//      at the bottom to assemble Brazil-wide images per
+//      disturbance type / gas / year into EXPORT_MOSAIC_ROOT
 // ============================================================
 
 // ====================================================================
 //  CONFIGURATION
 // ====================================================================
 
-var START_YEAR        = 2017;
-var END_YEAR          = 2023;
-var EXPORT_ASSET_ROOT = 'projects/ee-ipam/assets/CCAL/FREL_V2'; // must exist as ImageCollection
+var START_YEAR         = 2017;
+var END_YEAR           = 2023;
+var EXPORT_ASSET_ROOT  = 'projects/ee-ipam/assets/CCAL/FREL_V2/biomes';  // biome-level outputs
+var EXPORT_MOSAIC_ROOT = 'projects/ee-ipam/assets/CCAL/FREL_V2/brazil';  // Brazil-wide mosaics
 
-var PRODES_START      = 2016;
-var PRODES_END        = 2023;
+var PRODES_START       = 2016;
+var PRODES_END         = 2023;
 
-var C_TO_CO2          = 44 / 12;
-var GWP_CH4           = 28;
-var GWP_N2O           = 265;
-var SPATIAL_SCALE     = 30;
+var C_TO_CO2           = 44 / 12;
+var GWP_CH4            = 28;
+var GWP_N2O            = 265;
+var SPATIAL_SCALE      = 30;
 
 // ====================================================================
 //  END OF CONFIGURATION
@@ -52,17 +54,10 @@ var vegetationMask = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/UKPact_MRV/
 var carbonStock = ee.ImageCollection('projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1');
 var biomesBound = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
 
-// ── Brazil-wide export region (used by ALL exports) ──────────────────
-// Single geometry shared across all biome functions so every image
-// has identical extent and can be stacked as an ImageCollection.
 var brazilRegion = biomesBound.geometry().bounds();
 
 // =================== EXPORT HELPERS ===================
 
-/**
- * Export a single-band emission image to the asset ImageCollection.
- * Region is always brazilRegion (Brazil-wide).
- */
 function exportEmissionImage(image, description, year) {
   var tagged = image
     .rename('emission_tCO2e_ha')
@@ -81,11 +76,6 @@ function exportEmissionImage(image, description, year) {
   });
 }
 
-/**
- * Export a multi-band carbon stock snapshot (Amazon, Cerrado).
- * Bands: agb, bgb, dw, litter, total (tC/ha).
- * year = START_YEAR - 1 for initial state; processing year otherwise.
- */
 function exportStockImage(agb, bgb, dw, litter, prefix, year) {
   var total   = agb.add(bgb).add(dw).add(litter);
   var stacked = agb.rename('agb')
@@ -109,10 +99,6 @@ function exportStockImage(agb, bgb, dw, litter, prefix, year) {
   });
 }
 
-/**
- * Export a single-band carbon stock snapshot (simple biomes).
- * Band: total (tC/ha).
- */
 function exportStockImageSimple(totalImage, prefix, year) {
   var tagged = totalImage
     .rename('total')
@@ -169,7 +155,6 @@ function processAmazon() {
   var litter = carbonStock.select('clitter').mosaic().blend(litter1).multiply(forests).clip(biomeFC);
   var agbDwL = agb.add(dw).add(litter);
 
-  // ── Initial stock → START_YEAR - 1 ───────────────────────────────
   exportStockImage(agb, bgb, dw, litter, prefix, START_YEAR - 1);
 
   var slLayer = zeros.blend(
@@ -240,7 +225,6 @@ function processAmazon() {
     exportEmissionImage(defCH4.multiply(GWP_CH4),  prefix + '_emission_def_ch4_' + year, year);
     exportEmissionImage(defN2O.multiply(GWP_N2O),  prefix + '_emission_def_n2o_' + year, year);
 
-    // ── Updated stock (end-of-year, after fire → sl → def) ──────────
     exportStockImage(agb, bgb, dw, litter, prefix, year);
 
     iterate(year + 1);
@@ -273,7 +257,6 @@ function processCerrado() {
   var litter = carbonStock.select('clitter').mosaic().unmask(0).multiply(forests).clip(biomeFC);
   var agbDwL = agb.add(dw).add(litter);
 
-  // ── Initial stock → START_YEAR - 1 ───────────────────────────────
   exportStockImage(agb, bgb, dw, litter, prefix, START_YEAR - 1);
 
   function iterate(year) {
@@ -295,7 +278,6 @@ function processCerrado() {
     exportEmissionImage(defCH4.multiply(GWP_CH4),  prefix + '_emission_def_ch4_' + year, year);
     exportEmissionImage(defN2O.multiply(GWP_N2O),  prefix + '_emission_def_n2o_' + year, year);
 
-    // ── Updated stock ────────────────────────────────────────────────
     exportStockImage(agb, bgb, dw, litter, prefix, year);
 
     iterate(year + 1);
@@ -324,7 +306,6 @@ function processSimpleBiome(biomeName, prefix) {
 
   var totalCarbon = carbonStock.select('total').mosaic().unmask(0).multiply(forests).clip(biomeFC);
 
-  // ── Initial stock → START_YEAR - 1 ───────────────────────────────
   exportStockImageSimple(totalCarbon, prefix, START_YEAR - 1);
 
   function iterate(year) {
@@ -337,7 +318,6 @@ function processSimpleBiome(biomeName, prefix) {
 
     exportEmissionImage(defCO2.multiply(C_TO_CO2), prefix + '_emission_def_co2_' + year, year);
 
-    // ── Updated stock ────────────────────────────────────────────────
     exportStockImageSimple(totalCarbon, prefix, year);
 
     iterate(year + 1);
@@ -350,3 +330,116 @@ processSimpleBiome('Pantanal',       'pan');
 processSimpleBiome('Pampa',          'pam');
 processSimpleBiome('Caatinga',       'caa');
 processSimpleBiome('Mata Atlântica', 'ma');
+
+// ============================================================
+//  MOSAIC — Brazil-wide assembly
+//
+//  Run this section ONLY after all biome export tasks above
+//  have completed successfully in the GEE Task Manager.
+//
+//  For each combination of disturbance / gas / year, loads the
+//  six biome images from EXPORT_ASSET_ROOT and mosaics them
+//  into a single Brazil-wide image saved to EXPORT_MOSAIC_ROOT.
+//
+//  Since biomes do not overlap, mosaic() == sum() here.
+//  The first image in the collection takes priority at any
+//  pixel, but because extents are mutually exclusive the
+//  result is equivalent to a spatial union.
+// ============================================================
+
+// Emission combinations present across all biomes
+var EMISSION_TYPES = [
+  // Amazon only
+  'emission_fire_co2', 'emission_fire_ch4', 'emission_fire_n2o',
+  'emission_sl_co2',
+  // Amazon + Cerrado + simple biomes
+  'emission_def_co2', 'emission_def_ch4', 'emission_def_n2o'
+];
+
+var BIOME_PREFIXES = ['amz', 'cerr', 'pan', 'pam', 'caa', 'ma'];
+
+// Load the biome ImageCollection (populated after export tasks finish)
+var biomeIC = ee.ImageCollection(EXPORT_ASSET_ROOT);
+
+function mosaicEmissions() {
+  for (var ei = 0; ei < EMISSION_TYPES.length; ei++) {
+    var emType = EMISSION_TYPES[ei];
+
+    for (var yi = START_YEAR; yi <= END_YEAR; yi++) {
+      var year = yi;
+
+      // Collect all biome images for this emission type + year
+      // Filter by the 'description' property set during biome export
+      var biomeImages = ee.ImageCollection(
+        BIOME_PREFIXES.map(function(pfx) {
+          // Use a try-style filter: if the asset doesn't exist for this
+          // biome/type combo (e.g. fire only in Amazon), the collection
+          // will be empty and contribute nothing to the mosaic
+          return biomeIC
+            .filter(ee.Filter.eq('description', pfx + '_' + emType + '_' + year))
+            .first()
+            .unmask(0);  // masked pixels (outside biome) become 0
+        })
+      );
+
+      var brazilMosaic = biomeImages
+        .sum()  // non-overlapping biomes → sum == mosaic
+        .rename('emission_tCO2e_ha')
+        .set('system:time_start', ee.Date.fromYMD(year, 1, 1).millis())
+        .set('year', year)
+        .set('emission_type', emType);
+
+      var desc = 'brazil_' + emType + '_' + year;
+      Export.image.toAsset({
+        image: brazilMosaic,
+        description: desc,
+        assetId: EXPORT_MOSAIC_ROOT + '/' + desc,
+        region: brazilRegion,
+        scale: SPATIAL_SCALE,
+        maxPixels: 1e13,
+        pyramidingPolicy: { '.default': 'mean' }
+      });
+    }
+  }
+}
+
+function mosaicStocks() {
+  // Stock bands differ by biome group:
+  // amz + cerr → agb, bgb, dw, litter, total
+  // simple biomes → total only
+  // Mosaic exports the 'total' band which is common to all
+
+  for (var yi = START_YEAR - 1; yi <= END_YEAR; yi++) {
+    var year = yi;
+
+    var stockImages = ee.ImageCollection(
+      BIOME_PREFIXES.map(function(pfx) {
+        return biomeIC
+          .filter(ee.Filter.eq('description', pfx + '_stock_carbon_' + year))
+          .first()
+          .select(['total'])   // only 'total' is present in all biomes
+          .unmask(0);
+      })
+    );
+
+    var brazilStock = stockImages
+      .sum()
+      .rename('total_tC_ha')
+      .set('system:time_start', ee.Date.fromYMD(year, 1, 1).millis())
+      .set('year', year);
+
+    var desc = 'brazil_stock_carbon_' + year;
+    Export.image.toAsset({
+      image: brazilStock,
+      description: desc,
+      assetId: EXPORT_MOSAIC_ROOT + '/' + desc,
+      region: brazilRegion,
+      scale: SPATIAL_SCALE,
+      maxPixels: 1e13,
+      pyramidingPolicy: { '.default': 'mean' }
+    });
+  }
+}
+
+mosaicEmissions();
+mosaicStocks();

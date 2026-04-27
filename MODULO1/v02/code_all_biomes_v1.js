@@ -20,8 +20,8 @@
 
 var START_YEAR         = 2017;
 var END_YEAR           = 2023;
-var EXPORT_ASSET_ROOT  = 'projects/ee-ipam/assets/CCAL/FREL_V2/biomes';  // biome-level outputs
-var EXPORT_MOSAIC_ROOT = 'projects/ee-ipam/assets/CCAL/FREL_V2/brazil';  // Brazil-wide mosaics
+var EXPORT_ASSET_ROOT  = 'projects/ee-ipam/assets/CCAL/MODULO1/biomes';  // biome-level outputs
+var EXPORT_MOSAIC_ROOT = 'projects/ee-ipam/assets/CCAL/MODULO1/brazil';  // Brazil-wide mosaics
 
 var PRODES_START       = 2016;
 var PRODES_END         = 2023;

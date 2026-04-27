@@ -93,7 +93,7 @@ var prodesNonForest = ee.Image('projects/ee-ipam/assets/REDD/prodes_brasil_2023'
 // (mesmo padrão de prodesGreaterThan625ha: ano - 2000)
 var prodesSmall = prodesLessThan625ha
   .remap([1,2,3,4,5,6,7,8,9],
-         [2016,2023,2024,2020,2019,2018,2022,2017,2021]);
+         [16,23,24,20,19,18,22,17,21]);
 
 // Une os dois datasets; prodesGreaterThan625ha tem prioridade onde ambos têm valor
 var prodesUnified = prodesGreaterThan625ha
@@ -108,6 +108,9 @@ var deforestedUpTo2016 = prodesUnified.gte(2).and(prodesUnified.lte(16));
 var forest2016 = vegetationMask.eq(1)
   .and(deforestedUpTo2016.not())
   .and(prodesNonForest.not());
+  
+Map.centerObject(forest2016, 5); // Centraliza o mapa na sua imagem
+Map.addLayer(forest2016.selfMask(), {palette: ['darkgreen']}, 'Floresta Remanescente 2016');
 
 // =================== EXPORT HELPERS ===================
 

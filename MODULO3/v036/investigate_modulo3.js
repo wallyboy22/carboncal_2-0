@@ -112,7 +112,7 @@ var final_image = loss_fire_bands.addBands(loss_logging_bands).addBands(loss_def
 // =============================================================================
 // 4. INTERFACE E CONFIGURAÇÃO
 // =============================================================================
-var panel = ui.Panel({ style: { width: '480px', padding: '8px' } });
+var panel = ui.Panel({ style: { minWidth: '300px', padding: '8px' } });
 var is_transposed = true;
 var last_data = null;
 var target_year = '2023';

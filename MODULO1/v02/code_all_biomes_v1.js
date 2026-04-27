@@ -1,57 +1,42 @@
 // ============================================================
-// BRAZIL NATIONAL FREL — Unified GEE Script (v1)
+// BRAZIL NATIONAL FREL — Unified GEE Script (v2)
 //
 // Reference:
 //   Silva-Junior, C. H. L. et al. (2026). Increased deforestation
 //   and forest degradation jeopardize Brazil's REDD+ results in 2022.
 //   Nature Communications.
 //
-// Description:
-//   Calculates greenhouse gas emissions from deforestation and
-//   forest degradation across all six Brazilian biomes using the
-//   National FREL methodology. Exports one CSV per combination of
-//   biome / disturbance type / gas / year.
-//
-// Export file naming convention:
-//   {biome}_{emission}_{disturbance}_{gas}_{year}.csv
-//   Example: amz_emission_fire_co2_2022.csv
-//
-// Biome codes:  amz | cerr | pan | pam | caa | ma
-// Disturbances: def (deforestation) | fire | sl (selective logging)
-// Gases:        co2 | ch4 | n2o
+// Changes from v1:
+//   - Outputs exported as GEE Assets (ImageCollection) instead of CSV
+//   - Export region is always Brazil-wide (all images co-registered)
+//   - Carbon stock snapshots exported at each time step;
+//     initial snapshot assigned to START_YEAR - 1
 // ============================================================
 
 // ====================================================================
-//  CONFIGURATION — Edit only this section to change the analysis
+//  CONFIGURATION
 // ====================================================================
 
-var START_YEAR     = 2017;        // First year of analysis (inclusive)
-var END_YEAR       = 2023;        // Last year of analysis  (inclusive)
-var EXPORT_FOLDER  = 'Results_V1'; // Destination folder in Google Drive
+var START_YEAR        = 2017;
+var END_YEAR          = 2023;
+var EXPORT_ASSET_ROOT = 'projects/ee-ipam/assets/CCAL/FREL_V2'; // must exist as ImageCollection
 
-// PRODES dataset encoding: pixel_value = year - 2000.
-// Extend PRODES_END if a newer annual PRODES asset becomes available.
-var PRODES_START   = 2016;
-var PRODES_END     = 2023;
+var PRODES_START      = 2016;
+var PRODES_END        = 2023;
 
-// Conversion factors — IPCC AR5 (do not change without updating methodology)
-var C_TO_CO2       = 44 / 12;    // Carbon to CO2
-var GWP_CH4        = 28;         // CH4 100-yr global warming potential
-var GWP_N2O        = 265;        // N2O 100-yr global warming potential
-var SPATIAL_SCALE  = 30;         // Pixel resolution (metres)
+var C_TO_CO2          = 44 / 12;
+var GWP_CH4           = 28;
+var GWP_N2O           = 265;
+var SPATIAL_SCALE     = 30;
 
 // ====================================================================
 //  END OF CONFIGURATION
 // ====================================================================
 
-// ---------------------------------------------------------------------------
-// Build PRODES remap arrays from configuration so the script adapts
-// automatically when PRODES_START / PRODES_END are updated.
-// ---------------------------------------------------------------------------
 var PRODES_FROM = [], PRODES_TO = [];
 for (var _y = PRODES_START; _y <= PRODES_END; _y++) {
-  PRODES_FROM.push(_y - 2000); // encoded pixel value inside the GEE asset
-  PRODES_TO.push(_y);          // actual calendar year
+  PRODES_FROM.push(_y - 2000);
+  PRODES_TO.push(_y);
 }
 
 // =================== SHARED ASSETS ===================
@@ -60,62 +45,105 @@ var prodesGreaterThan625ha = ee.Image('projects/ee-ipam/assets/REDD/prodes_brasi
 var prodesLessThan625ha    = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/yearly_deforestation_smaller_than_625ha_biome');
 var managedLandAmazon      = ee.Image('projects/ee-ipam/assets/Managed_Land_Brazil').unmask(0);
 
-// Forest vegetation mask (QCN v2) — shared across all biomes
 var vegetationMask = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/UKPact_MRV/brazil_pret_vegetation_qcn_v2')
                        .unmask(0)
                        .remap([1, 2], [1, 1], 0);
 
 var carbonStock = ee.ImageCollection('projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1');
 var biomesBound = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
-var statesFC    = ee.FeatureCollection('projects/ee-ipam/assets/BR_UF_Biomas');
 
-// =================== SHARED EXPORT HELPER ===================
-// Converts carbon density (tC/ha) to total CO2e (tonnes), aggregates
-// by state × biome, and exports the result as CSV to Google Drive.
+// ── Brazil-wide export region (used by ALL exports) ──────────────────
+// Single geometry shared across all biome functions so every image
+// has identical extent and can be stacked as an ImageCollection.
+var brazilRegion = biomesBound.geometry().bounds();
 
-function exportEmission(image, regions, description) {
-  var result = image
-    .multiply(ee.Image.pixelArea().multiply(0.0001)) // m² to ha
-    .reduceRegions({
-      collection: regions,
-      reducer: ee.Reducer.sum(),
-      scale: SPATIAL_SCALE
-    })
-    .select(['.*'], null, false); // drop .geo column
+// =================== EXPORT HELPERS ===================
 
-  Export.table.toDrive({
-    collection: result,
-    folder: EXPORT_FOLDER,
+/**
+ * Export a single-band emission image to the asset ImageCollection.
+ * Region is always brazilRegion (Brazil-wide).
+ */
+function exportEmissionImage(image, description, year) {
+  var tagged = image
+    .rename('emission_tCO2e_ha')
+    .set('system:time_start', ee.Date.fromYMD(year, 1, 1).millis())
+    .set('year', year)
+    .set('description', description);
+
+  Export.image.toAsset({
+    image: tagged,
     description: description,
-    fileFormat: 'CSV'
+    assetId: EXPORT_ASSET_ROOT + '/' + description,
+    region: brazilRegion,
+    scale: SPATIAL_SCALE,
+    maxPixels: 1e13,
+    pyramidingPolicy: { '.default': 'mean' }
+  });
+}
+
+/**
+ * Export a multi-band carbon stock snapshot (Amazon, Cerrado).
+ * Bands: agb, bgb, dw, litter, total (tC/ha).
+ * year = START_YEAR - 1 for initial state; processing year otherwise.
+ */
+function exportStockImage(agb, bgb, dw, litter, prefix, year) {
+  var total   = agb.add(bgb).add(dw).add(litter);
+  var stacked = agb.rename('agb')
+    .addBands(bgb.rename('bgb'))
+    .addBands(dw.rename('dw'))
+    .addBands(litter.rename('litter'))
+    .addBands(total.rename('total'))
+    .set('system:time_start', ee.Date.fromYMD(year, 1, 1).millis())
+    .set('year', year)
+    .set('biome', prefix);
+
+  var desc = prefix + '_stock_carbon_' + year;
+  Export.image.toAsset({
+    image: stacked,
+    description: desc,
+    assetId: EXPORT_ASSET_ROOT + '/' + desc,
+    region: brazilRegion,
+    scale: SPATIAL_SCALE,
+    maxPixels: 1e13,
+    pyramidingPolicy: { '.default': 'mean' }
+  });
+}
+
+/**
+ * Export a single-band carbon stock snapshot (simple biomes).
+ * Band: total (tC/ha).
+ */
+function exportStockImageSimple(totalImage, prefix, year) {
+  var tagged = totalImage
+    .rename('total')
+    .set('system:time_start', ee.Date.fromYMD(year, 1, 1).millis())
+    .set('year', year)
+    .set('biome', prefix);
+
+  var desc = prefix + '_stock_carbon_' + year;
+  Export.image.toAsset({
+    image: tagged,
+    description: desc,
+    assetId: EXPORT_ASSET_ROOT + '/' + desc,
+    region: brazilRegion,
+    scale: SPATIAL_SCALE,
+    maxPixels: 1e13,
+    pyramidingPolicy: { '.default': 'mean' }
   });
 }
 
 // ============================================================
 //  AMAZON  |  prefix: amz
-//
-//  Disturbances : fire (CO2, CH4, N2O)
-//                 selective logging / sl (CO2)
-//                 deforestation / def (CO2, CH4, N2O)
-//
-//  Carbon stocks : agb, bgb, dw, litter
-//                  QCN blended with EBA/INPE maps (30 m)
-//                  Stocks updated annually: fire → sl → def
-//
-//  Combustion fraction : 0.368
-//  CH4 / N2O base      : 1 / 0.47
 // ============================================================
 
 function processAmazon() {
 
   var biomeFC = biomesBound.filter(ee.Filter.eq('Bioma', 'Amazônia'));
-  var regions = statesFC.filter(ee.Filter.eq('Bioma', 'Amazônia'));
   var prefix  = 'amz';
 
   var forests = vegetationMask.clip(biomeFC);
   var zeros   = ee.Image(0).clip(biomeFC);
 
-  // PRODES: merge large (>625 ha) and small (<625 ha) deforestation patches
   var prodes625 = prodesGreaterThan625ha
     .unmask(0)
     .remap(PRODES_FROM, PRODES_TO, 0)
@@ -123,10 +151,9 @@ function processAmazon() {
 
   var prodesDeforestation = prodes625
     .blend(prodesLessThan625ha.clip(biomeFC))
-    .remap(PRODES_TO, PRODES_TO, 0) // identity remap to zero out non-year values
+    .remap(PRODES_TO, PRODES_TO, 0)
     .clip(biomeFC);
 
-  // Carbon stocks: QCN blended with EBA/INPE high-resolution maps
   var agb1    = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/FREL/EBA_AB_30m')
                   .updateMask(ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/FREL/EBA_AB_30m').gte(0));
   var bgb1    = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/FREL/EBA_BB_30m')
@@ -142,7 +169,9 @@ function processAmazon() {
   var litter = carbonStock.select('clitter').mosaic().blend(litter1).multiply(forests).clip(biomeFC);
   var agbDwL = agb.add(dw).add(litter);
 
-  // Selective logging base layer: t0 = START_YEAR
+  // ── Initial stock → START_YEAR - 1 ───────────────────────────────
+  exportStockImage(agb, bgb, dw, litter, prefix, START_YEAR - 1);
+
   var slLayer = zeros.blend(
     ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_'
              + START_YEAR + '_cs_disordered')
@@ -166,14 +195,13 @@ function processAmazon() {
     var fireCH4 = agbDwL.multiply(fireLayer).multiply(1 / 0.47).multiply(0.368).multiply(6.8).multiply(0.001);
     var fireN2O = agbDwL.multiply(fireLayer).multiply(1 / 0.47).multiply(0.368).multiply(0.2).multiply(0.001);
 
-    // Update stocks after fire
     agb    = agb.subtract(agb.multiply(fireLayer).multiply(0.368));
     dw     = dw.subtract(dw.multiply(fireLayer).multiply(0.368));
     litter = litter.subtract(litter.multiply(fireLayer).multiply(0.368));
 
-    exportEmission(fireCO2.multiply(C_TO_CO2), regions, prefix + '_emission_fire_co2_' + year);
-    exportEmission(fireCH4.multiply(GWP_CH4),  regions, prefix + '_emission_fire_ch4_' + year);
-    exportEmission(fireN2O.multiply(GWP_N2O),  regions, prefix + '_emission_fire_n2o_' + year);
+    exportEmissionImage(fireCO2.multiply(C_TO_CO2), prefix + '_emission_fire_co2_' + year, year);
+    exportEmissionImage(fireCH4.multiply(GWP_CH4),  prefix + '_emission_fire_ch4_' + year, year);
+    exportEmissionImage(fireN2O.multiply(GWP_N2O),  prefix + '_emission_fire_n2o_' + year, year);
 
     // ---- Selective Logging ----
     var slFactor = slLayer.remap(
@@ -182,7 +210,6 @@ function processAmazon() {
     );
     var slCO2 = agb.multiply(slFactor);
 
-    // Advance selective logging disturbance layer to next year
     var slNext = zeros.blend(
       ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_'
                + (year + 1) + '_cs_disordered')
@@ -192,11 +219,10 @@ function processAmazon() {
     );
     slLayer = slLayer.add(slNext).multiply(slNext).multiply(forests).clip(biomeFC);
 
-    // Update stocks after selective logging
     agb    = agb.subtract(slCO2);
     agbDwL = agb.add(dw).add(litter);
 
-    exportEmission(slCO2.multiply(C_TO_CO2), regions, prefix + '_emission_sl_co2_' + year);
+    exportEmissionImage(slCO2.multiply(C_TO_CO2), prefix + '_emission_sl_co2_' + year, year);
 
     // ---- Deforestation ----
     var defMask = prodesDeforestation.eq(year);
@@ -204,14 +230,18 @@ function processAmazon() {
     var defCH4  = agbDwL.multiply(defMask).multiply(1 / 0.47).multiply(0.368).multiply(6.8).multiply(0.001);
     var defN2O  = agbDwL.multiply(defMask).multiply(1 / 0.47).multiply(0.368).multiply(0.2).multiply(0.001);
 
-    // Update stocks after deforestation
     agbDwL = agbDwL.multiply(defMask.neq(1));
     agb    = agb.multiply(defMask.neq(1));
     bgb    = bgb.multiply(defMask.neq(1));
+    dw     = dw.multiply(defMask.neq(1));
+    litter = litter.multiply(defMask.neq(1));
 
-    exportEmission(defCO2.multiply(C_TO_CO2), regions, prefix + '_emission_def_co2_' + year);
-    exportEmission(defCH4.multiply(GWP_CH4),  regions, prefix + '_emission_def_ch4_' + year);
-    exportEmission(defN2O.multiply(GWP_N2O),  regions, prefix + '_emission_def_n2o_' + year);
+    exportEmissionImage(defCO2.multiply(C_TO_CO2), prefix + '_emission_def_co2_' + year, year);
+    exportEmissionImage(defCH4.multiply(GWP_CH4),  prefix + '_emission_def_ch4_' + year, year);
+    exportEmissionImage(defN2O.multiply(GWP_N2O),  prefix + '_emission_def_n2o_' + year, year);
+
+    // ── Updated stock (end-of-year, after fire → sl → def) ──────────
+    exportStockImage(agb, bgb, dw, litter, prefix, year);
 
     iterate(year + 1);
   }
@@ -223,19 +253,11 @@ processAmazon();
 
 // ============================================================
 //  CERRADO  |  prefix: cerr
-//
-//  Disturbances : deforestation / def (CO2, CH4, N2O)
-//
-//  Carbon stocks : agb, bgb, dw, litter — QCN only (no EBA blend)
-//
-//  Combustion fraction : 0.379 (Cerrado-specific)
-//  CH4 / N2O base      : 1 / 0.47
 // ============================================================
 
 function processCerrado() {
 
   var biomeFC = biomesBound.filter(ee.Filter.eq('Bioma', 'Cerrado'));
-  var regions = statesFC.filter(ee.Filter.eq('Bioma', 'Cerrado'));
   var prefix  = 'cerr';
 
   var forests = vegetationMask.clip(biomeFC);
@@ -249,21 +271,32 @@ function processCerrado() {
   var bgb    = carbonStock.select('cbgb').mosaic().unmask(0).multiply(forests).clip(biomeFC);
   var dw     = carbonStock.select('cdw').mosaic().unmask(0).multiply(forests).clip(biomeFC);
   var litter = carbonStock.select('clitter').mosaic().unmask(0).multiply(forests).clip(biomeFC);
+  var agbDwL = agb.add(dw).add(litter);
 
-  var agbDwL      = agb.add(dw).add(litter);
-  var totalCarbon = agb.add(bgb).add(dw).add(litter);
+  // ── Initial stock → START_YEAR - 1 ───────────────────────────────
+  exportStockImage(agb, bgb, dw, litter, prefix, START_YEAR - 1);
 
   function iterate(year) {
     if (year > END_YEAR) return;
 
-    var defMask = prodesDeforestation.eq(year);
-    var defCO2  = totalCarbon.multiply(defMask);
-    var defCH4  = agbDwL.multiply(defMask).multiply(1 / 0.47).multiply(0.379).multiply(6.8).multiply(0.001);
-    var defN2O  = agbDwL.multiply(defMask).multiply(1 / 0.47).multiply(0.379).multiply(0.2).multiply(0.001);
+    var defMask     = prodesDeforestation.eq(year);
+    var totalCarbon = agb.add(bgb).add(dw).add(litter);
+    var defCO2      = totalCarbon.multiply(defMask);
+    var defCH4      = agbDwL.multiply(defMask).multiply(1 / 0.47).multiply(0.379).multiply(6.8).multiply(0.001);
+    var defN2O      = agbDwL.multiply(defMask).multiply(1 / 0.47).multiply(0.379).multiply(0.2).multiply(0.001);
 
-    exportEmission(defCO2.multiply(C_TO_CO2), regions, prefix + '_emission_def_co2_' + year);
-    exportEmission(defCH4.multiply(GWP_CH4),  regions, prefix + '_emission_def_ch4_' + year);
-    exportEmission(defN2O.multiply(GWP_N2O),  regions, prefix + '_emission_def_n2o_' + year);
+    agb    = agb.multiply(defMask.neq(1));
+    bgb    = bgb.multiply(defMask.neq(1));
+    dw     = dw.multiply(defMask.neq(1));
+    litter = litter.multiply(defMask.neq(1));
+    agbDwL = agb.add(dw).add(litter);
+
+    exportEmissionImage(defCO2.multiply(C_TO_CO2), prefix + '_emission_def_co2_' + year, year);
+    exportEmissionImage(defCH4.multiply(GWP_CH4),  prefix + '_emission_def_ch4_' + year, year);
+    exportEmissionImage(defN2O.multiply(GWP_N2O),  prefix + '_emission_def_n2o_' + year, year);
+
+    // ── Updated stock ────────────────────────────────────────────────
+    exportStockImage(agb, bgb, dw, litter, prefix, year);
 
     iterate(year + 1);
   }
@@ -275,37 +308,24 @@ processCerrado();
 
 // ============================================================
 //  SIMPLE BIOMES — Pantanal | Pampa | Caatinga | Atlantic Forest
-//
-//  Disturbances : deforestation / def (CO2 only)
-//
-//  Carbon stocks : QCN band 'total' (agb + bgb + dw + litter
-//                  pre-summed in the asset)
-//
-//  Forest mask applied to PRODES before remap (biome-specific
-//  approach consistent with the original per-biome scripts)
-//
-//  Biome name        | prefix
-//  ------------------|-------
-//  Pantanal          | pan
-//  Pampa             | pam
-//  Caatinga          | caa
-//  Mata Atlântica    | ma
 // ============================================================
 
 function processSimpleBiome(biomeName, prefix) {
 
   var biomeFC = biomesBound.filter(ee.Filter.eq('Bioma', biomeName));
-  var regions = statesFC.filter(ee.Filter.eq('Bioma', biomeName));
 
   var forests = vegetationMask.clip(biomeFC);
 
   var prodesDeforestation = prodesGreaterThan625ha
     .unmask(0)
-    .multiply(forests)          // apply forest mask before remap
+    .multiply(forests)
     .remap(PRODES_FROM, PRODES_TO, 0)
     .clip(biomeFC);
 
   var totalCarbon = carbonStock.select('total').mosaic().unmask(0).multiply(forests).clip(biomeFC);
+
+  // ── Initial stock → START_YEAR - 1 ───────────────────────────────
+  exportStockImageSimple(totalCarbon, prefix, START_YEAR - 1);
 
   function iterate(year) {
     if (year > END_YEAR) return;
@@ -313,7 +333,12 @@ function processSimpleBiome(biomeName, prefix) {
     var defMask = prodesDeforestation.eq(year);
     var defCO2  = totalCarbon.multiply(defMask);
 
-    exportEmission(defCO2.multiply(C_TO_CO2), regions, prefix + '_emission_def_co2_' + year);
+    totalCarbon = totalCarbon.multiply(defMask.neq(1));
+
+    exportEmissionImage(defCO2.multiply(C_TO_CO2), prefix + '_emission_def_co2_' + year, year);
+
+    // ── Updated stock ────────────────────────────────────────────────
+    exportStockImageSimple(totalCarbon, prefix, year);
 
     iterate(year + 1);
   }

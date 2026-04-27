@@ -110,7 +110,7 @@ var forest2016 = vegetationMask.eq(1)
   .and(prodesNonForest.not());
   
 Map.centerObject(forest2016, 5); // Centraliza o mapa na sua imagem
-Map.addLayer(forest2016, {palette: ['darkgreen']}, 'Floresta Remanescente 2016');
+Map.addLayer(forest2016.selfMask(), {palette: ['darkgreen']}, 'Floresta Remanescente 2016');
 
 // =================== EXPORT HELPERS ===================
 

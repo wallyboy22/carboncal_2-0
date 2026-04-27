@@ -163,7 +163,7 @@ function getLayerInstance(key) {
       vis = { min: 0, max: 50, palette: ['white', 'orange', 'red'] };
       break;
     case 'fire_annual':
-      img = fire_annual.select('burned_area_' + target_year).selfMask();
+      img = fire_annual.select('burned_coverage_' + target_year).selfMask();
       vis = { palette: ['red'] };
       break;
     case 'fire_freq':
@@ -306,26 +306,40 @@ function renderMatrix(obj) {
     var sub = ui.Panel({ layout: is_transposed ? ui.Panel.Layout.flow('horizontal') : ui.Panel.Layout.flow('vertical'), style: { border: '1px solid #ced4da', margin: l_m } });
     active_keys.forEach(function (k) {
       var val = '--', style = { margin: l_m, fontSize: '9px', width: l_w, textAlign: 'center' };
-      if (k === 'lulc_orig') { var l = obj['lulc_' + year]; val = l ? ('00' + l).slice(-2) : '--'; style.backgroundColor = paletaMapBiomas[l]; }
+      
+      if (k === 'lulc_orig') { 
+        var l = obj['lulc_' + year]; 
+        val = l ? ('00' + l).slice(-2) : '--'; 
+        style.backgroundColor = paletaMapBiomas[l]; 
+      }
       else if (k === 'year') val = year.slice(-2);
       else {
         var base = 0;
         if (k === 'stock_in') base = obj['biomass_stock_' + year];
-        else if (k === 'logging_raw') base = obj['logging_tC_ha_' + year];
+        else if (k === 'trans_orig') base = obj['trans_o_' + year];
+        else if (k === 'trans_adj') base = obj['trans_c_' + year];
         else if (k === 'out_stock') base = obj['stock_' + year];
         else if (k === 'out_fire') base = obj['loss_fire_' + year];
         else if (k === 'out_logging') base = obj['loss_logging_' + year];
         else if (k === 'out_secveg') base = obj['gain_secveg_' + year];
         else if (k === 'out_defor') base = obj['loss_deforestation_' + year];
-        else if (k === 'fire_annual') base = obj['fire_annual_' + year];
-        else if (k === 'fire_freq') base = obj['fire_freq_' + year];
-        else if (k === 'fire_tsf') base = obj['fire_tsf_' + year];
-        else if (k.indexOf('fire_forest') !== -1) base = obj[k.replace('fire_forest', 'CO2_tC_ha').replace('_ch4', 'CH4_t_ha').replace('_n2o', 'N2O_t_ha')];
-        else if (k.indexOf('fire_savanna') !== -1) {
-          var b_name = k.replace('fire_savanna', 'CO2_tCO2e_ha').replace('_ch4', 'CH4_t_ha').replace('_n2o', 'N2O_t_ha');
-          base = (k.indexOf('_co2') !== -1 || k === 'fire_savanna') ? obj[b_name] / TC_TO_TCO2 : obj[b_name];
+        else if (k === 'fire_annual') base = obj['burn_' + year];
+        else if (k === 'fire_freq') base = obj['freq_2023']; // Banda única
+        else if (k === 'fire_tsf') base = obj['tsf_' + year];
+        else if (k === 'logging_raw') base = obj['log_logging_tC_ha_' + year];
+        else if (k.indexOf('fire_forest') !== -1) {
+          var b_ff = k.replace('fire_forest', 'ff_CO2_tC_ha').replace('_ch4', 'ff_CH4_t_ha').replace('_n2o', 'ff_N2O_t_ha');
+          base = obj[b_ff + '_' + year];
         }
-        else if (k.indexOf('fire_grassland') !== -1) base = obj[k.replace('fire_grassland', 'CH4_t_ha').replace('_n2o', 'N2O_t_ha')];
+        else if (k.indexOf('fire_savanna') !== -1) {
+          var b_fs = k.replace('fire_savanna', 'fs_CO2_tCO2e_ha').replace('_ch4', 'fs_CH4_t_ha').replace('_n2o', 'fs_N2O_t_ha');
+          var raw = obj[b_fs + '_' + year];
+          base = (k.indexOf('_co2') !== -1 || k === 'fire_savanna') ? (raw / TC_TO_TCO2) : raw;
+        }
+        else if (k.indexOf('fire_grassland') !== -1) {
+          var b_fg = k.replace('fire_grassland', 'fg_CH4_t_ha').replace('_n2o', 'fg_N2O_t_ha');
+          base = obj[b_fg + '_' + year];
+        }
 
         var is_gas = (k.indexOf('_ch4') !== -1 || k.indexOf('_n2o') !== -1);
         var conv = is_gas ? base : convertValue(base || 0, config.unit);
@@ -340,7 +354,20 @@ function renderMatrix(obj) {
 Map.onClick(function (coords) {
   inspector_results.clear(); matrix_outer.clear(); matrix_outer.add(ui.Label('Carregando...'));
   var point = ee.Geometry.Point(coords.lon, coords.lat);
-  var combined = final_image.addBands(biomass_stock_bruto).addBands(lulc.rename(YEARS_ALL.map(function (y) { return 'lulc_' + y }))).addBands(desf_reg_corrected.rename(YEARS_ALL.map(function (y) { return 'trans_c_' + y })));
+  
+  var combined = final_image
+    .addBands(biomass_stock_bruto)
+    .addBands(lulc.rename(YEARS_ALL.map(function (y) { return 'lulc_' + y })))
+    .addBands(desf_reg.rename(YEARS_ALL.map(function (y) { return 'trans_o_' + y })))
+    .addBands(desf_reg_corrected.rename(YEARS_ALL.map(function (y) { return 'trans_c_' + y })))
+    .addBands(fire_annual.rename(YEARS_ALL.map(function (y) { return 'burn_' + y })))
+    .addBands(fire_freq.rename(['freq_2023']))
+    .addBands(fire_tsf.rename(YEARS_ALL.map(function (y) { return 'tsf_' + y })))
+    .addBands(fire_forest.rename(fire_forest.bandNames().map(function(n){ return 'ff_' + n })))
+    .addBands(fire_savanna.rename(fire_savanna.bandNames().map(function(n){ return 'fs_' + n })))
+    .addBands(fire_grassland.rename(fire_grassland.bandNames().map(function(n){ return 'fg_' + n })))
+    .addBands(logging.rename(logging.bandNames().map(function(n){ return 'log_' + n })));
+
   combined.reduceRegion({ reducer: ee.Reducer.first(), geometry: point, scale: 30 }).evaluate(function (obj) {
     if (!obj) return; last_data = obj; renderMatrix(obj);
     var landsat = ee.ImageCollection('projects/nexgenmap/MapBiomas2/LANDSAT/BRAZIL/mosaics-2').filter(ee.Filter.eq('year', 2023)).filterBounds(point).mosaic();
@@ -348,3 +375,4 @@ Map.onClick(function (coords) {
   });
 });
 updateLayers(); Map.style().set('cursor', 'crosshair');
+

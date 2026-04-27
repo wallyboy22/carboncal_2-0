@@ -107,7 +107,7 @@ var final_image = loss_deforestation_bands.addBands(gain_sec_veg_bands).addBands
 // =============================================================================
 // 4. INTERFACE E CONFIGURAÇÃO
 // =============================================================================
-var panel = ui.Panel({ style: { width: '480px', padding: '8px' } });
+var panel = ui.Panel({ style: {} });
 var is_transposed = true;
 var last_data = null;
 var target_year = '2023';

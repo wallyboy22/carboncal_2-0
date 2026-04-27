@@ -41,8 +41,8 @@ var logging = ee.Image(BASE_ASSET + 'logging_emissions_' + VERSION);
 // =============================================================================
 // 2. DATASETS DE ENTRADA
 // =============================================================================
-var lulc = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_coverage_v1');
-var desf_reg = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_deforestation_secondary_vegetation_v1');
+var lulc = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_coverage_v1');
+var desf_reg = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_deforestation_secondary_vegetation_v1');
 var biomas = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
 var water_count = lulc.eq(33).reduce(ee.Reducer.sum());
 var always_submerged = water_count.gte(38);
@@ -109,7 +109,7 @@ var final_image = loss_deforestation_bands.addBands(gain_sec_veg_bands).addBands
 // =============================================================================
 // 4. INTERFACE E INSPEÇÃO
 // =============================================================================
-var panel = ui.Panel({ style: { width: '480px', padding: '8px' } });
+var panel = ui.Panel({ style: {} });
 var intro = ui.Label({ value: 'CCAL M3 — Auditoria Técnica', style: { fontWeight: 'bold', fontSize: '18px', color: '#2c3e50' } });
 panel.add(intro);
 

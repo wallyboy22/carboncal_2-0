@@ -11,7 +11,7 @@ var geometry =
 // =============================================================================
 // CCAL Módulo 3 — v036
 // investigate_modulo3.js
-// Script de inspeção e reconstrução: carrega ativos intermediários para gerar o produto final.
+// Script de auditoria técnica e inspeção pixel-a-pixel.
 // =============================================================================
 
 // =============================================================================
@@ -31,23 +31,25 @@ var GWP_CH4 = 28;
 var GWP_N2O = 265;
 var TC_TO_TCO2 = 3.67;
 
-// Carregamento dos Ativos Intermediários
+// Ativos Intermediários
 var biomass_stock_bruto = ee.Image(BASE_ASSET + 'biomass_stock_' + VERSION);
 var fire_forest = ee.Image(BASE_ASSET + 'fire_forest_emissions_' + VERSION);
 var fire_savanna = ee.Image(BASE_ASSET + 'fire_savanna_emissions_' + VERSION);
 var fire_grassland = ee.Image(BASE_ASSET + 'fire_grassland_emissions_' + VERSION);
 var logging = ee.Image(BASE_ASSET + 'logging_emissions_' + VERSION);
 
-// =============================================================================
-// 2. DATASETS DE ENTRADA
-// =============================================================================
+// Datasets Originais (Inputs Externos)
 var lulc = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_coverage_v1');
 var desf_reg = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_deforestation_secondary_vegetation_v1');
 var biomas = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
-var water_count = lulc.eq(33).reduce(ee.Reducer.sum());
-var always_submerged = water_count.gte(38);
 
-// --- 3a. Corrige classe 7 (outras transições) no desf/reg
+// Fire Context Assets
+var fire_freq = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/fire_frequency_v1');
+var fire_tsf = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/time_after_fire_v1');
+
+// =============================================================================
+// 2. CORREÇÃO TÉCNICA (DESF_REG)
+// =============================================================================
 var desf_corrected = ee.Image(YEARS_ALL.reduce(function (acc, year, i) {
   var curr = desf_reg.select('classification_' + year);
   if (i === 0) return curr.rename('classification_' + year);
@@ -55,7 +57,6 @@ var desf_corrected = ee.Image(YEARS_ALL.reduce(function (acc, year, i) {
   return ee.Image(acc).addBands(prev.where(curr.neq(7), curr).rename('classification_' + year));
 }, null));
 
-// Propagação inversa (backward fill) para pixels que começam em 7
 var desf_corrected_bwd = ee.Image(YEARS_ALL.slice().reverse().reduce(function (acc, year, i) {
   var curr = desf_corrected.select('classification_' + year);
   if (i === 0) return curr.rename('classification_' + year);
@@ -63,23 +64,16 @@ var desf_corrected_bwd = ee.Image(YEARS_ALL.slice().reverse().reduce(function (a
   return ee.Image(acc).addBands(next.where(curr.neq(7), curr).rename('classification_' + year));
 }, null));
 
-// Merge: usa o corrigido forward; onde ainda 7, usa backward
 var desf_reg_corrected = desf_corrected.where(desf_corrected.eq(7), desf_corrected_bwd);
 
 // =============================================================================
-// 3. RECONSTRUÇÃO DO ATIVO FINAL (Lógica de Integração)
+// 3. RECONSTRUÇÃO DO ATIVO FINAL (Lógica SEEG)
 // =============================================================================
 var pixel_area_ha = ee.Image.pixelArea().divide(10000);
 var accumulated_degradation = ee.Image(0).rename('dummy');
-
-var loss_fire_bands = ee.Image().select();
-var loss_logging_bands = ee.Image().select();
-var loss_convergence_bands = ee.Image().select();
-var loss_grassland_bands = ee.Image().select();
 var loss_deforestation_bands = ee.Image().select();
 var gain_sec_veg_bands = ee.Image().select();
 var stock_bands = ee.Image().select();
-
 var past_stock = biomass_stock_bruto.select('biomass_stock_1985');
 
 YEARS_FIRE.forEach(function (y, i) {
@@ -104,23 +98,21 @@ YEARS_FIRE.forEach(function (y, i) {
   stock_bands = stock_bands.addBands(stock_updated_y);
 });
 
-var final_image = loss_deforestation_bands.addBands(gain_sec_veg_bands).addBands(stock_bands).updateMask(always_submerged.not()).float();
+var final_image = loss_deforestation_bands.addBands(gain_sec_veg_bands).addBands(stock_bands).float();
 
 // =============================================================================
-// 4. INTERFACE E INSPEÇÃO
+// 4. INTERFACE E CONFIGURAÇÃO
 // =============================================================================
 var panel = ui.Panel({ style: {} });
-var intro = ui.Label({ value: 'CCAL M3 — Auditoria Técnica', style: { fontWeight: 'bold', fontSize: '18px', color: '#2c3e50' } });
-panel.add(intro);
-
-// Variáveis de Estado
 var is_transposed = true;
 var last_data = null;
 
 var config = {
   lulc_orig: true,
-  lulc_corr: true,
-  trans: true,
+  trans_orig: true,
+  trans_adj: true,
+  fire_freq: false,
+  fire_tsf: false,
   stock_in: true,
   stock_out: true,
   fire_forest: true,
@@ -136,26 +128,52 @@ var config = {
 };
 
 var config_info = {
-  lulc_orig: 'LULC MapBiomas (Coleção 10.1)',
-  lulc_corr: 'LULC Corrigido (Máscaras)',
-  trans: 'Transições (Classes 1-7)',
+  lulc_orig: 'Uso e Cobertura (MB)',
+  trans_orig: 'Desm/VegSec Original (MB)',
+  trans_adj: 'Desm/VegSec Ajustado (Classe 7 corrigida)',
+  fire_freq: 'Frequência de Fogo (Acumulado)',
+  fire_tsf: 'Tempo desde último fogo (Anos)',
   stock_in: 'Estoque de Carbono Base (Entrada)',
   stock_out: 'Estoque de Carbono Final (Saída)',
-  fire_forest: 'Fogo Floresta (Input)',
-  logging: 'Madeira/Degradação (Input)',
-  defor: 'Balanço de Carbono (Saída)'
+  fire_forest: 'Fogo Floresta (FATE)',
+  logging: 'Corte Seletivo (DETER)',
+  defor: 'Balanço Desmatamento (SEEG)'
 };
 
 var config_help = {
-  trans: 'Classes: 1-Primária, 2-Desm, 3-SecVeg, 4-SupSec, 5-Recorrência, 6-RegNatural, 7-SupReg.',
-  lulc_corr: 'LULC após aplicação de máscaras perenes e ajustes de consistência.',
-  logging: 'Exploração seletiva. Dado bruto em tC/ha (apenas CO2).',
-  defor: 'Saldo de emissão (+) ou remoção (-) por hectare.'
+  intro: 'O Módulo 3 da plataforma CCAL monitora estoques de carbono e emissões/remoções líquidas associadas a distúrbios (fogo, logging) e regeneração (vegetação secundária).',
+  fire_freq: 'Número total de vezes que o pixel queimou entre 1985 e o ano de análise.',
+  fire_tsf: 'Anos decorridos desde a última cicatriz de fogo mapeada pelo MapBiomas Fogo Col 4.1.',
+  trans_orig: 'Dado bruto de desmatamento e vegetação secundária do MapBiomas Coleção 10.1.',
+  trans_adj: 'Dado filtrado e corrigido temporalmente para eliminar a instabilidade da classe 7 (Outra Transição).',
+  logging: 'Emissão por corte seletivo baseada nos alertas DETER (2017-2024). Fração de perda: 19.6%.',
+  defor: 'Saldo de carbono. Emissões (+) por supressão e Remoções (-) por incremento de biomassa secundária.'
 };
+
+// --- Header ---
+panel.add(ui.Label({ value: 'CCAL M3 — Auditoria Técnica', style: { fontWeight: 'bold', fontSize: '18px', color: '#2c3e50' } }));
+
+// --- Drawer: O que é o Módulo 3 ---
+var info_panel = ui.Panel({ style: { margin: '5px 0', border: '1px solid #3498db', padding: '5px', shown: false, backgroundColor: '#ebf5fb' } });
+info_panel.add(ui.Label('Sobre o Módulo 3:', { fontWeight: 'bold', fontSize: '12px' }));
+info_panel.add(ui.Label(config_help.intro, { fontSize: '11px', color: '#2c3e50' }));
+info_panel.add(ui.Label('• Entra: LULC, Estoque Base, Queimadas, Corte Seletivo.\n• Sai: Estoque Dinâmico, Balanço de Desmatamento e Regeneração.', { fontSize: '10px', whiteSpace: 'pre' }));
+
+var toggle_info = ui.Button({
+  label: 'ℹ️ Módulo 3: O que entra e o que sai',
+  onClick: function () {
+    var isShown = info_panel.style().get('shown');
+    info_panel.style().set('shown', !isShown);
+  },
+  style: { stretch: 'horizontal', margin: '5px 0' }
+});
+panel.add(toggle_info);
+panel.add(info_panel);
 
 var inspector_results = ui.Panel();
 panel.add(inspector_results);
 
+// --- Controles de Matriz ---
 var transpose_btn = ui.Button({
   label: '🔄 Inverter Matriz (Anos em Linhas/Colunas)',
   onClick: function () {
@@ -180,15 +198,13 @@ var unit_selector = ui.Select({
 unit_panel.add(unit_selector);
 panel.add(unit_panel);
 
-var matrix_outer = ui.Panel({
-  style: { stretch: 'both', padding: '2px', backgroundColor: '#f8f9fa', border: '1px solid #dee2e6' }
-});
+var matrix_outer = ui.Panel({ style: { stretch: 'both', padding: '2px', backgroundColor: '#f8f9fa', border: '1px solid #dee2e6' } });
 panel.add(matrix_outer);
 
-// Gaveta ao final
+// --- Drawer: Camadas e Ajuda ---
 var gaveta_panel = ui.Panel({ style: { margin: '10px 0', border: '1px solid #eee', shown: false } });
 var toggle_gaveta = ui.Button({
-  label: '⚙️ Ajuda Técnica e Filtros',
+  label: '⚙️ Camadas e Ajuda Técnica',
   onClick: function () {
     var isShown = gaveta_panel.style().get('shown');
     gaveta_panel.style().set('shown', !isShown);
@@ -198,13 +214,6 @@ var toggle_gaveta = ui.Button({
 panel.add(toggle_gaveta);
 panel.add(gaveta_panel);
 
-function updateLayers() {
-  Map.layers().reset();
-  Map.addLayer(biomas, {}, 'Brasil Biomas', false);
-  if (config.lulc_orig) Map.addLayer(lulc.select('classification_2023'), { min: 0, max: 62, palette: paletaMapBiomas }, 'MapBiomas LULC 2023', false);
-  if (config.stock_out) Map.addLayer(final_image.select('stock_2023'), { min: 0, max: 200, palette: ['white', 'green'] }, 'Estoque Final 2023');
-}
-
 function createConfigRow(key, label_text, is_sub) {
   var row = ui.Panel({ layout: ui.Panel.Layout.flow('horizontal'), style: { margin: is_sub ? '1px 0 1px 20px' : '3px 0' } });
   var cb = ui.Checkbox({
@@ -212,57 +221,58 @@ function createConfigRow(key, label_text, is_sub) {
     value: config[key],
     onChange: function (checked) {
       config[key] = checked;
-      updateLayers();
       if (last_data) renderMatrix(last_data);
     },
-    style: { fontSize: is_sub ? '10px' : '11px', fontWeight: is_sub ? 'normal' : 'bold', width: is_sub ? '110px' : '130px' }
+    style: { fontSize: is_sub ? '10px' : '11px', fontWeight: is_sub ? 'normal' : 'bold', width: is_sub ? '135px' : '160px' }
   });
   row.add(cb);
-  if (config_help[key]) {
-    var help_btn = ui.Button({ style: { margin: '0px', color: '#3498db' }, imageUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAA0UlEQVR4nMXSQUoDQRQE0LfQuDGeIOo5RD2OhlxHAjmBJicQ8SxGBc0dzCqhoAVtepjZiLVp5vf86vpVnz/ANVbYYItPLHHZ13iABda4wQSH5bzFK+blvyYWeMRxx33qT4WkKful0byrvsd4a42zKrKHYIqHurgps+pREJwVY39hi9FAgiN8tRScDiQ4x0ddXJaohhDMcF8Xr0r+4x6CE7zjokFsXnKuSX42P+Ou4142LCTJOVHFkxgb1yM7L6e5cxO/kSVJzjEq6eTMzE3Z/489zV4rLYSBhc4AAAAASUVORK5CYII=" });
-    var help_txt = ui.Label(config_help[key], { fontSize: '9px', color: '#7f8c8d', shown: false, margin: '2px 0 2px 25px' });
-    help_btn.onClick(function () { help_txt.style().set('shown', !help_txt.style().get('shown')); });
-    row.add(help_btn);
-    gaveta_panel.add(row);
-    gaveta_panel.add(help_txt);
-  } else {
-    gaveta_panel.add(row);
-  }
+  
+  var help_btn = ui.Button({ 
+    style: { margin: '0px', color: '#3498db' }, 
+    imageUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAA0UlEQVR4nMXSQUoDQRQE0LfQuDGeIOo5RD2OhlxHAjmBJicQ8SxGBc0dzCqhoAVtepjZiLVp5vf86vpVnz/ANVbYYItPLHHZ13iABda4wQSH5bzFK+blvyYWeMRxx33qT4WkKful0byrvsd4a42zKrKHYIqHurgps+pREJwVY39hi9FAgiN8tRScDiQ4x0ddXJaohhDMcF8Xr0r+4x6CE7zjokFsXnKuSX42P+Ou4142LCTJOVHFkxgb1yM7L6e5cxO/kSVJzjEq6eTMzE3Z/489zV4rLYSBhc4AAAAASUVORK5CYII=" 
+  });
+  var help_txt = ui.Label(config_help[key] || 'Descrição técnica derivada do README.', { fontSize: '9px', color: '#7f8c8d', shown: false, margin: '2px 0 2px 25px' });
+  help_btn.onClick(function () { help_txt.style().set('shown', !help_txt.style().get('shown')); });
+  
+  row.add(help_btn);
+  gaveta_panel.add(row);
+  gaveta_panel.add(help_txt);
 }
 
-gaveta_panel.add(ui.Label('Entradas (Inputs):', { fontSize: '10px', color: '#3498db' }));
-createConfigRow('lulc_orig', 'LULC ORIG');
-createConfigRow('lulc_corr', 'LULC CORR');
-createConfigRow('trans', 'TRANSIÇÕES');
+gaveta_panel.add(ui.Label('Entradas (Inputs):', { fontSize: '10px', color: '#3498db', fontWeight: 'bold' }));
+createConfigRow('lulc_orig', config_info.lulc_orig);
+createConfigRow('trans_orig', 'TRANS (Original)');
+createConfigRow('trans_adj', 'TRANS (Ajustado)');
+createConfigRow('fire_freq', 'FREQ. FOGO');
+createConfigRow('fire_tsf', 'TSF (Anos)');
 createConfigRow('stock_in', 'ESTOQUE BASE');
 createConfigRow('logging', 'MADEIRA (Log)');
 
-gaveta_panel.add(ui.Label('Saídas (Outputs):', { fontSize: '10px', color: '#27ae60', margin: '8px 0 2px 0' }));
+gaveta_panel.add(ui.Label('Saídas (Outputs):', { fontSize: '10px', color: '#27ae60', margin: '8px 0 2px 0', fontWeight: 'bold' }));
 createConfigRow('stock_out', 'ESTOQUE FINAL');
 createConfigRow('defor', 'DESMAT. (Balanço)');
 
-gaveta_panel.add(ui.Label('Fogo e Gases (Inputs):', { fontSize: '10px', color: '#e67e22', margin: '8px 0 2px 0' }));
+gaveta_panel.add(ui.Label('Fogo e Gases (Inputs):', { fontSize: '10px', color: '#e67e22', margin: '8px 0 2px 0', fontWeight: 'bold' }));
 createConfigRow('fire_forest', 'FOGO FLORESTA');
 createConfigRow('fire_forest_co2', '↳ CO2 (tC)', true);
 createConfigRow('fire_forest_ch4', '↳ CH4 (t)', true);
 createConfigRow('fire_forest_n2o', '↳ N2O (t)', true);
-
 createConfigRow('fire_savanna', 'FOGO SAVANA');
 createConfigRow('fire_savanna_co2', '↳ CO2 (tCO2e)', true);
 createConfigRow('fire_savanna_ch4', '↳ CH4 (t)', true);
 createConfigRow('fire_savanna_n2o', '↳ N2O (t)', true);
-
 createConfigRow('fire_grassland', 'FOGO CAMPESTRE');
 createConfigRow('fire_grassland_ch4', '↳ CH4 (t)', true);
 createConfigRow('fire_grassland_n2o', '↳ N2O (t)', true);
 
 ui.root.insert(0, panel);
 
+// --- Lógica de Matriz ---
 var paletaMapBiomas = require('users/mapbiomas/modules:Palettes.js').get('brazil');
-
 var row_titles = {
   'year': 'Year',
-  'lulc_orig': 'LULC.O', 'lulc_corr': 'LULC.C', 'trans': 'TRANS', 'stock_in': 'Stk.In',
+  'lulc_orig': 'LULC', 'trans_orig': 'TRANS.O', 'trans_adj': 'TRANS.C', 
+  'fire_freq': 'FREQ', 'fire_tsf': 'TSF', 'stock_in': 'Stk.In',
   'fire_forest': '🔥For', 'fire_forest_co2': 'co2', 'fire_forest_ch4': 'ch4', 'fire_forest_n2o': 'n2o',
   'fire_savanna': '🔥Sav', 'fire_savanna_co2': 'co2', 'fire_savanna_ch4': 'ch4', 'fire_savanna_n2o': 'n2o',
   'fire_grassland': '🔥Gra', 'fire_grassland_ch4': 'ch4', 'fire_grassland_n2o': 'n2o',
@@ -279,52 +289,46 @@ function convertValue(val_tC_ha, unit) {
 
 function renderMatrix(obj) {
   matrix_outer.clear();
-  var container = ui.Panel({
-    layout: is_transposed ? ui.Panel.Layout.flow('vertical') : ui.Panel.Layout.flow('horizontal'),
-    style: { stretch: 'horizontal' }
-  });
+  var container = ui.Panel({ layout: is_transposed ? ui.Panel.Layout.flow('vertical') : ui.Panel.Layout.flow('horizontal'), style: { stretch: 'horizontal' } });
   matrix_outer.add(container);
 
   var label_width = '55px';
   var label_margin = '1px';
-
   var active_keys = Object.keys(row_titles).filter(function (k) { return config[k] });
+  
   var title_panel = ui.Panel({
     layout: is_transposed ? ui.Panel.Layout.flow('horizontal') : ui.Panel.Layout.flow('vertical'),
     style: { backgroundColor: '#e9ecef', border: '1px solid #adb5bd', margin: label_margin }
   });
-  
   active_keys.forEach(function (k) {
     var is_out = (k === 'stock_out' || k === 'defor');
     var is_sub = (k.indexOf('_co2') !== -1 || k.indexOf('_ch4') !== -1 || k.indexOf('_n2o') !== -1);
-    
     title_panel.add(ui.Label(row_titles[k], {
-      fontWeight: is_sub ? 'normal' : 'bold',
-      fontSize: '8px', width: label_width, textAlign: 'center', margin: label_margin,
-      backgroundColor: is_out ? '#d4edda' : (is_sub ? '#f8f9fa' : '#e9ecef'),
-      color: is_sub ? '#7f8c8d' : '#000'
+      fontWeight: is_sub ? 'normal' : 'bold', fontSize: '8px', width: label_width, textAlign: 'center', margin: label_margin,
+      backgroundColor: is_out ? '#d4edda' : (is_sub ? '#f8f9fa' : '#e9ecef'), color: is_sub ? '#7f8c8d' : '#000'
     }));
   });
   container.add(title_panel);
 
   YEARS_FIRE.forEach(function (year) {
-    var subpanel = ui.Panel({
-      layout: is_transposed ? ui.Panel.Layout.flow('horizontal') : ui.Panel.Layout.flow('vertical'),
-      style: { margin: label_margin, border: '1px solid #ced4da', textAlign: 'center' }
-    });
-
+    var subpanel = ui.Panel({ layout: is_transposed ? ui.Panel.Layout.flow('horizontal') : ui.Panel.Layout.flow('vertical'), style: { margin: label_margin, border: '1px solid #ced4da', textAlign: 'center' } });
     active_keys.forEach(function (k) {
       var val = '--';
       var style = { margin: label_margin, fontSize: '9px', width: label_width, textAlign: 'center' };
-
-      if (k === 'lulc_orig' || k === 'lulc_corr') {
-        var l_val = obj['classification_' + year];
+      
+      if (k === 'lulc_orig') {
+        var l_val = obj['lulc_' + year];
         val = l_val ? ('00' + l_val).slice(-2) : '--';
         style.backgroundColor = paletaMapBiomas[l_val] || '#ffffff';
-      } else if (k === 'trans') {
-        val = obj['classification_' + year] || '--';
+      } else if (k === 'trans_orig' || k === 'trans_adj') {
+        val = (k === 'trans_orig') ? obj['trans_o_' + year] : obj['trans_c_' + year];
+        val = val || '--';
         style.fontWeight = 'bold';
         style.backgroundColor = (val == 2) ? '#ffccbc' : (val == 3 ? '#c8e6c9' : '#ffffff');
+      } else if (k === 'fire_freq') {
+        val = obj['fire_freq_' + year] || '0';
+      } else if (k === 'fire_tsf') {
+        val = obj['fire_tsf_' + year] || '--';
       } else if (k === 'year') {
         val = year.slice(-2);
         style.backgroundColor = '#f1f3f5';
@@ -334,19 +338,15 @@ function renderMatrix(obj) {
         else if (k === 'stock_out') base_val = obj['stock_' + year];
         else if (k === 'logging') base_val = obj['logging_tC_ha_' + year];
         else if (k === 'defor') base_val = obj['loss_deforestation_' + year] / (0.09 * TC_TO_TCO2);
-        
-        else if (k.indexOf('fire_forest') !== -1) base_val = obj[k.replace('fire_forest','CO2_tC_ha').replace('_ch4','CH4_t_ha').replace('_n2o','N2O_t_ha')];
+        else if (k.indexOf('fire_forest') !== -1) base_val = obj[k.replace('fire_forest', 'CO2_tC_ha').replace('_ch4', 'CH4_t_ha').replace('_n2o', 'N2O_t_ha')];
         else if (k.indexOf('fire_savanna') !== -1) {
-           var b_name = k.replace('fire_savanna','CO2_tCO2e_ha').replace('_ch4','CH4_t_ha').replace('_n2o','N2O_t_ha');
-           base_val = (k.indexOf('_co2') !== -1 || k==='fire_savanna') ? obj[b_name]/TC_TO_TCO2 : obj[b_name];
-        } else if (k.indexOf('fire_grassland') !== -1) {
-           base_val = obj[k.replace('fire_grassland','CH4_t_ha').replace('_n2o','N2O_t_ha')];
-        }
-
+          var b_name = k.replace('fire_savanna', 'CO2_tCO2e_ha').replace('_ch4', 'CH4_t_ha').replace('_n2o', 'N2O_t_ha');
+          base_val = (k.indexOf('_co2') !== -1 || k === 'fire_savanna') ? obj[b_name] / TC_TO_TCO2 : obj[b_name];
+        } else if (k.indexOf('fire_grassland') !== -1) base_val = obj[k.replace('fire_grassland', 'CH4_t_ha').replace('_n2o', 'N2O_t_ha')];
+        
         var is_gas = (k.indexOf('_ch4') !== -1 || k.indexOf('_n2o') !== -1);
         var converted = is_gas ? base_val : convertValue(base_val, config.unit);
         val = (converted > 0.0001 || converted < -0.0001) ? converted.toFixed(is_gas ? 3 : 1) : ' ';
-        
         if (k.indexOf('stock') !== -1) style.color = '#27ae60';
         else if (k.indexOf('fire') !== -1) style.color = '#e67e22';
         else if (k === 'defor' || k === 'logging') style.color = '#c0392b';
@@ -362,24 +362,26 @@ Map.onClick(function (coords) {
   inspector_results.clear();
   matrix_outer.clear();
   matrix_outer.add(ui.Label('Carregando...', { color: 'gray' }));
-
   var point = ee.Geometry.Point(coords.lon, coords.lat);
-  var combined = final_image.addBands(biomass_stock_bruto).addBands(lulc).addBands(desf_reg)
+  
+  // Build names for unambiguous selection
+  var combined = final_image
+    .addBands(biomass_stock_bruto)
+    .addBands(lulc.rename(YEARS_ALL.map(function(y){return 'lulc_'+y})))
+    .addBands(desf_reg.rename(YEARS_ALL.map(function(y){return 'trans_o_'+y})))
+    .addBands(desf_reg_corrected.rename(YEARS_ALL.map(function(y){return 'trans_c_'+y})))
+    .addBands(fire_freq.rename(YEARS_ALL.map(function(y){return 'fire_freq_'+y})))
+    .addBands(fire_tsf.rename(YEARS_ALL.map(function(y){return 'fire_tsf_'+y})))
     .addBands(fire_forest).addBands(fire_savanna).addBands(logging);
 
-  combined.reduceRegion({ reducer: ee.Reducer.first(), geometry: point, scale: 30, maxPixels: 1e13 })
-    .evaluate(function (obj) {
-      if (!obj) return;
-      inspector_results.clear();
-      inspector_results.add(ui.Label('📍 ' + coords.lon.toFixed(4) + ', ' + coords.lat.toFixed(4), { fontWeight: 'bold' }));
-      last_data = obj;
-      renderMatrix(obj);
-      var landsat = ee.ImageCollection('projects/nexgenmap/MapBiomas2/LANDSAT/BRAZIL/mosaics-2')
-        .filter(ee.Filter.eq('year', 2023)).filterBounds(point).mosaic();
-      Map.layers().insert(0, ui.Map.Layer(landsat, { bands: ['swir1_median_wet', 'nir_median_wet', 'red_median_wet'], gain: [0.08, 0.06, 0.2] }, 'Landsat 2023', false));
-    });
+  combined.reduceRegion({ reducer: ee.Reducer.first(), geometry: point, scale: 30, maxPixels: 1e13 }).evaluate(function (obj) {
+    if (!obj) return;
+    inspector_results.add(ui.Label('📍 ' + coords.lon.toFixed(4) + ', ' + coords.lat.toFixed(4), { fontWeight: 'bold' }));
+    last_data = obj;
+    renderMatrix(obj);
+    var landsat = ee.ImageCollection('projects/nexgenmap/MapBiomas2/LANDSAT/BRAZIL/mosaics-2').filter(ee.Filter.eq('year', 2023)).filterBounds(point).mosaic();
+    Map.layers().insert(0, ui.Map.Layer(landsat, { bands: ['swir1_median_wet', 'nir_median_wet', 'red_median_wet'], gain: [0.08, 0.06, 0.2] }, 'Landsat 2023', false));
+  });
 });
 
-updateLayers();
 Map.style().set('cursor', 'crosshair');
-// Map.centerObject(biomas, 4);

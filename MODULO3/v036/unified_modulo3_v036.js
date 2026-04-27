@@ -359,7 +359,7 @@ Object.keys(export_assets).forEach(function (key) {
 // 10. EQUAÇÕES (FUNÇÕES PURAS)
 // =============================================================================
 
-// [x] verificado a função calcForestFireEmissions
+// [x] verificado a função calcSecondaryVegIncrement
 function calcSecondaryVegIncrement(params) {
 
     var desf_reg = params.desf_reg_corrected;
@@ -438,6 +438,7 @@ function calcSecondaryVegIncrement(params) {
 
     return stock_stack;
 }
+
 // [ ] Camila verificar a função calcForestFireEmissions
 function calcForestFireEmissions(params) {
 
@@ -598,7 +599,8 @@ function calcForestFireEmissions(params) {
 
     return CO2_mosaic.addBands(CH4_mosaic).addBands(N2O_mosaic).addBands(CO_mosaic).addBands(NOX_mosaic);
 }
-// [ ] Celso verificar a função calcForestFireEmissions
+
+// [ ] Celso verificar a função calcSavannaFireEmissions
 function calcSavannaFireEmissions(params) {
 
     var annual_burned = params.annual_burned;
@@ -685,7 +687,8 @@ function calcSavannaFireEmissions(params) {
 
     return CO2_bands.addBands(CH4_bands).addBands(N2O_bands).addBands(CO_bands).addBands(NOX_bands);
 }
-// [ ] Camila verificar a função calcForestFireEmissions
+
+// [ ] Camila verificar a função calcGrasslandFireEmissions
 function calcGrasslandFireEmissions(params) {
 
     var annual_burned = params.annual_burned;
@@ -755,7 +758,8 @@ function calcGrasslandFireEmissions(params) {
 
     return CO_bands.addBands(CH4_bands).addBands(N2O_bands).addBands(NOX_bands);
 }
-// [ ] Celso verificar a função calcForestFireEmissions
+
+// [ ] Celso verificar a função calcLoggingEmissions
 function calcLoggingEmissions(params) {
 
     var agb = params.agb;

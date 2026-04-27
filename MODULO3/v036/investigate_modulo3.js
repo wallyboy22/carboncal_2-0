@@ -163,7 +163,7 @@ function getLayerInstance(key) {
       vis = { min: 0, max: 50, palette: ['white', 'orange', 'red'] };
       break;
     case 'fire_annual':
-      img = fire_annual.select('burned_coverage_' + target_year).selfMask();
+      img = fire_annual.select('burned_area_' + target_year).selfMask();
       vis = { palette: ['red'] };
       break;
     case 'fire_freq':

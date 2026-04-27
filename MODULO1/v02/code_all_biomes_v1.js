@@ -43,8 +43,8 @@ for (var _y = PRODES_START; _y <= PRODES_END; _y++) {
 
 // =================== SHARED ASSETS ===================
 
-var prodesGreaterThan625ha = ee.Image('projects/ee-ipam/assets/REDD/prodes_brasil_2023');
-var prodesLessThan625ha    = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/PRODES/yearly_deforestation_smaller_than_625ha_biome');
+var prodesGreaterThan625ha = ee.Image('projects/ee-ipam/assets/REDD/prodes_brasil_2024');
+var prodesLessThan625ha    = ee.Image('projects/ee-celsojunior/assets/yearly_deforestation_smaller_than_625ha_biome');
 var managedLandAmazon      = ee.Image('projects/ee-ipam/assets/Managed_Land_Brazil').unmask(0);
 
 var vegetationMask = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/UKPact_MRV/brazil_pret_vegetation_qcn_v2')

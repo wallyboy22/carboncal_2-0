@@ -19,12 +19,12 @@
 // ====================================================================
 
 var START_YEAR         = 2017;
-var END_YEAR           = 2023;
+var END_YEAR           = 2024;
 var EXPORT_ASSET_ROOT  = 'projects/ee-ipam/assets/CCAL/MODULO1/biomes';  // biome-level outputs
 var EXPORT_MOSAIC_ROOT = 'projects/ee-ipam/assets/CCAL/MODULO1/brazil';  // Brazil-wide mosaics
 
 var PRODES_START       = 2016;
-var PRODES_END         = 2023;
+var PRODES_END         = 2024;
 
 var C_TO_CO2           = 44 / 12;
 var GWP_CH4            = 28;

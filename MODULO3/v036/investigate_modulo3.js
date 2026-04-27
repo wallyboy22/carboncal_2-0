@@ -168,7 +168,7 @@ function getLayerInstance(key) {
       break;
     case 'fire_freq':
       img = fire_freq.selfMask();
-      vis = { min: 1, max: 20, palette: ['#ffffcc','#ffeda0','#fed976','#feb24c','#fd8d3c','#fc4e2a','#e31a1c','#bd0026','#800026'] };
+      vis = { min: 1, max: 20, palette: ['#ffffcc', '#ffeda0', '#fed976', '#feb24c', '#fd8d3c', '#fc4e2a', '#e31a1c', '#bd0026', '#800026'] };
       break;
     default:
       return null;
@@ -222,22 +222,22 @@ panel.add(gaveta_panel);
 
 function createConfigRow(key, label_text, is_sub, target_panel) {
   var row = ui.Panel({ layout: ui.Panel.Layout.flow('horizontal'), style: { margin: is_sub ? '1px 0 1px 20px' : '3px 0' } });
-  
-  var cb = ui.Checkbox({ 
-    label: label_text, 
-    value: config[key], 
-    onChange: function (c) { 
-      config[key] = c; 
+
+  var cb = ui.Checkbox({
+    label: label_text,
+    value: config[key],
+    onChange: function (c) {
+      config[key] = c;
       var ly = getLayerInstance(key);
       if (ly) {
         if (c) Map.add(ly);
         else Map.layers().remove(ly);
       }
-      if (last_data) renderMatrix(last_data); 
-    }, 
-    style: { fontSize: is_sub ? '10px' : '11px', width: is_sub ? '135px' : '160px' } 
+      if (last_data) renderMatrix(last_data);
+    },
+    style: { fontSize: is_sub ? '10px' : '11px', width: is_sub ? '135px' : '160px' }
   });
-  
+
   row.add(cb);
   var help_btn = ui.Button({ imageUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAA0UlEQVR4nMXSQUoDQRQE0LfQuDGeIOo5RD2OhlxHAjmBJicQ8SxGBc0dzCqhoAVtepjZiLVp5vf86vpVnz/ANVbYYItPLHHZ13iABda4wQSH5bzFK+blvyYWeMRxx33qT4WkKful0byrvsd4a42zKrKHYIqHurgps+pREJwVY39hi9FAgiN8tRScDiQ4x0ddXJaohhDMcF8Xr0r+4x6CE7zjokFsXnKuSX42P+Ou4142LCTJOVHFkxgb1yM7L6e5cxO/kSVJzjEq6eTMzE3Z/489zV4rLYSBhc4AAAAASUVORK5CYII=" });
   var help_txt = ui.Label('Descrição técnica.', { fontSize: '9px', color: '#7f8c8d', shown: false, margin: '2px 0 2px 25px' });
@@ -280,7 +280,7 @@ createConfigRow('out_defor', 'Balanço Desmat.', false, outputs_panel);
 ui.root.insert(0, panel);
 
 function updateLayers() {
-  Object.keys(config).forEach(function(key) {
+  Object.keys(config).forEach(function (key) {
     if (config[key]) {
       var ly = getLayerInstance(key);
       if (ly) Map.add(ly);
@@ -306,11 +306,11 @@ function renderMatrix(obj) {
     var sub = ui.Panel({ layout: is_transposed ? ui.Panel.Layout.flow('horizontal') : ui.Panel.Layout.flow('vertical'), style: { border: '1px solid #ced4da', margin: l_m } });
     active_keys.forEach(function (k) {
       var val = '--', style = { margin: l_m, fontSize: '9px', width: l_w, textAlign: 'center' };
-      
-      if (k === 'lulc_orig') { 
-        var l = obj['lulc_' + year]; 
-        val = l ? ('00' + l).slice(-2) : '--'; 
-        style.backgroundColor = paletaMapBiomas[l]; 
+
+      if (k === 'lulc_orig') {
+        var l = obj['lulc_' + year];
+        val = l ? ('00' + l).slice(-2) : '--';
+        style.backgroundColor = paletaMapBiomas[l];
       }
       else if (k === 'year') val = year.slice(-2);
       else {
@@ -354,25 +354,41 @@ function renderMatrix(obj) {
 Map.onClick(function (coords) {
   inspector_results.clear(); matrix_outer.clear(); matrix_outer.add(ui.Label('Carregando...'));
   var point = ee.Geometry.Point(coords.lon, coords.lat);
-  
-  var combined = final_image
-    .addBands(biomass_stock_bruto)
-    .addBands(lulc.rename(YEARS_ALL.map(function (y) { return 'lulc_' + y })))
-    .addBands(desf_reg.rename(YEARS_ALL.map(function (y) { return 'trans_o_' + y })))
-    .addBands(desf_reg_corrected.rename(YEARS_ALL.map(function (y) { return 'trans_c_' + y })))
-    .addBands(fire_annual.rename(YEARS_ALL.map(function (y) { return 'burn_' + y })))
-    .addBands(fire_freq.rename(['freq_2023']))
-    .addBands(fire_tsf.rename(YEARS_ALL.map(function (y) { return 'tsf_' + y })))
-    .addBands(fire_forest.rename(fire_forest.bandNames().map(function(n){ return 'ff_' + n })))
-    .addBands(fire_savanna.rename(fire_savanna.bandNames().map(function(n){ return 'fs_' + n })))
-    .addBands(fire_grassland.rename(fire_grassland.bandNames().map(function(n){ return 'fg_' + n })))
-    .addBands(logging.rename(logging.bandNames().map(function(n){ return 'log_' + n })));
 
-  combined.reduceRegion({ reducer: ee.Reducer.first(), geometry: point, scale: 30 }).evaluate(function (obj) {
-    if (!obj) return; last_data = obj; renderMatrix(obj);
-    var landsat = ee.ImageCollection('projects/nexgenmap/MapBiomas2/LANDSAT/BRAZIL/mosaics-2').filter(ee.Filter.eq('year', 2023)).filterBounds(point).mosaic();
+  // Imagem combinada com unmask(0) para evitar que pixels sem dados travem o evaluate
+  var combined = final_image
+    .addBands(biomass_stock_bruto.unmask(0))
+    .addBands(lulc.unmask(0).rename(YEARS_ALL.map(function (y) { return 'lulc_' + y })))
+    .addBands(desf_reg.unmask(0).rename(YEARS_ALL.map(function (y) { return 'trans_o_' + y })))
+    .addBands(desf_reg_corrected.unmask(0).rename(YEARS_ALL.map(function (y) { return 'trans_c_' + y })))
+    .addBands(fire_annual.unmask(0).rename(YEARS_ALL.map(function (y) { return 'burn_' + y })))
+    .addBands(fire_freq.unmask(0).rename(['freq_2023']))
+    .addBands(fire_tsf.unmask(0).rename(YEARS_ALL.map(function (y) { return 'tsf_' + y })))
+    .addBands(fire_forest.unmask(0).rename(fire_forest.bandNames().map(function (n) { return 'ff_' + n })))
+    .addBands(fire_savanna.unmask(0).rename(fire_savanna.bandNames().map(function (n) { return 'fs_' + n })))
+    .addBands(fire_grassland.unmask(0).rename(fire_grassland.bandNames().map(function (n) { return 'fg_' + n })))
+    .addBands(logging.unmask(0).rename(logging.bandNames().map(function (n) { return 'log_' + n })));
+
+  combined.reduceRegion({
+    reducer: ee.Reducer.first(),
+    geometry: point,
+    scale: 30,
+    bestEffort: true
+  }).evaluate(function (obj) {
+    if (!obj) {
+      matrix_outer.clear();
+      matrix_outer.add(ui.Label('Erro: Pixel sem dados ou fora da área de estudo.'));
+      return;
+    }
+    last_data = obj;
+    renderMatrix(obj);
+    var landsat = ee.ImageCollection('projects/nexgenmap/MapBiomas2/LANDSAT/BRAZIL/mosaics-2')
+      .filter(ee.Filter.eq('year', 2023))
+      .filterBounds(point)
+      .mosaic();
     Map.layers().insert(0, ui.Map.Layer(landsat, { bands: ['swir1_median_wet', 'nir_median_wet', 'red_median_wet'], gain: [0.08, 0.06, 0.2] }, 'Landsat 2023', false));
   });
 });
 updateLayers(); Map.style().set('cursor', 'crosshair');
+
 

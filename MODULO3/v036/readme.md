@@ -17,7 +17,7 @@ A plataforma CCAL é composta por 4 módulos metodológicos principais, que reú
 - **Módulo de Dano Climático**: Desenvolvido para apoiar o Poder Judiciário, estima o valor do dano causado até a data atual descontando o carbono pretérito de uma ação de desmatamento.
 - **Módulo 1 (FREL/MRV)**: Gera dados de estoques e emissões de carbono alinhados estritamente com as metodologias oficiais submetidas pelo Brasil à UNFCCC (*Forest Reference Emission Level*).
 - **Módulo 2 (FREL Adaptado)**: Expande a metodologia do Módulo 1 ao incluir, além das florestas primárias, as emissões geradas pela passagem do fogo em ecossistemas de savana.
-- **Módulo 3 (SEEG/MapBiomas)**: Segue mapas e abordagens metodologicas utilizadas por diferentes grupos e parceiros do IPAM seus nucleos de pesquisa e monitoramento dos estoques carbono, emissões, fogo, degradação e transições de uso e cobertura da terra e seus efeitos para a sociedades.
+- **Módulo 3 (QCN/MapBiomas)**: Segue mapas e abordagens metodologicas utilizadas por diferentes grupos e parceiros do IPAM, com o que há de mais atual na pesquisa e monitoramento dos estoques carbono, emissões, fogo, degradação e transições de uso e cobertura da terra e seus efeitos para a sociedades.
 
 O foco desta documentação é detalhar o **Módulo 3**. Seu papel é gerar de forma modular e clara os mapas anuais de estoque e as emissões/remoções líquidas de carbono por tipo de distúrbio para alimentar a calculadora.
 
@@ -25,7 +25,7 @@ Para atingir esse objetivo, o pipeline operacional é dividido nas seguintes par
 
 ## 1. Introdução e Contexto
 
-O **Módulo 3** da plataforma CCAL (Calculadora de Carbono) adota uma abordagem metodológica inovadora, alinhada com as estimativas anuais produzidas pelo **SEEG** (Sistema de Estimativas de Emissões e Remoções de Gases de Efeito Estufa), com o histórico de cobertura da terra e regime de fogo do **MapBiomas** e corte seletivo para o **DETER Amazônia** (2017-2024).
+O **Módulo 3** da plataforma CCAL (Calculadora de Carbono) adota uma abordagem metodológica inovadora, alinhada com o histórico de cobertura da terra e regime de fogo do **MapBiomas** e corte seletivo para o **DETER Amazônia** (2017-2024).
 
 Diferente das estimativas convencionais, o Módulo 3 possui duas características exclusivas:
 1. **Considera toda a vegetação nativa** mapeada (Florestas, Savanas e Campos), não se restringindo apenas às fitofisionomias oficiais submetidas no contexto da UNFCCC.
@@ -33,7 +33,7 @@ Diferente das estimativas convencionais, o Módulo 3 possui duas característica
 
 ## 2. Fundamentos Teóricos: Conservação de Massa e Atualização Dinâmica
 
-A base do Módulo 3 é a **Atualização Dinâmica Anual do Estoque de Carbono** (Princípio da Conservação de Massa). 
+A base do Módulo 3 é a **Atualização Dinâmica Anual do Estoque de Carbono**. 
 
 Em vez de descontar a degradação de forma estática apenas na área primária do último ano da série, o algoritmo atualiza pixel a pixel toda a cobertura ao longo do tempo. 
 A equação de transição base é:
@@ -50,7 +50,7 @@ Isso garante precisão técnica, evitando contabilizar a mesma árvore como emis
 
 ---
 
-## 3. Dinâmicas de Emissão e Remoção (Core)
+## 3. Dinâmicas de Emissão e Remoção
 
 A mecânica do Módulo 3 é segmentada pelos principais processos de distúrbio e ganho:
 
@@ -61,16 +61,16 @@ Quando o MapBiomas indica áreas de transição que configuram vegetação secun
 - O limite máximo de crescimento de um pixel nunca ultrapassa o teto do estoque primário original daquela mesma região.
 
 ### B. Emissões por Fogo em Florestas
-Em áreas de cobertura florestal, o fogo gera danos severos e prolongados. O modelo não contabiliza apenas as cinzas iniciais, mas divide as emissões em duas etapas:
-1. **Combustão Imediata (Non-CO₂)**: Queima instantânea de serrapilheira e galhos mortos no solo, liberando altas concentrações de Metano (CH₄) e Óxido Nitroso (N₂O).
-2. **Emissões Tardias (CO₂)**: Árvores maiores não queimam instantaneamente, mas morrem devido aos danos térmicos. Seus troncos apodrecem ao longo dos anos ou décadas subsequentes. O modelo aplica uma curva de decaimento para descontar essa emissão tardia do balanço final de carbono de maneira diluída no tempo.
+Em áreas de cobertura florestal, o fogo gera danos severos e prolongados. O modelo não contabiliza apenas as emissões imediatas, mas divide as emissões em duas etapas:
+1. **Emissões Imediatas (Não-CO₂)**: Queima instantânea de serrapilheira e madeira morta no solo, liberando altas concentrações de Metano (CH₄) e Óxido Nitroso (N₂O).
+2. **Emissões Tardias (CO₂)**: Árvores maiores não queimam instantaneamente, mas podem morrer posteriormente devido aos danos térmicos. Seus troncos apodrecem ao longo dos anos ou décadas subsequentes. O modelo aplica uma curva de decaimento para descontar essa emissão tardia do balanço final de carbono de maneira diluída no tempo.
 
 ### C. Emissões por Fogo em Savanas
 As dinâmicas de savana e campo evoluíram sob o estresse do fogo, possuindo alta resiliência.
-- **Savanas**: Utiliza o *Índice de Intervalo de Retorno do Fogo (FRI)* e o *Time Since Fire (TSF)*. Dependendo da recorrência, o fogo no Cerrado pode levar a pequenos ganhos estruturais pós-recuperação (+2.1%) ou perdas progressivas de biomassa (-0.4% a -2.0% AGB). Para o cálculo de queima instantânea, assume-se que 26% da biomassa acima do solo atua como material combustível fino (componente herbáceo vivo). Atualmente savanas primarias queimadas ao menos uma vez são consideradas como degradadas. Esse é um ponto de Atenção pois o fogo em savanas no cerrado não é um processo destrutivo, mas sim um componente natural do bioma.
+- **Savanas**: Utiliza o *Índice de Intervalo de Retorno do Fogo (FRI)* e o *Tempo Após o Fogo (TSF: time since fire)*. Dependendo da recorrência, o fogo no Cerrado pode levar a pequenos ganhos estruturais pós-recuperação (+2.1%) ou perdas progressivas de biomassa (-0.4% a -2.0% AGB). Para o cálculo de queima instantânea, assume-se que 26% da biomassa acima do solo atua como material combustível fino (componente herbáceo vivo). Atualmente savanas primárias queimadas ao menos uma vez são consideradas como degradadas. Esse é um ponto de atenção pois o fogo em savanas no cerrado não é um processo destrutivo, mas sim um componente natural do bioma.
 
 ### D. Emissões por Fogo em Campos
-- **Campos**: O balanço de longo prazo de carbono (CO₂) é considerado **neutro**, visto que a biomassa herbácea das gramíneas se recupera quase integralmente com as chuvas subsequentes. Logo, as emissões contabilizadas nestes pixels são apenas as instantâneas (CH₄, N₂O e CO), sem mapear a área como estruturalmente degradada a longo prazo.
+- **Campos**: O balanço de longo prazo de carbono (CO₂) é considerado **neutro**, visto que a biomassa herbácea das gramíneas se recupera quase integralmente após o fogo. Logo, as emissões contabilizadas nestes pixels são apenas as instantâneas (CH₄, N₂O), sem mapear a área como estruturalmente degradada a longo prazo.
 
 ### E. Emissões por Corte Seletivo
 Aplicável restritamente à Amazônia, onde o impacto da exploração madeireira legal ou ilegal altera permanentemente o estoque. Baseia-se em vetores do DETER AMAZÔNIA (2017-2024), estabelecendo uma fração média de perda (ex: 19.6%) extraída do dossel florestal por hectare afetado nas classes de vegetação florestal com alertas de corte seletivo.
@@ -211,7 +211,7 @@ graph TD
 ## Contato e Referências
 
 **Equipe CCAL — IPAM Amazônia**
-Wallace Silva, Bárbara Zimbres, Manuela Padilla, Celso Junior, Camila Silva, Aline Pontes, Edriano Souza, Livia Loreto, Paulo Moutinho, Ane Alencar
+Wallace Silva, Bárbara Zimbres, Manuela Padilha, Celso Silva Junior, Camila Silva, Aline Pontes, Edriano Souza, Livia Laureto, Paulo Moutinho, Ane Alencar
 
 **Modelos de emissão:**
 - FATE v2-1: Camila Silva, Aline Pontes, Wallace Silva

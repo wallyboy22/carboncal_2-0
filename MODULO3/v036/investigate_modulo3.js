@@ -64,12 +64,12 @@ var desf_corrected_bwd = ee.Image(YEARS_ALL.slice().reverse().reduce(function (a
 }, null));
 var desf_reg_corrected = desf_corrected.where(desf_corrected.eq(7), desf_corrected_bwd);
 
-/*
+///*
 // 3. MOTOR DE CÁLCULO
 var pixel_area_ha = ee.Image.pixelArea().divide(10000);
 var biome_list = Object.keys(INCR_TABLE);
 var biome_masks = {};
-biome_list.forEach(function (b) { biome_masks[b] = ee.Image(1).paint(biomas.filter(ee.Filter.equals('Bioma', b)), 1).eq(1); });
+biome_list.forEach(function (b) { biome_masks[b] = ee.Image(0).paint(biomas.filter(ee.Filter.eq('Bioma', b)), 1).eq(1); });
 
 var age_acum = ee.Image(0);
 var degr_acum = ee.Image(0);
@@ -91,21 +91,23 @@ YEARS_FIRE.forEach(function (y, i) {
   var f_sv_co2e = fire_savanna.select('CO2_tCO2e_ha_' + y).unmask(0);
   var mad_tC = (i >= YEARS_FIRE.indexOf('2017')) ? logging.select('logging_tC_ha_' + y).unmask(0) : ee.Image(0);
 
+  var degr_emiss_y = f_fl_co2.multiply(TC_TO_TCO2).add(f_sv_co2e).add(mad_tC.multiply(TC_TO_TCO2));
+
   degr_acum = degr_acum.add(incr_y).subtract(f_fl_co2).subtract(f_sv_co2e.divide(TC_TO_TCO2)).subtract(mad_tC);
   var stk_fin = biomass_stock_bruto.select('biomass_stock_' + y).add(degr_acum);
 
   out_bands = out_bands.addBands([
     incr_y.rename('gain_secveg_' + y), stk_fin.rename('stock_' + y),
-    f_fl_co2.multiply(TC_TO_TCO2).multiply(pixel_area_ha).add(f_sv_co2e.multiply(pixel_area_ha)).rename('loss_fire_' + y),
+    degr_emiss_y.subtract(mad_tC.multiply(TC_TO_TCO2)).multiply(pixel_area_ha).rename('loss_fire_' + y),
     mad_tC.multiply(TC_TO_TCO2).multiply(pixel_area_ha).rename('loss_logging_' + y),
-    stk_fin.subtract(biomass_stock_bruto.select('biomass_stock_' + y)).multiply(TC_TO_TCO2).multiply(pixel_area_ha).rename('loss_deforestation_' + y)
+    stk_fin.subtract(biomass_stock_bruto.select('biomass_stock_' + y)).multiply(TC_TO_TCO2).subtract(degr_emiss_y).max(0).multiply(pixel_area_ha).rename('loss_deforestation_' + y)
   ]);
 });
 var final_image = out_bands.float();
-*/
+//*/
 
 // 3. ATIVO DE RESULTADO (PÓS-EXPORTAÇÃO)
-var final_image = ee.Image(FINAL_ASSET);
+// var final_image = ee.Image(FINAL_ASSET);
 var pixel_area_ha = ee.Image.pixelArea().divide(10000);
 
 // 4. INTERFACE E CONFIGURAÇÃO
@@ -431,9 +433,9 @@ function renderMatrix(obj) {
           var area_fact = obj.pixel_area_ha || 0.09; // 0.09 como fallback
           // var area_fact = 0.09; // Alternativa fixa comentada
           var raw_pixel = 0;
-          if (k === 'out_fire') raw_pixel = obj['loss_fire_' + year];
-          if (k === 'out_logging') raw_pixel = obj['loss_selective_logging_' + year];
-          if (k === 'out_defor') raw_pixel = obj['loss_deforestation_' + year];
+          if (k === 'out_fire') raw_pixel = obj['loss_fire_' + year] || 0;
+          if (k === 'out_logging') raw_pixel = obj['loss_selective_logging_' + year] || 0;
+          if (k === 'out_defor') raw_pixel = obj['loss_deforestation_' + year] || 0;
           base = raw_pixel / area_fact;
         }
         else if (k === 'out_secveg') base = obj['gain_secondary_vegetation_' + year];
@@ -468,20 +470,22 @@ function renderMatrix(obj) {
         } else {
           var conv = is_gas ? (base || 0) : convertValue(base || 0, config.unit);
           val = (conv > 0.0001 || conv < -0.0001) ? conv.toFixed(is_gas ? 3 : 1) : ' ';
-          base = conv; // Para colorir com o valor convertido
+          base = conv;
         }
+        
+        style.color = '#000000'; // Cor padrão
         style.backgroundColor = getColor(k, parseFloat(base)) || '#ffffff';
-        // Ajuste de contraste para texto
+        
         var hex = style.backgroundColor;
         if (hex && hex.indexOf('#') === 0) {
-          hex = hex.replace('#', '');
-          var r = parseInt(hex.substr(0, 2), 16);
-          var g = parseInt(hex.substr(2, 2), 16);
-          var b = parseInt(hex.substr(4, 2), 16);
+          var h = hex.replace('#', '');
+          var r = parseInt(h.substr(0, 2), 16);
+          var g = parseInt(h.substr(2, 2), 16);
+          var b = parseInt(h.substr(4, 2), 16);
           if ((r * 0.299 + g * 0.587 + b * 0.114) < 128) style.color = '#ffffff';
         }
       }
-      sub.add(ui.Label(val, style));
+      sub.add(ui.Label(String(val), style));
     });
     container.add(sub);
   });

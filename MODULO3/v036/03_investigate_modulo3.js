@@ -138,11 +138,11 @@ var panel = ui.Panel({ style: { padding: '8px' } });
 var is_transposed = true, last_data = null, target_year = '2023';
 
 var config = {
-  lulc_orig: true, trans_orig: false, trans_adj: true, age_secveg: true, fire_annual: false, fire_freq: false, fire_tsf: false, stock_in: false,
+  lulc_orig: true, trans_orig: false, trans_adj: true, age_secveg: false, fire_annual: false, fire_freq: false, fire_tsf: false, stock_in: false,
   fire_forest: false, fire_forest_co2: false, fire_forest_ch4: false, fire_forest_n2o: false,
   fire_savanna: false, fire_savanna_co2: false, fire_savanna_ch4: false, fire_savanna_n2o: false,
   fire_grassland: false, fire_grassland_ch4: false, fire_grassland_n2o: false,
-  logging_raw: false, out_stock: true, out_fire: false, out_logging: false, out_secveg: false, out_defor: true,
+  logging_raw: false, out_stock: true, out_fire: true, out_logging: true, out_secveg: true, out_defor: true,
   year: true, unit: 'tCO2e/ha'
 };
 
@@ -523,3 +523,11 @@ Map.onClick(function (coords) {
   });
 });
 Map.style().set('cursor', 'crosshair');
+
+// 5. INICIALIZAÇÃO DE CAMADAS ATIVAS
+Object.keys(config).forEach(function (key) {
+  if (config[key] === true && key !== 'year' && key !== 'unit') {
+    var ly = getLayerInstance(key);
+    if (ly) Map.add(ly);
+  }
+});

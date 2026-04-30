@@ -132,6 +132,7 @@ exports.calcForestFireEmissions = function (params) {
     return CO2_mosaic.selfMask().addBands(CH4_mosaic.selfMask()).addBands(N2O_mosaic.selfMask());
 };
 
+//
 /*
 // =============================================================================
 // ÁREA DE TESTE (DESCOMENTE PARA VALIDAR)
@@ -168,4 +169,4 @@ Map.addLayer(fire_emissions, { bands: ['CO2_tC_ha_2023'], min: 0, max: 50, palet
 Map.addLayer(fire_emissions, { bands: ['CH4_t_ha_2023'], min: 0, max: 0.5, palette: ['white', 'blue', 'cyan'] }, 'Total CH4 (t/ha)');
 Map.addLayer(fire_emissions, { bands: ['N2O_t_ha_2023'], min: 0, max: 0.05, palette: ['white', 'green', 'lime'] }, 'Total N2O (t/ha)');
 Map.addLayer(fire_emissions, { }, 'Resultado Bruto (Todas Bandas)', false);
-*/
+//*/

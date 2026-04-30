@@ -87,12 +87,15 @@ var logging_result = exports.calcLoggingEmissions({
     years: years
 });
 
+// Parâmetros de Visualização (Ref: v036/02_investigate_modulo3.js)
+var paletaMapBiomas = require('users/mapbiomas/modules:Palettes.js').get('brazil');
+
 // Camadas de Referência (Inputs)
-Map.addLayer(lulc, { bands: ['classification_2023'] }, 'LULC 2023', false);
-Map.addLayer(amazon_mask, { palette: 'blue' }, 'Máscara Amazônia', false);
-Map.addLayer(forest_mask, { bands: ['classification_2023'], palette: 'green' }, 'Máscara Floresta 2023', false);
+Map.addLayer(lulc, { bands: ['classification_2023'], min: 0, max: 75, palette: paletaMapBiomas }, 'LULC 2023', false);
+Map.addLayer(amazon_mask.updateMask(amazon_mask), { palette: ['blue'] }, 'Máscara Amazônia', false);
+Map.addLayer(forest_mask.selfMask(), { bands: ['classification_2023'], palette: ['green'] }, 'Máscara Floresta 2023', false);
 
 // Camadas de Saída
-Map.addLayer(logging_result, { bands: ['logging_tC_ha_2023'], min: 0, max: 20, palette: ['white', 'brown', 'black'] }, 'Corte Seletivo 2023 (tC/ha)');
+Map.addLayer(logging_result, { bands: ['logging_tC_ha_2023'], min: 0, max: 10, palette: ['white', 'brown'] }, 'Corte Seletivo 2023 (tC/ha)');
 Map.addLayer(logging_result, { }, 'Resultado Bruto (Todas Bandas)', false);
 //*/

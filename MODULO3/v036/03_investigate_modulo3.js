@@ -45,6 +45,9 @@ var biomass_stock_bruto = ee.Image(BASE_ASSET + 'biomass_stock_' + VERSION);
 var sec_veg_increment = ee.Image(BASE_ASSET + 'secondary_veg_increment_' + VERSION);
 var fire_forest = ee.Image(BASE_ASSET + 'fire_forest_emissions_' + VERSION);
 var fire_savanna = ee.Image(BASE_ASSET + 'fire_savanna_emissions_' + VERSION);
+// linha temporaria ate a correcao do dataset de emissão por fogo em savana
+fire_savanna = fire_savanna.select(fire_savanna.bandNames(),fire_savanna.bandNames().map(function(s){return ee.String(s).replace('CO2_tCO2e_ha_','CO2_tC_ha_')}));
+
 var fire_grassland = ee.Image(BASE_ASSET + 'fire_grassland_emissions_' + VERSION);
 var logging = ee.Image(BASE_ASSET + 'logging_emissions_' + VERSION);
 
@@ -99,9 +102,7 @@ YEARS_FIRE.forEach(function (y, i) {
 
   // Componentes via Assets
   var f_fl_co2 = fire_forest.select('CO2_tC_ha_' + y).unmask(0);
-  var f_sv_co2 = fire_savanna.select('CO2_tCO2e_ha_' + y).unmask(0);
-  // linha temporaria ate a correcao do dataset de emissão por fogo em savana
-  f_sv_co2 = fire_savanna.select(fire_savanna.bandNames(),fire_savanna.bandNames().map(function(s){return ee.String(s).replace('CO2_tC_ha_','CO2_tCO2e_ha_')}));
+  var f_sv_co2 = fire_savanna.select('CO2_tC_ha_' + y).unmask(0);
   
   var mad_tC = (i >= YEARS_FIRE.indexOf('2017')) ? logging.select('logging_tC_ha_' + y).unmask(0) : ee.Image(0);
   

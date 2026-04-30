@@ -92,6 +92,7 @@ exports.calcSavannaFireEmissions = function (params) {
     return CO2_bands.addBands(CH4_bands).addBands(N2O_bands);
 };
 
+//
 /*
 // =============================================================================
 // ÁREA DE TESTE (DESCOMENTE PARA VALIDAR)
@@ -127,13 +128,17 @@ var fire_emissions = exports.calcSavannaFireEmissions({
     years: years
 });
 
+// Parâmetros de Visualização (Ref: v036/02_investigate_modulo3.js)
+var paletaMapBiomas = require('users/mapbiomas/modules:Palettes.js').get('brazil');
+
 // Camadas de Referência (Inputs)
-Map.addLayer(lulc, { bands: ['classification_2023'], }, 'LULC 2023', false);
-Map.addLayer(fire_annual.selfMask(), { bands: ['burned_area_2023'], palette: 'red' }, 'Área Queimada 2023', false);
-Map.addLayer(savanna_mask, { bands: ['classification_2023'], palette: 'orange' }, 'Máscara Savana 2023', false);
+Map.addLayer(lulc, { bands: ['classification_2023'], min: 0, max: 75, palette: paletaMapBiomas }, 'LULC 2023', false);
+Map.addLayer(fire_annual.selfMask(), { bands: ['burned_area_2023'], palette: ['red'] }, 'Área Queimada 2023', false);
+Map.addLayer(savanna_mask.selfMask(), { bands: ['classification_2023'], palette: ['orange'] }, 'Máscara Savana 2023', false);
 
 // Camadas de Saída
-Map.addLayer(fire_emissions, { bands: ['CO2_tC_ha_2023'], min: 0, max: 20, palette: ['white', 'orange', 'red'] }, 'Total CO2 Savana (tC/ha)');
-Map.addLayer(fire_emissions, { bands: ['CH4_t_ha_2023'], min: 0, max: 0.1, palette: ['white', 'blue'] }, 'CH4 Savana (t/ha)');
+Map.addLayer(fire_emissions, { bands: ['CO2_tC_ha_2023'], min: 0, max: 50, palette: ['white', 'orange', 'red'] }, 'Total CO2 Savana (tC/ha)');
+Map.addLayer(fire_emissions, { bands: ['CH4_t_ha_2023'], min: 0, max: 0.1, palette: ['white', 'purple'] }, 'CH4 Savana (t/ha)');
+Map.addLayer(fire_emissions, { bands: ['N2O_t_ha_2023'], min: 0, max: 0.01, palette: ['white', 'cyan'] }, 'N2O Savana (t/ha)');
 Map.addLayer(fire_emissions, { }, 'Resultado Bruto (Todas Bandas)', false);
-*/
+//*/

@@ -164,14 +164,17 @@ var fire_emissions = exports.calcForestFireEmissions({
     years: years
 });
 
+// Parâmetros de Visualização (Ref: v036/02_investigate_modulo3.js)
+var paletaMapBiomas = require('users/mapbiomas/modules:Palettes.js').get('brazil');
+
 // Camadas de Referência (Inputs)
-Map.addLayer(lulc, { bands: ['classification_2023'], }, 'LULC 2023', false);
-Map.addLayer(fire_annual.selfMask(), { bands: ['burned_area_2023'], palette: 'red' }, 'Área Queimada 2023', false);
-Map.addLayer(forest_mask, { bands: ['classification_2023'], palette: 'green' }, 'Máscara Floresta 2023', false);
+Map.addLayer(lulc, { bands: ['classification_2023'], min: 0, max: 75, palette: paletaMapBiomas }, 'LULC 2023', false);
+Map.addLayer(fire_annual.selfMask(), { bands: ['burned_area_2023'], palette: ['red'] }, 'Área Queimada 2023', false);
+Map.addLayer(forest_mask.selfMask(), { bands: ['classification_2023'], palette: ['green'] }, 'Máscara Floresta 2023', false);
 
 // Camadas de Saída (Emissões)
-Map.addLayer(fire_emissions, { bands: ['CO2_tC_ha_2023'], min: 0, max: 50, palette: ['white', 'orange', 'red', 'purple'] }, 'Total CO2 (tC/ha)');
-Map.addLayer(fire_emissions, { bands: ['CH4_t_ha_2023'], min: 0, max: 0.5, palette: ['white', 'blue', 'cyan'] }, 'Total CH4 (t/ha)');
-Map.addLayer(fire_emissions, { bands: ['N2O_t_ha_2023'], min: 0, max: 0.05, palette: ['white', 'green', 'lime'] }, 'Total N2O (t/ha)');
+Map.addLayer(fire_emissions, { bands: ['CO2_tC_ha_2023'], min: 0, max: 50, palette: ['white', 'orange', 'red'] }, 'Total CO2 (tC/ha)');
+Map.addLayer(fire_emissions, { bands: ['CH4_t_ha_2023'], min: 0, max: 0.1, palette: ['white', 'purple'] }, 'Total CH4 (t/ha)');
+Map.addLayer(fire_emissions, { bands: ['N2O_t_ha_2023'], min: 0, max: 0.01, palette: ['white', 'cyan'] }, 'Total N2O (t/ha)');
 Map.addLayer(fire_emissions, { }, 'Resultado Bruto (Todas Bandas)', false);
 //*/

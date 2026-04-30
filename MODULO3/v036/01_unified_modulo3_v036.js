@@ -1,11 +1,23 @@
 /**
  * =============================================================================
- * CCAL Módulo 3 — v036 (Unified Script)
- * =============================================================================
- * Script principal: carrega dados, executa equações e exporta resultados.
- * Regra: mapeamento da área emersa do Brasil (exclui água permanente).
+ * PROJETO: CCAL - Módulo 3 (Emissões por Mudança de Uso e Degradação)
+ * VERSÃO: v036
+ * SCRIPT: 00_unified_modulo3_v036.js
+ * DESCRIÇÃO: Orquestrador central do Módulo 3. Integra o processamento completo de 
+ *            emissões por mudança de uso da terra e degradação florestal. Contém 
+ *            a lógica de orquestração temporal e espacial, permitindo a execução 
+ *            modular das equações de fogo, regeneração e exploração madeireira.
+ * -----------------------------------------------------------------------------
+ * INSTITUIÇÃO: IPAM Amazônia
+ * EQUIPE CCAL: Ane Alencar; Bárbara Zimbres; Camila Silva; Celso Silva-Junior; 
+ *              Edriano Souza; Isabel Silva; Lívia Laureto; Manuela Padilha; 
+ *              Paulo Moutinho; Rebecca Maranhão; Valderli Piontekowski; Wallace Silva
+ * ORGANIZAÇÃO: Bárbara Zimbres e Wallace Silva
+ * CONTATO: https://ipam.org.br/contato/fale-conosco/
+ * ATUALIZAÇÃO: 2026-04-30
  * =============================================================================
  */
+
 
 // 1. PARÂMETROS GLOBAIS
 var VERSION = 'v036';

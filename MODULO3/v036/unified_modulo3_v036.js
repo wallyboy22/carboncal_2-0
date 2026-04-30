@@ -463,9 +463,13 @@ function calcForestFireEmissions(params) {
     var annual_fire_freq_gte2 = annual_burned.updateMask(fire_frequency.gte(2)).gte(1);
     var tsf_edit = annual_burned.multiply(0).slice(1).blend(time_since_fire);
 
-    var CO2_mosaic = ee.Image().select();
-    var CH4_mosaic = ee.Image().select();
-    var N2O_mosaic = ee.Image().select();
+    var co2_names = years.map(function (y) { return 'CO2_tC_ha_' + y });
+    var ch4_names = years.map(function (y) { return 'CH4_t_ha_' + y });
+    var n2o_names = years.map(function (y) { return 'N2O_t_ha_' + y });
+
+    var CO2_mosaic = ee.Image.constant(ee.List.repeat(0, co2_names.length)).rename(co2_names).float();
+    var CH4_mosaic = ee.Image.constant(ee.List.repeat(0, ch4_names.length)).rename(ch4_names).float();
+    var N2O_mosaic = ee.Image.constant(ee.List.repeat(0, n2o_names.length)).rename(n2o_names).float();
 
     Object.keys(BIOME_DICT).forEach(function (biome_str) {
         var p = BIOME_DICT[biome_str];
@@ -520,11 +524,11 @@ function calcForestFireEmissions(params) {
         var CH4_y = fAGNcomb_b.multiply(2000).multiply(6.8).divide(1e6).rename(years.map(function (y) { return 'CH4_t_ha_' + y }));
         var N2O_y = fAGNcomb_b.multiply(2000).multiply(0.2).divide(1e6).rename(years.map(function (y) { return 'N2O_t_ha_' + y }));
 
-        CO2_mosaic = CO2_mosaic.bandNames().size().eq(0) ? CO2_y : CO2_mosaic.unmask(0).add(CO2_y.unmask(0));
-        CH4_mosaic = CH4_mosaic.bandNames().size().eq(0) ? CH4_y : CH4_mosaic.unmask(0).add(CH4_y.unmask(0));
-        N2O_mosaic = N2O_mosaic.bandNames().size().eq(0) ? N2O_y : N2O_mosaic.unmask(0).add(N2O_y.unmask(0));
+        CO2_mosaic = CO2_mosaic.where(biome_mask, CO2_y);
+        CH4_mosaic = CH4_mosaic.where(biome_mask, CH4_y);
+        N2O_mosaic = N2O_mosaic.where(biome_mask, N2O_y);
     });
-    return CO2_mosaic.addBands(CH4_mosaic).addBands(N2O_mosaic);
+    return CO2_mosaic.selfMask().addBands(CH4_mosaic.selfMask()).addBands(N2O_mosaic.selfMask());
 }
 
 function calcSavannaFireEmissions(params) {

@@ -130,6 +130,6 @@ Map.addLayer(desf_reg, { bands: ['classification_2023'], min: 0, max: 7, palette
 Map.addLayer(qcn, { bands: ['TOTAL'], min: 0, max: 250, palette: paletaStock }, 'Carbono QCN (tC/ha)', false);
 
 // Camadas de Saída
-Map.addLayer(sec_veg_result, { bands: ['sec_veg_increment_2023'], min: 0, max: 100, palette: ['#edf8e9', '#bae4b3', '#74c476', '#31a354', '#006d2c'] }, 'Estoque Regeneração 2023 (tC/ha)');
+Map.addLayer(sec_veg_result.select('sec_veg_increment_.*'), { bands: ['sec_veg_increment_2023'], min: 0, max: 100, palette: ['#edf8e9', '#bae4b3', '#74c476', '#31a354', '#006d2c'] }, 'Estoque Regeneração 2023 (tC/ha)');
 Map.addLayer(sec_veg_result, { }, 'Resultado Bruto (Todas Bandas)', false);
 //*/

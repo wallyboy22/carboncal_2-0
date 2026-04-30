@@ -52,6 +52,7 @@ exports.calcGrasslandFireEmissions = function (params) {
     return CH4_bands.addBands(N2O_bands);
 };
 
+//
 /*
 // =============================================================================
 // ÁREA DE TESTE (DESCOMENTE PARA VALIDAR)
@@ -91,4 +92,4 @@ Map.addLayer(grassland_mask, { bands: ['classification_2023'], palette: 'yellow'
 // Camadas de Saída
 Map.addLayer(fire_emissions, { bands: ['CH4_t_ha_2023'], min: 0, max: 0.1, palette: ['white', 'blue'] }, 'CH4 Campo (t/ha)');
 Map.addLayer(fire_emissions, { }, 'Resultado Bruto (Todas Bandas)', false);
-*/
+//*/

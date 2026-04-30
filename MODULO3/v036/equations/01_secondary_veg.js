@@ -21,7 +21,6 @@ var geometry =
  * EQUIPE CCAL: Ane Alencar; Bárbara Zimbres; Camila Silva; Celso Silva-Junior; 
  *              Edriano Souza; Isabel Silva; Lívia Laureto; Manuela Padilha; 
  *              Paulo Moutinho; Rebecca Maranhão; Valderli Piontekowski; Wallace Silva
- * ORGANIZAÇÃO: Bárbara Zimbres e Wallace Silva
  * CONTATO: https://ipam.org.br/contato/fale-conosco/
  * ATUALIZAÇÃO: 2026-04-30
  * =============================================================================

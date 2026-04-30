@@ -68,9 +68,15 @@ var qcn = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/RETIFICACAO/c_rect_col10
 var lulc = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_coverage_v1');
 var biomas = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
 
-var forest_mask = lulc.remap([3], [1], 0).rename(lulc.bandNames());
+var forest_mask = (function() {
+    var out = lulc.multiply(0);
+    [3].forEach(function(v) {
+        out = out.where(lulc.eq(v), 1);
+    });
+    return out;
+})();
 var amazon_mask = ee.Image(0).paint(biomas.filter(ee.Filter.eq('Bioma', 'Amazônia')), 1).eq(1);
-var years = ['2020', '2021', '2022', '2023'];
+var years = ['2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024'];
 
 var logging_result = exports.calcLoggingEmissions({
     agb: qcn.select('AGB'),

@@ -84,12 +84,16 @@ var fire_emissions = exports.calcGrasslandFireEmissions({
     years: years
 });
 
+// Parâmetros de Visualização (Ref: v036/02_investigate_modulo3.js)
+var paletaMapBiomas = require('users/mapbiomas/modules:Palettes.js').get('brazil');
+
 // Camadas de Referência (Inputs)
-Map.addLayer(lulc, { bands: ['classification_2023'], }, 'LULC 2023', false);
-Map.addLayer(fire_annual.selfMask(), { bands: ['burned_area_2023'], palette: 'red' }, 'Área Queimada 2023', false);
-Map.addLayer(grassland_mask, { bands: ['classification_2023'], palette: 'yellow' }, 'Máscara Campo 2023', false);
+Map.addLayer(lulc, { bands: ['classification_2023'], min: 0, max: 75, palette: paletaMapBiomas }, 'LULC 2023', false);
+Map.addLayer(fire_annual.selfMask(), { bands: ['burned_area_2023'], palette: ['red'] }, 'Área Queimada 2023', false);
+Map.addLayer(grassland_mask.selfMask(), { bands: ['classification_2023'], palette: ['yellow'] }, 'Máscara Campo 2023', false);
 
 // Camadas de Saída
-Map.addLayer(fire_emissions, { bands: ['CH4_t_ha_2023'], min: 0, max: 0.1, palette: ['white', 'blue'] }, 'CH4 Campo (t/ha)');
+Map.addLayer(fire_emissions, { bands: ['CH4_t_ha_2023'], min: 0, max: 0.1, palette: ['white', 'purple'] }, 'CH4 Campo (t/ha)');
+Map.addLayer(fire_emissions, { bands: ['N2O_t_ha_2023'], min: 0, max: 0.01, palette: ['white', 'cyan'] }, 'N2O Campo (t/ha)');
 Map.addLayer(fire_emissions, { }, 'Resultado Bruto (Todas Bandas)', false);
 //*/

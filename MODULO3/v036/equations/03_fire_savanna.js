@@ -8,7 +8,7 @@ var geometry =
           [-28.735305550775358, -36.49659065368281],
           [-28.735305550775358, 6.702549891783329]]], null, false);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
-/**
+.select('=========================================================================.*')/**
  * =============================================================================
  * PROJETO: CCAL - Módulo 3 (Emissões por Mudança de Uso e Degradação)
  * VERSÃO: v036
@@ -137,8 +137,8 @@ Map.addLayer(fire_annual.selfMask(), { bands: ['burned_area_2023'], palette: ['r
 Map.addLayer(savanna_mask.selfMask(), { bands: ['classification_2023'], palette: ['orange'] }, 'Máscara Savana 2023', false);
 
 // Camadas de Saída
-Map.addLayer(fire_emissions, { bands: ['CO2_tC_ha_2023'], min: 0, max: 50, palette: ['white', 'orange', 'red'] }, 'Total CO2 Savana (tC/ha)');
-Map.addLayer(fire_emissions, { bands: ['CH4_t_ha_2023'], min: 0, max: 0.1, palette: ['white', 'purple'] }, 'CH4 Savana (t/ha)');
-Map.addLayer(fire_emissions, { bands: ['N2O_t_ha_2023'], min: 0, max: 0.01, palette: ['white', 'cyan'] }, 'N2O Savana (t/ha)');
+Map.addLayer(fire_emissions.select('CO2_tC_ha_.*'), { bands: ['CO2_tC_ha_2023'], min: 0, max: 50, palette: ['white', 'orange', 'red'] }, 'Total CO2 Savana (tC/ha)');
+Map.addLayer(fire_emissions.select('CH4_t_ha_.*'), { bands: ['CH4_t_ha_2023'], min: 0, max: 0.1, palette: ['white', 'purple'] }, 'CH4 Savana (t/ha)');
+Map.addLayer(fire_emissions.select('N2O_t_ha_.*'), { bands: ['N2O_t_ha_2023'], min: 0, max: 0.01, palette: ['white', 'cyan'] }, 'N2O Savana (t/ha)');
 Map.addLayer(fire_emissions, { }, 'Resultado Bruto (Todas Bandas)', false);
 //*/

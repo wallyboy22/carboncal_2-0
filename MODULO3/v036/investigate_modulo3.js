@@ -400,16 +400,18 @@ function getColor(key, val) {
     var i = Math.min(palette.length - 1, Math.max(0, Math.floor((val / 40) * (palette.length - 1))));
     color = palette[i];
   } else if (key === 'out_defor') {
-    color = val > 0 ? '#fcc' : '#ffffff';
+    color = val > 0 ? '#ffcccc' : '#ffffff';
   } else if (key === 'out_secveg') {
-    color = val > 0 ? '#cfc' : '#ffffff';
+    color = val > 0 ? '#ccffcc' : '#ffffff';
   } else if (key === 'out_fire') {
-    color = val > 0 ? '#fdb' : '#ffffff';
+    color = val > 0 ? '#ffddbb' : '#ffffff';
   } else if (key === 'out_logging') {
-    color = val > 0 ? '#edc' : '#ffffff';
+    color = val > 0 ? '#eeddcc' : '#ffffff';
   }
   
-  return (typeof color === 'string' && color.indexOf('#') === 0) ? color : '#ffffff';
+  if (!color) return '#ffffff';
+  if (typeof color === 'string' && color.indexOf('#') !== 0) return '#' + color;
+  return typeof color === 'string' ? color : '#ffffff';
 }
 
 function renderMatrix(obj) {
@@ -434,7 +436,8 @@ function renderMatrix(obj) {
       if (k === 'lulc_orig') {
         var l = obj['lulc_' + year];
         val = l ? ('00' + l).slice(-2) : '--';
-        style.backgroundColor = paletaMapBiomas[l];
+        var c = paletaMapBiomas[l];
+        style.backgroundColor = c ? (c.indexOf('#') === 0 ? c : '#' + c) : '#ffffff';
       }
       else if (k === 'year') val = year.slice(-2);
       else {
@@ -568,5 +571,3 @@ Map.onClick(function (coords) {
   });
 });
 updateLayers(); Map.style().set('cursor', 'crosshair');
-
-

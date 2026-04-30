@@ -1,13 +1,3 @@
-/**** Start of imports. If edited, may not auto-convert in the playground. ****/
-var geometry = 
-    /* color: #d63000 */
-    /* shown: false */
-    ee.Geometry.Polygon(
-        [[[-76.54780555077535, 6.702549891783329],
-          [-76.54780555077535, -36.49659065368281],
-          [-28.735305550775358, -36.49659065368281],
-          [-28.735305550775358, 6.702549891783329]]], null, false);
-/***** End of imports. If edited, may not auto-convert in the playground. *****/
 /**
  * =============================================================================
  * CCAL Módulo 3 — v036 (Unified Script)
@@ -387,7 +377,8 @@ Object.keys(export_assets).forEach(function (key) {
         region: brazil_bounds,
         scale: SCALE,
         maxPixels: MAX_PIX,
-        pyramidingPolicy: key === 'final_image' ? 'median' : 'mean'
+        pyramidingPolicy: key === 'final_image' ? 'median' : 'mean',
+        overwrite: true
     });
     print('Task created for: ' + key);
 });

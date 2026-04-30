@@ -132,8 +132,7 @@ exports.calcForestFireEmissions = function (params) {
     return CO2_mosaic.selfMask().addBands(CH4_mosaic.selfMask()).addBands(N2O_mosaic.selfMask());
 };
 
-//
-/*
+///*
 // =============================================================================
 // ÁREA DE TESTE (DESCOMENTE PARA VALIDAR)
 // =============================================================================
@@ -145,7 +144,12 @@ var fire_tsf = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection
 var lulc = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_coverage_v1');
 var forest_mask = lulc.remap([3], [1], 0).rename(lulc.bandNames()); // Simplificado para teste
 
-var years = ['2020', '2021', '2022', '2023'];
+var years = [
+    '1985', '1986', '1987', '1988', '1989', '1990', '1991', '1992', '1993', '1994',
+    '1995', '1996', '1997', '1998', '1999', '2000', '2001', '2002', '2003', '2004',
+    '2005', '2006', '2007', '2008', '2009', '2010', '2011', '2012', '2013', '2014',
+    '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024'
+];
 
 var fire_emissions = exports.calcForestFireEmissions({
     annual_burned: fire_annual,

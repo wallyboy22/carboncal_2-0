@@ -9,10 +9,21 @@ var geometry =
           [-28.735305550775358, 6.702549891783329]]], null, false);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 /**
- * calcLoggingEmissions — CCAL Módulo 3 v036 (05)
- *
- * Calcula a perda de estoque de carbono por corte seletivo na Amazônia
- * baseado em alertas do DETER e frações de perda (MRV REDD+).
+ * =============================================================================
+ * PROJETO: CCAL - Módulo 3 (Emissões por Mudança de Uso e Degradação)
+ * VERSÃO: v036
+ * SCRIPT: 05_logging.js
+ * DESCRIÇÃO: Módulo de estimativa de degradação por exploração madeireira. 
+ *            Utiliza cicatrizes de corte seletivo e fatores de dano (MRV REDD+) 
+ *            para quantificar a redução do estoque de carbono florestal.
+ * -----------------------------------------------------------------------------
+ * INSTITUIÇÃO: IPAM Amazônia
+ * EQUIPE CCAL: Ane Alencar; Bárbara Zimbres; Camila Silva; Celso Silva-Junior; 
+ *              Edriano Souza; Isabel Silva; Lívia Laureto; Manuela Padilha; 
+ *              Paulo Moutinho; Rebecca Maranhão; Valderli Piontekowski; Wallace Silva
+ * CONTATO: https://ipam.org.br/contato/fale-conosco/
+ * ATUALIZAÇÃO: 2026-04-30
+ * =============================================================================
  */
 
 exports.calcLoggingEmissions = function (params) {
@@ -21,13 +32,12 @@ exports.calcLoggingEmissions = function (params) {
     var forest_mask = params.forest_mask;
     var amazon_mask = params.amazon_mask;
     var loss_fraction = params.loss_fraction !== undefined ? params.loss_fraction : 0.196;
-    var years = params.years || [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024];
+    var years = params.years;
 
     var agbUpdated = agb;
     var result = ee.Image().select();
 
     years.forEach(function (year) {
-
         var dis = ee.Image('projects/ee-ipam/assets/MRV_REDD_PARA/0_Activity_Year/degradation_' + year + '_sl_disordered').unmask(0);
         var geo = ee.Image('projects/ee-ipam/assets/MRV_REDD_PARA/0_Activity_Year/degradation_' + year + '_sl_geometric').unmask(0);
 
@@ -44,9 +54,38 @@ exports.calcLoggingEmissions = function (params) {
             .float();
 
         agbUpdated = agbUpdated.subtract(logging_carbon_year.unmask(0));
-
         result = result.addBands(logging_carbon_year);
     });
 
     return result;
 };
+
+/*
+// =============================================================================
+// ÁREA DE TESTE (DESCOMENTE PARA VALIDAR)
+// =============================================================================
+var qcn = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/RETIFICACAO/c_rect_col10');
+var lulc = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_coverage_v1');
+var biomas = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
+
+var forest_mask = lulc.remap([3], [1], 0).rename(lulc.bandNames());
+var amazon_mask = ee.Image(0).paint(biomas.filter(ee.Filter.eq('Bioma', 'Amazônia')), 1).eq(1);
+var years = ['2020', '2021', '2022', '2023'];
+
+var logging_result = exports.calcLoggingEmissions({
+    agb: qcn.select('AGB'),
+    forest_mask: forest_mask,
+    amazon_mask: amazon_mask,
+    loss_fraction: 0.196,
+    years: years
+});
+
+// Camadas de Referência (Inputs)
+Map.addLayer(lulc, { bands: ['classification_2023'] }, 'LULC 2023', false);
+Map.addLayer(amazon_mask, { palette: 'blue' }, 'Máscara Amazônia', false);
+Map.addLayer(forest_mask, { bands: ['classification_2023'], palette: 'green' }, 'Máscara Floresta 2023', false);
+
+// Camadas de Saída
+Map.addLayer(logging_result, { bands: ['logging_tC_ha_2023'], min: 0, max: 20, palette: ['white', 'brown', 'black'] }, 'Corte Seletivo 2023 (tC/ha)');
+Map.addLayer(logging_result, { }, 'Resultado Bruto (Todas Bandas)', false);
+*/

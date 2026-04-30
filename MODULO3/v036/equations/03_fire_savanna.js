@@ -105,7 +105,7 @@ var lulc = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1
 
 var savanna_mask = (function() {
     var out = lulc.multiply(0);
-    [4, 12].forEach(function(v) {
+    [4].forEach(function(v) {
         out = out.where(lulc.eq(v), 1);
     });
     return out;

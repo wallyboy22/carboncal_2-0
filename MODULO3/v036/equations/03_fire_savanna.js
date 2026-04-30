@@ -8,9 +8,9 @@ var geometry =
           [-28.735305550775358, -36.49659065368281],
           [-28.735305550775358, 6.702549891783329]]], null, false);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
-'=========================================================================.*')/**
+/**
  * =============================================================================
- * PROJETO: CCAL - Módulo 3 (Emissões por Mudança de Uso e Degradação)
+* PROJETO: CCAL - Módulo 3 (Emissões por Mudança de Uso e Degradação)
  * VERSÃO: v036
  * SCRIPT: 03_fire_savanna.js
  * DESCRIÇÃO: Algoritmo de emissões por fogo em savanas e campos. Quantifica a 
@@ -92,7 +92,8 @@ exports.calcSavannaFireEmissions = function (params) {
     return CO2_bands.addBands(CH4_bands).addBands(N2O_bands);
 };
 
-///*
+//
+/*
 // =============================================================================
 // ÁREA DE TESTE (DESCOMENTE PARA VALIDAR)
 // =============================================================================

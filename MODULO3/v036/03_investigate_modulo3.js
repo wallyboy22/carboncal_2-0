@@ -46,7 +46,7 @@ var sec_veg_increment = ee.Image(BASE_ASSET + 'secondary_veg_increment_' + VERSI
 var fire_forest = ee.Image(BASE_ASSET + 'fire_forest_emissions_' + VERSION);
 var fire_savanna = ee.Image(BASE_ASSET + 'fire_savanna_emissions_' + VERSION);
 // linha temporaria ate a correcao do dataset de emissão por fogo em savana
-fire_savanna = fire_savanna.select(fire_savanna.bandNames(),fire_savanna.bandNames().map(function(s){return ee.String(s).replace('CO2_tCO2e_ha_','CO2_tC_ha_')}));
+fire_savanna = fire_savanna.select(fire_savanna.bandNames(), fire_savanna.bandNames().map(function (s) { return ee.String(s).replace('CO2_tCO2e_ha_', 'CO2_tC_ha_') }));
 
 var fire_grassland = ee.Image(BASE_ASSET + 'fire_grassland_emissions_' + VERSION);
 var logging = ee.Image(BASE_ASSET + 'logging_emissions_' + VERSION);
@@ -96,18 +96,18 @@ var out_bands = ee.Image().select();
 YEARS_FIRE.forEach(function (y, i) {
   var desf_y = desf_reg_corrected.select('classification_' + y);
   var is_sec = desf_y.eq(3).or(desf_y.eq(5));
-  
+
   // Cálculo da Idade (acumulada no auditor)
   age_acum = age_acum.add(1).multiply(is_sec);
 
   // Componentes via Assets
   var f_fl_co2 = fire_forest.select('CO2_tC_ha_' + y).unmask(0);
   var f_sv_co2 = fire_savanna.select('CO2_tC_ha_' + y).unmask(0);
-  
+
   var mad_tC = (i >= YEARS_FIRE.indexOf('2017')) ? logging.select('logging_tC_ha_' + y).unmask(0) : ee.Image(0);
-  
+
   var incr_y = sec_veg_increment.select('sec_veg_increment_' + y).subtract(
-    (i === 0) ? ee.Image(0) : sec_veg_increment.select('sec_veg_increment_' + YEARS_FIRE[i-1])
+    (i === 0) ? ee.Image(0) : sec_veg_increment.select('sec_veg_increment_' + YEARS_FIRE[i - 1])
   ).unmask(0);
 
   degr_acum = degr_acum.add(incr_y).subtract(f_fl_co2).subtract(f_sv_co2).subtract(mad_tC);
@@ -115,15 +115,15 @@ YEARS_FIRE.forEach(function (y, i) {
   var past_stock_y = (i === 0) ? biomass_stock_bruto.select('biomass_stock_1985') : out_bands.select('stock_' + YEARS_FIRE[i - 1]);
   var stock_bruto_y = biomass_stock_bruto.select('biomass_stock_' + y);
   var stk_fin = stock_bruto_y.where(desf_y.eq(2), stock_bruto_y.add(degr_acum));
-  
+
   var delta_stock_tC = past_stock_y.subtract(stk_fin);
   var degradation_tC_y = f_fl_co2.add(f_sv_co2).add(mad_tC);
-  
+
   var loss_defor_y = delta_stock_tC.subtract(degradation_tC_y).max(0).multiply(TC_TO_TCO2).multiply(pixel_area_ha);
   var gain_secveg_y = delta_stock_tC.min(0).abs().multiply(is_sec).multiply(TC_TO_TCO2).multiply(pixel_area_ha);
 
   out_bands = out_bands.addBands([
-    gain_secveg_y.rename('gain_secondary_vegetation_' + y), 
+    gain_secveg_y.rename('gain_secondary_vegetation_' + y),
     stk_fin.rename('stock_' + y),
     f_fl_co2.add(f_sv_co2).multiply(TC_TO_TCO2).multiply(pixel_area_ha).rename('loss_fire_' + y),
     mad_tC.multiply(TC_TO_TCO2).multiply(pixel_area_ha).rename('loss_selective_logging_' + y),
@@ -294,11 +294,11 @@ panel.add(ui.Button({
 
 var unit_panel = ui.Panel({ layout: ui.Panel.Layout.flow('horizontal'), style: { margin: '0 0 10px 0' } });
 unit_panel.add(ui.Label('Exibir em:', { fontSize: '11px', fontWeight: 'bold' }));
-unit_panel.add(ui.Select({ 
-  items: ['tCO2e/ha', 'tC/ha', 'kgCO2e/ha', 'kgC/ha', 'tCO2e/px', 'tC/px', 'kgCO2e/px', 'kgC/px'], 
-  value: config.unit, 
-  onChange: function (v) { config.unit = v; if (last_data) renderMatrix(last_data); }, 
-  style: { stretch: 'horizontal' } 
+unit_panel.add(ui.Select({
+  items: ['tCO2e/ha', 'tC/ha', 'kgCO2e/ha', 'kgC/ha', 'tCO2e/px', 'tC/px', 'kgCO2e/px', 'kgC/px'],
+  value: config.unit,
+  onChange: function (v) { config.unit = v; if (last_data) renderMatrix(last_data); },
+  style: { stretch: 'horizontal' }
 }));
 panel.add(unit_panel);
 
@@ -392,6 +392,15 @@ function getColor(key, val) {
   return color;
 }
 
+function getContrastColor(hexColor) {
+  if (!hexColor || hexColor.length < 7) return '#000000';
+  var r = parseInt(hexColor.substring(1, 3), 16);
+  var g = parseInt(hexColor.substring(3, 5), 16);
+  var b = parseInt(hexColor.substring(5, 7), 16);
+  var brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return (brightness > 125) ? '#000000' : '#ffffff';
+}
+
 function renderMatrix(obj) {
   matrix_outer.clear();
   var container = ui.Panel({ layout: is_transposed ? ui.Panel.Layout.flow('vertical') : ui.Panel.Layout.flow('horizontal') });
@@ -412,6 +421,7 @@ function renderMatrix(obj) {
         var l = obj['lulc_' + year];
         val = l ? ('00' + l).slice(-2) : '--';
         style.backgroundColor = paletaMapBiomas[l] || '#ffffff';
+        style.color = getContrastColor(style.backgroundColor);
       }
       else if (k === 'year') val = year.slice(-2);
       else {
@@ -448,6 +458,7 @@ function renderMatrix(obj) {
           base = conv;
         }
         style.backgroundColor = getColor(k, parseFloat(base)) || '#ffffff';
+        style.color = getContrastColor(style.backgroundColor);
       }
       sub.add(ui.Label(String(val), style));
     });
@@ -457,12 +468,12 @@ function renderMatrix(obj) {
 
 Map.onClick(function (coords) {
   print('Click detected at:', coords);
-  inspector_results.clear(); 
-  matrix_outer.clear(); 
-  matrix_outer.add(ui.Label('Auditando pixel (aguarde)...', {color: 'gray', fontSize: '12px'}));
-  
+  inspector_results.clear();
+  matrix_outer.clear();
+  matrix_outer.add(ui.Label('Auditando pixel (aguarde)...', { color: 'gray', fontSize: '12px' }));
+
   var point = ee.Geometry.Point(coords.lon, coords.lat);
-  
+
   print('Iniciando montagem do mosaico multibanda...');
   var combined = ee.Image(0).rename('base_zero')
     .addBands(ee.Image.pixelArea().divide(10000).rename('pixel_area_ha'))
@@ -494,20 +505,20 @@ Map.onClick(function (coords) {
     if (err) {
       print('❌ Erro no GEE:', err);
       matrix_outer.clear();
-      matrix_outer.add(ui.Label('Erro no servidor GEE:', {fontWeight: 'bold', color: 'red'}));
-      matrix_outer.add(ui.Label(err, {fontSize: '10px', color: 'red'}));
+      matrix_outer.add(ui.Label('Erro no servidor GEE:', { fontWeight: 'bold', color: 'red' }));
+      matrix_outer.add(ui.Label(err, { fontSize: '10px', color: 'red' }));
       return;
     }
-    
-    if (!obj) { 
+
+    if (!obj) {
       print('⚠️ Objeto de resultado vazio/nulo');
-      matrix_outer.clear(); 
-      matrix_outer.add(ui.Label('Erro de clique: resultado vazio.', {color: 'red'})); 
-      return; 
+      matrix_outer.clear();
+      matrix_outer.add(ui.Label('Erro de clique: resultado vazio.', { color: 'red' }));
+      return;
     }
-    
+
     print('✅ Resultado recebido com sucesso. Renderizando matriz...');
-    last_data = obj; 
+    last_data = obj;
     renderMatrix(obj);
   });
 });

@@ -563,7 +563,7 @@ function calcSavannaFireEmissions(params) {
     years.forEach(function (y) {
         var fire_y = annual_burned.select('.*_' + y);
         var tsf_y = tsf_edit.select('.*_' + y);
-        var freq_y = fire_frequency;
+        var freq_y = fire_frequency.select('.*_' + y);
         var pixel_mask = fire_y.multiply(mask.select('.*_' + y));
 
         var factor = tsf_y.remap(tsf_values, agb_factor_table[0])

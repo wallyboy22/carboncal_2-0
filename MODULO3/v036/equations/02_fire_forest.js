@@ -143,7 +143,7 @@ var fire_annual = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collect
 var fire_freq = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_fire_frequency_v1').select('fire_frequency_1985_.*');
 var fire_tsf = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_time_after_fire_v1').select('classification_.*');
 var lulc = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_coverage_v1');
-var forest_mask = lulc.where(lulc.eq(3),1);
+var forest_mask = lulc.multiply(0).where(lulc.eq(3), 1);
 
 var years = [
             '1986', '1987', '1988', '1989', '1990', '1991', '1992', '1993', '1994',

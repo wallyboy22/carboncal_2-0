@@ -21,6 +21,7 @@ var geometry =
  * EQUIPE CCAL: Ane Alencar; Bárbara Zimbres; Camila Silva; Celso Silva-Junior; 
  *              Edriano Souza; Isabel Silva; Lívia Laureto; Manuela Padilha; 
  *              Paulo Moutinho; Rebecca Maranhão; Valderli Piontekowski; Wallace Silva
+ * ORGANIZAÇÃO: Bárbara Zimbres e Wallace Silva
  * CONTATO: https://ipam.org.br/contato/fale-conosco/
  * ATUALIZAÇÃO: 2026-04-30
  * =============================================================================
@@ -97,11 +98,22 @@ var desf_reg = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection
 var biomas = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
 var qcn = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/RETIFICACAO/c_rect_col10');
 
-var years = ['2020', '2021', '2022', '2023'];
+var years = [
+    '1985', '1986', '1987', '1988', '1989', '1990', '1991', '1992', '1993', '1994',
+    '1995', '1996', '1997', '1998', '1999', '2000', '2001', '2002', '2003', '2004',
+    '2005', '2006', '2007', '2008', '2009', '2010', '2011', '2012', '2013', '2014',
+    '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024'
+];
 
 var sec_veg_result = exports.calcSecondaryVegIncrement({
     desf_reg_corrected: desf_reg,
-    grass_forest: lulc.remap([3, 4, 11, 12, 13], [2, 2, 1, 1, 1], 0).rename(lulc.bandNames()),
+    grass_forest: (function() {
+        var out = lulc.multiply(0);
+        [3, 4, 11, 12, 13].forEach(function(v, i) {
+            out = out.where(lulc.eq(v), [2, 2, 1, 1, 1][i]);
+        });
+        return out;
+    })(),
     total_carbon: qcn.select('TOTAL'),
     biomas: biomas,
     years: years

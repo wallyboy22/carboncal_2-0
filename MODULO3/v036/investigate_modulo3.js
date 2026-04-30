@@ -64,8 +64,7 @@ var desf_corrected_bwd = ee.Image(YEARS_ALL.slice().reverse().reduce(function (a
 }, null));
 var desf_reg_corrected = desf_corrected.where(desf_corrected.eq(7), desf_corrected_bwd);
 
-///*
-// 3. MOTOR DE CÁLCULO
+// 3. MOTOR DE CÁLCULO (ATIVADO PARA TESTES)
 var pixel_area_ha = ee.Image.pixelArea().divide(10000);
 var biome_list = Object.keys(INCR_TABLE);
 var biome_masks = {};
@@ -88,25 +87,40 @@ YEARS_FIRE.forEach(function (y, i) {
   });
 
   var f_fl_co2 = fire_forest.select('CO2_tC_ha_' + y).unmask(0);
-  var f_sv_co2e = fire_savanna.select('CO2_tCO2e_ha_' + y).unmask(0);
+  var f_sv_co2 = fire_savanna.select('CO2_tC_ha_' + y).unmask(0);
   var mad_tC = (i >= YEARS_FIRE.indexOf('2017')) ? logging.select('logging_tC_ha_' + y).unmask(0) : ee.Image(0);
 
-  var degr_emiss_y = f_fl_co2.multiply(TC_TO_TCO2).add(f_sv_co2e).add(mad_tC.multiply(TC_TO_TCO2));
+  // Atualiza degradação acumulada: estoque líquido de degradação/ganho
+  degr_acum = degr_acum.add(incr_y).subtract(f_fl_co2).subtract(f_sv_co2).subtract(mad_tC);
 
-  degr_acum = degr_acum.add(incr_y).subtract(f_fl_co2).subtract(f_sv_co2e.divide(TC_TO_TCO2)).subtract(mad_tC);
-  var stk_fin = biomass_stock_bruto.select('biomass_stock_' + y).add(degr_acum);
+  var past_stock_y = (i === 0) ? biomass_stock_bruto.select('biomass_stock_1985') : out_bands.select('stock_' + YEARS_FIRE[i - 1]);
+  // O estoque final só recebe a degradação acumulada se ainda for Floresta Primária (classe 2)
+  var stock_bruto_y = biomass_stock_bruto.select('biomass_stock_' + y);
+  var stk_fin = stock_bruto_y.where(desf_y.eq(2), stock_bruto_y.add(degr_acum));
+  
+  // Balanço de carbono (tC)
+  var delta_stock_tC = past_stock_y.subtract(stk_fin);
+  
+  // Degradação do ano (CO2 apenas) para desconto
+  var degradation_tC_y = f_fl_co2.add(f_sv_co2).add(mad_tC);
+  
+  // Desmatamento = Balanço - Degradação (Isola a conversão de uso)
+  var loss_defor_y = delta_stock_tC.subtract(degradation_tC_y).max(0).multiply(TC_TO_TCO2).multiply(pixel_area_ha);
+  
+  // Ganho Secundária = Balanço Negativo (Crescimento)
+  var gain_secveg_y = delta_stock_tC.min(0).abs().multiply(is_sec).multiply(TC_TO_TCO2).multiply(pixel_area_ha);
 
   out_bands = out_bands.addBands([
-    incr_y.rename('gain_secveg_' + y), stk_fin.rename('stock_' + y),
-    degr_emiss_y.subtract(mad_tC.multiply(TC_TO_TCO2)).multiply(pixel_area_ha).rename('loss_fire_' + y),
-    mad_tC.multiply(TC_TO_TCO2).multiply(pixel_area_ha).rename('loss_logging_' + y),
-    stk_fin.subtract(biomass_stock_bruto.select('biomass_stock_' + y)).multiply(TC_TO_TCO2).subtract(degr_emiss_y).max(0).multiply(pixel_area_ha).rename('loss_deforestation_' + y)
+    gain_secveg_y.rename('gain_secondary_vegetation_' + y), 
+    stk_fin.rename('stock_' + y),
+    f_fl_co2.add(f_sv_co2).multiply(TC_TO_TCO2).multiply(pixel_area_ha).rename('loss_fire_' + y),
+    mad_tC.multiply(TC_TO_TCO2).multiply(pixel_area_ha).rename('loss_selective_logging_' + y),
+    loss_defor_y.rename('loss_deforestation_' + y)
   ]);
 });
 var final_image = out_bands.float();
-//*/
 
-// 3. ATIVO DE RESULTADO (PÓS-EXPORTAÇÃO)
+// 3. ATIVO DE RESULTADO (COMENTADO PARA USAR O MOTOR ACIMA)
 // var final_image = ee.Image(FINAL_ASSET);
 var pixel_area_ha = ee.Image.pixelArea().divide(10000);
 
@@ -209,7 +223,7 @@ function getLayerInstance(key) {
       break;
     case 'fire_savanna':
     case 'fire_savanna_co2':
-      b_name = 'CO2_tCO2e_ha_' + target_year;
+      b_name = 'CO2_tC_ha_' + target_year;
       img = fire_savanna.updateMask(fire_savanna.select(b_name).neq(0));
       vis = { bands: [b_name], min: 0, max: 50, palette: ['white', 'orange', 'red'] };
       break;
@@ -334,7 +348,7 @@ createConfigRow('fire_forest_co2', '↳ CO2 (tC)', true, inputs_panel);
 createConfigRow('fire_forest_ch4', '↳ CH4 (t)', true, inputs_panel);
 createConfigRow('fire_forest_n2o', '↳ N2O (t)', true, inputs_panel);
 createConfigRow('fire_savanna', 'FOGO SAVANA', false, inputs_panel);
-createConfigRow('fire_savanna_co2', '↳ CO2 (tCO2e)', true, inputs_panel);
+createConfigRow('fire_savanna_co2', '↳ CO2 (tC)', true, inputs_panel);
 createConfigRow('fire_savanna_ch4', '↳ CH4 (t)', true, inputs_panel);
 createConfigRow('fire_savanna_n2o', '↳ N2O (t)', true, inputs_panel);
 createConfigRow('fire_grassland', 'FOGO CAMPESTRE', false, inputs_panel);
@@ -429,16 +443,16 @@ function renderMatrix(obj) {
         else if (k === 'trans_orig') base = obj['trans_o_' + year];
         else if (k === 'trans_adj') base = obj['trans_c_' + year];
         else if (k === 'out_stock') base = obj['stock_' + year];
-        else if (k === 'out_fire' || k === 'out_defor' || k === 'out_logging') {
+        else if (k === 'out_fire' || k === 'out_defor' || k === 'out_logging' || k === 'out_secveg') {
           var area_fact = obj.pixel_area_ha || 0.09; // 0.09 como fallback
           // var area_fact = 0.09; // Alternativa fixa comentada
           var raw_pixel = 0;
           if (k === 'out_fire') raw_pixel = obj['loss_fire_' + year] || 0;
           if (k === 'out_logging') raw_pixel = obj['loss_selective_logging_' + year] || 0;
           if (k === 'out_defor') raw_pixel = obj['loss_deforestation_' + year] || 0;
-          base = raw_pixel / area_fact;
+          if (k === 'out_secveg') raw_pixel = obj['gain_secondary_vegetation_' + year] || 0;
+          base = (raw_pixel / area_fact) / TC_TO_TCO2;
         }
-        else if (k === 'out_secveg') base = obj['gain_secondary_vegetation_' + year];
         else if (k === 'fire_annual') base = obj['burn_' + year];
         else if (k === 'fire_freq') base = obj['freq_' + year];
         else if (k === 'fire_tsf') base = obj['tsf_' + year];
@@ -450,11 +464,10 @@ function renderMatrix(obj) {
           base = obj[prefix_ff + '_' + year];
         }
         else if (k.indexOf('fire_savanna') !== -1) {
-          var prefix_fs = 'fs_CO2_tCO2e_ha';
+          var prefix_fs = 'fs_CO2_tC_ha';
           if (k.indexOf('_ch4') !== -1) prefix_fs = 'fs_CH4_t_ha';
           if (k.indexOf('_n2o') !== -1) prefix_fs = 'fs_N2O_t_ha';
-          var raw = obj[prefix_fs + '_' + year];
-          base = (k.indexOf('_ch4') === -1 && k.indexOf('_n2o') === -1) ? (raw / TC_TO_TCO2) : raw;
+          base = obj[prefix_fs + '_' + year];
         }
         else if (k.indexOf('fire_grassland') !== -1) {
           var prefix_fg = 'fg_CH4_t_ha';
@@ -523,7 +536,7 @@ Map.onClick(function (coords) {
     .addBands(fire_forest.select('CH4_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'ff_CH4_t_ha_' + y })))
     .addBands(fire_forest.select('N2O_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'ff_N2O_t_ha_' + y })))
     // Emissões Savana
-    .addBands(fire_savanna.select('CO2_tCO2e_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fs_CO2_tCO2e_ha_' + y })))
+    .addBands(fire_savanna.select('CO2_tC_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fs_CO2_tC_ha_' + y })))
     .addBands(fire_savanna.select('CH4_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fs_CH4_t_ha_' + y })))
     .addBands(fire_savanna.select('N2O_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fs_N2O_t_ha_' + y })))
     // Emissões Campo

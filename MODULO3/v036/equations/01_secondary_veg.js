@@ -50,7 +50,7 @@ exports.calcSecondaryVegIncrement = function (params) {
     });
 
     var is_sec_veg = desf_reg.eq(3).or(desf_reg.eq(5));
-    var age_stack = ee.Image(0); 
+    var age_stack = ee.Image(0);
     var stock_stack = ee.Image().select();
 
     years.forEach(function (year, i) {
@@ -88,6 +88,7 @@ exports.calcSecondaryVegIncrement = function (params) {
     return stock_stack;
 };
 
+//
 /*
 // =============================================================================
 // ÁREA DE TESTE (DESCOMENTE PARA VALIDAR)
@@ -118,12 +119,17 @@ var sec_veg_result = exports.calcSecondaryVegIncrement({
     years: years
 });
 
+// Parâmetros de Visualização (Ref: v036/02_investigate_modulo3.js)
+var paletaMapBiomas = require('users/mapbiomas/modules:Palettes.js').get('brazil');
+var paletaTrans = ["#ffffff", '#faf5d1', '#3f7849', '#5bcf20', '#ea1c1c', '#b4f792', '#fe9934', '#303149'];
+var paletaStock = ["#440154", "#46327e", "#365c8d", "#277f8e", "#1fa187", "#4ac16d", "#a0da39", "#fde725"];
+
 // Camadas de Referência (Inputs)
-Map.addLayer(lulc, { bands: ['classification_2023'] }, 'LULC 2023', false);
-Map.addLayer(desf_reg, { bands: ['classification_2023'] }, 'Desf/Reg 2023', false);
-Map.addLayer(qcn, { bands: ['TOTAL'], min: 0, max: 200 }, 'Carbono QCN (tC/ha)', false);
+Map.addLayer(lulc, { bands: ['classification_2023'], min: 0, max: 75, palette: paletaMapBiomas }, 'LULC 2023', false);
+Map.addLayer(desf_reg, { bands: ['classification_2023'], min: 0, max: 7, palette: paletaTrans }, 'Desf/Reg 2023', false);
+Map.addLayer(qcn, { bands: ['TOTAL'], min: 0, max: 250, palette: paletaStock }, 'Carbono QCN (tC/ha)', false);
 
 // Camadas de Saída
-Map.addLayer(sec_veg_result, { bands: ['sec_veg_increment_2023'], min: 0, max: 100, palette: ['white', 'green', 'darkgreen'] }, 'Estoque Regenação 2023 (tC/ha)');
+Map.addLayer(sec_veg_result, { bands: ['sec_veg_increment_2023'], min: 0, max: 100, palette: ['#edf8e9', '#bae4b3', '#74c476', '#31a354', '#006d2c'] }, 'Estoque Regeneração 2023 (tC/ha)');
 Map.addLayer(sec_veg_result, { }, 'Resultado Bruto (Todas Bandas)', false);
-*/
+//*/

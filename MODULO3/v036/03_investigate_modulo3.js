@@ -55,6 +55,16 @@ var fire_annual = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collect
 var fire_freq = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_fire_frequency_v1').select('fire_frequency_1985_.*');
 var fire_tsf = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_time_after_fire_v1').select('classification_.*');
 
+print('--- Validação de Ativos (Bands) ---');
+print('LULC bands:', lulc.bandNames().length());
+print('Desf/Reg bands:', desf_reg.bandNames().length());
+print('Fire Annual bands:', fire_annual.bandNames().length());
+print('Fire Freq bands:', fire_freq.bandNames().length());
+print('Fire TSF bands:', fire_tsf.bandNames().length());
+print('Biomass Stock bands:', biomass_stock_bruto.bandNames().length());
+print('Fire Forest bands:', fire_forest.bandNames().length());
+print('Logging bands:', logging.bandNames().length());
+
 var paletaMapBiomas = require('users/mapbiomas/modules:Palettes.js').get('brazil');
 var paletaTrans = ["#ffffff", '#faf5d1', '#3f7849', '#5bcf20', '#ea1c1c', '#b4f792', '#fe9934', '#303149'];
 var paletaStock = ["#440154", "#46327e", "#365c8d", "#277f8e", "#1fa187", "#4ac16d", "#a0da39", "#fde725"];
@@ -89,7 +99,10 @@ YEARS_FIRE.forEach(function (y, i) {
 
   // Componentes via Assets
   var f_fl_co2 = fire_forest.select('CO2_tC_ha_' + y).unmask(0);
-  var f_sv_co2 = fire_savanna.select('CO2_tC_ha_' + y).unmask(0);
+  var f_sv_co2 = fire_savanna.select('CO2_tCO2e_ha_' + y).unmask(0);
+  // linha temporaria ate a correcao do dataset de emissão por fogo em savana
+  f_sv_co2 = fire_savanna.select(fire_savanna.bandNames(),fire_savanna.bandNames().map(function(s){return ee.String(s).replace('CO2_tC_ha_','CO2_tCO2e_ha_')}));
+  
   var mad_tC = (i >= YEARS_FIRE.indexOf('2017')) ? logging.select('logging_tC_ha_' + y).unmask(0) : ee.Image(0);
   
   var incr_y = sec_veg_increment.select('sec_veg_increment_' + y).subtract(
@@ -442,8 +455,14 @@ function renderMatrix(obj) {
 }
 
 Map.onClick(function (coords) {
-  inspector_results.clear(); matrix_outer.clear(); matrix_outer.add(ui.Label('Carregando...'));
+  print('Click detected at:', coords);
+  inspector_results.clear(); 
+  matrix_outer.clear(); 
+  matrix_outer.add(ui.Label('Auditando pixel (aguarde)...', {color: 'gray', fontSize: '12px'}));
+  
   var point = ee.Geometry.Point(coords.lon, coords.lat);
+  
+  print('Iniciando montagem do mosaico multibanda...');
   var combined = ee.Image(0).rename('base_zero')
     .addBands(ee.Image.pixelArea().divide(10000).rename('pixel_area_ha'))
     .addBands(final_image.unmask(0))
@@ -464,14 +483,31 @@ Map.onClick(function (coords) {
     .addBands(fire_grassland.select('N2O_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fg_N2O_t_ha_' + y })))
     .addBands(logging.select('logging_tC_ha_.*').unmask(0).rename(['2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024'].map(function (y) { return 'log_logging_tC_ha_' + y })));
 
+  print('Executando reduceRegion no ponto...');
   combined.reduceRegion({
     reducer: ee.Reducer.mean(),
     geometry: point.buffer(10),
     scale: 30,
     bestEffort: true
-  }).evaluate(function (obj) {
-    if (!obj) { matrix_outer.clear(); matrix_outer.add(ui.Label('Erro de clique.')); return; }
-    last_data = obj; renderMatrix(obj);
+  }).evaluate(function (obj, err) {
+    if (err) {
+      print('❌ Erro no GEE:', err);
+      matrix_outer.clear();
+      matrix_outer.add(ui.Label('Erro no servidor GEE:', {fontWeight: 'bold', color: 'red'}));
+      matrix_outer.add(ui.Label(err, {fontSize: '10px', color: 'red'}));
+      return;
+    }
+    
+    if (!obj) { 
+      print('⚠️ Objeto de resultado vazio/nulo');
+      matrix_outer.clear(); 
+      matrix_outer.add(ui.Label('Erro de clique: resultado vazio.', {color: 'red'})); 
+      return; 
+    }
+    
+    print('✅ Resultado recebido com sucesso. Renderizando matriz...');
+    last_data = obj; 
+    renderMatrix(obj);
   });
 });
 Map.style().set('cursor', 'crosshair');

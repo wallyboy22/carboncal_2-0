@@ -132,8 +132,7 @@ exports.calcForestFireEmissions = function (params) {
     return CO2_mosaic.selfMask().addBands(CH4_mosaic.selfMask()).addBands(N2O_mosaic.selfMask());
 };
 
-//
-/* 
+///* 
 // =============================================================================
 // ÁREA DE TESTE (DESCOMENTE PARA VALIDAR)
 // =============================================================================
@@ -173,8 +172,8 @@ Map.addLayer(fire_annual.selfMask(), { bands: ['burned_area_2023'], palette: ['r
 Map.addLayer(forest_mask.selfMask(), { bands: ['classification_2023'], palette: ['green'] }, 'Máscara Floresta 2023', false);
 
 // Camadas de Saída (Emissões)
-Map.addLayer(fire_emissions, { bands: ['CO2_tC_ha_2023'], min: 0, max: 50, palette: ['white', 'orange', 'red'] }, 'Total CO2 (tC/ha)');
-Map.addLayer(fire_emissions, { bands: ['CH4_t_ha_2023'], min: 0, max: 0.1, palette: ['white', 'purple'] }, 'Total CH4 (t/ha)');
-Map.addLayer(fire_emissions, { bands: ['N2O_t_ha_2023'], min: 0, max: 0.01, palette: ['white', 'cyan'] }, 'Total N2O (t/ha)');
+Map.addLayer(fire_emissions.select('CO2_tC_ha.*'), { bands: ['CO2_tC_ha_2023'], min: 0, max: 50, palette: ['white', 'orange', 'red'] }, 'Total CO2 (tC/ha)');
+Map.addLayer(fire_emissions.select('CH4_t_ha_.*'), { bands: ['CH4_t_ha_2023'], min: 0, max: 0.1, palette: ['white', 'purple'] }, 'Total CH4 (t/ha)');
+Map.addLayer(fire_emissions.select('N2O_t_ha_.*'), { bands: ['N2O_t_ha_2023'], min: 0, max: 0.01, palette: ['white', 'cyan'] }, 'Total N2O (t/ha)');
 Map.addLayer(fire_emissions, { }, 'Resultado Bruto (Todas Bandas)', false);
 //*/

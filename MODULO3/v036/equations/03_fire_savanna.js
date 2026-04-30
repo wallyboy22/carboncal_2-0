@@ -102,8 +102,19 @@ var fire_freq = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collectio
 var fire_tsf = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_time_after_fire_v1').select('classification_.*');
 var lulc = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_coverage_v1');
 
-var savanna_mask = lulc.remap([4, 12], [1, 1], 0).rename(lulc.bandNames()); 
-var years = ['2020', '2021', '2022', '2023'];
+var savanna_mask = (function() {
+    var out = lulc.multiply(0);
+    [4, 12].forEach(function(v) {
+        out = out.where(lulc.eq(v), 1);
+    });
+    return out;
+})();
+var years = [
+    '1986', '1987', '1988', '1989', '1990', '1991', '1992', '1993', '1994',
+    '1995', '1996', '1997', '1998', '1999', '2000', '2001', '2002', '2003', '2004',
+    '2005', '2006', '2007', '2008', '2009', '2010', '2011', '2012', '2013', '2014',
+    '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024'
+];
 
 var fire_emissions = exports.calcSavannaFireEmissions({
     annual_burned: fire_annual,

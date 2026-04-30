@@ -154,6 +154,21 @@ var row_titles = {
   'logging_raw': '🪓Log', 'out_stock': 'Estoque Final', 'out_fire': 'Fogo Total', 'out_logging': 'Madeira Total', 'out_secveg': 'Regeneração Total', 'out_defor': 'Balanço Desmat.'
 };
 
+var click_layer = ui.Map.Layer(ee.Geometry.Point([0, 0]), { color: 'FF00FF' }, '📍 Ponto Selecionado', false);
+
+function updateLayerVisibility(key, shown) {
+  var ly = getLayerInstance(key);
+  if (!ly) return;
+  if (shown) {
+    Map.add(ly);
+  } else {
+    Map.layers().remove(ly);
+  }
+  // Garante que o ponto de clique esteja sempre no topo
+  Map.layers().remove(click_layer);
+  Map.layers().add(click_layer);
+}
+
 var layers = {};
 function getLayerInstance(key) {
   if (layers[key]) return layers[key];
@@ -326,8 +341,7 @@ function createConfigRow(key, label_text, is_sub, target_panel) {
     value: config[key],
     onChange: function (c) {
       config[key] = c;
-      var ly = getLayerInstance(key);
-      if (ly) { if (c) Map.add(ly); else Map.layers().remove(ly); }
+      updateLayerVisibility(key, c);
       if (last_data) renderMatrix(last_data);
     },
     style: { fontSize: is_sub ? '10px' : '11px', width: is_sub ? '135px' : '160px' }
@@ -473,6 +487,8 @@ Map.onClick(function (coords) {
   matrix_outer.add(ui.Label('Auditando pixel (aguarde)...', { color: 'gray', fontSize: '12px' }));
 
   var point = ee.Geometry.Point(coords.lon, coords.lat);
+  click_layer.setEeObject(point);
+  click_layer.setShown(true);
 
   print('Iniciando montagem do mosaico multibanda...');
   var combined = ee.Image(0).rename('base_zero')
@@ -527,7 +543,6 @@ Map.style().set('cursor', 'crosshair');
 // 5. INICIALIZAÇÃO DE CAMADAS ATIVAS
 Object.keys(config).forEach(function (key) {
   if (config[key] === true && key !== 'year' && key !== 'unit') {
-    var ly = getLayerInstance(key);
-    if (ly) Map.add(ly);
+    updateLayerVisibility(key, true);
   }
 });

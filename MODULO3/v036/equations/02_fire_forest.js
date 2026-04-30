@@ -9,21 +9,22 @@ var geometry =
           [-28.735305550775358, 6.702549891783329]]], null, false);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 /**
- * calcForestFireEmissions — CCAL Módulo 3 v036 (02)
- *
- * Implementa o modelo FATE (Fire Adapted Tree Estimator) para calcular
- * emissões de CO2 (imediata + decomposição lenta) e gases não-CO2.
- *
- * Entradas (params):
- *   annual_burned   — ee.Image (MapBiomas Fogo)
- *   fire_frequency  — ee.Image
- *   time_since_fire — ee.Image
- *   agb, cdw, litter— ee.Image (QCN)
- *   forest_mask     — ee.Image (Máscara de floresta estável)
- *   biomas          — ee.FeatureCollection
- *   years           — Array de anos
- *
- * Retorna: ee.Image com bandas de CO2_tC_ha, CH4_t_ha, N2O_t_ha, etc.
+ * =============================================================================
+ * PROJETO: CCAL - Módulo 3 (Emissões por Mudança de Uso e Degradação)
+ * VERSÃO: v036
+ * SCRIPT: 02_fire_forest.js
+ * DESCRIÇÃO: Motor de cálculo para degradação por fogo em formações florestais. 
+ *            Implementa o modelo FATE para estimar a mortalidade de árvores e a 
+ *            liberação gradual de carbono e gases de efeito estufa (CO2, CH4, N2O).
+ * -----------------------------------------------------------------------------
+ * INSTITUIÇÃO: IPAM Amazônia
+ * EQUIPE CCAL: Ane Alencar; Bárbara Zimbres; Camila Silva; Celso Silva-Junior; 
+ *              Edriano Souza; Isabel Silva; Lívia Laureto; Manuela Padilha; 
+ *              Paulo Moutinho; Rebecca Maranhão; Valderli Piontekowski; Wallace Silva
+ * ORGANIZAÇÃO: Camila Silva, Aline Pontes e Wallace Silva
+ * CONTATO: https://ipam.org.br/contato/fale-conosco/
+ * ATUALIZAÇÃO: 2026-04-30
+ * =============================================================================
  */
 
 exports.calcForestFireEmissions = function (params) {
@@ -31,12 +32,8 @@ exports.calcForestFireEmissions = function (params) {
     var annual_burned = params.annual_burned;
     var fire_frequency = params.fire_frequency;
     var time_since_fire = params.time_since_fire;
-    var agb = params.agb;
-    var cdw = params.cdw;
-    var litter = params.litter;
-    var forest_mask = params.forest_mask;
-    var biomas = params.biomas;
-    var years = params.years;
+    var agb = params.agb; var cdw = params.cdw; var litter = params.litter;
+    var forest_mask = params.forest_mask; var biomas = params.biomas; var years = params.years;
 
     var BIOME_DICT = {
         'Amazônia': {
@@ -69,18 +66,18 @@ exports.calcForestFireEmissions = function (params) {
     var annual_fire_freq_gte2 = annual_burned.updateMask(fire_frequency.gte(2)).gte(1);
     var tsf_edit = annual_burned.multiply(0).slice(1).blend(time_since_fire);
 
-    var CO2_mosaic = ee.Image().select();
-    var CH4_mosaic = ee.Image().select();
-    var N2O_mosaic = ee.Image().select();
-    var CO_mosaic = ee.Image().select();
-    var NOX_mosaic = ee.Image().select();
+    var co2_names = years.map(function (y) { return 'CO2_tC_ha_' + y });
+    var ch4_names = years.map(function (y) { return 'CH4_t_ha_' + y });
+    var n2o_names = years.map(function (y) { return 'N2O_t_ha_' + y });
+
+    var CO2_mosaic = ee.Image.constant(ee.List.repeat(0, co2_names.length)).rename(co2_names).float();
+    var CH4_mosaic = ee.Image.constant(ee.List.repeat(0, ch4_names.length)).rename(ch4_names).float();
+    var N2O_mosaic = ee.Image.constant(ee.List.repeat(0, n2o_names.length)).rename(n2o_names).float();
 
     Object.keys(BIOME_DICT).forEach(function (biome_str) {
         var p = BIOME_DICT[biome_str];
-        var biome_geom = biomas.filter(ee.Filter.inList('Bioma', [biome_str]));
-        var biome_mask = ee.Image(1).paint(biome_geom).neq(1);
-
-        var first = ee.Image().rename('fLeftAGB_1985').addBands(ee.Image().rename('fLeftAGN_1985'));
+        var biome_mask = ee.Image(0).paint(biomas.filter(ee.Filter.eq('Bioma', biome_str)), 1).eq(1);
+        var first = ee.Image(0).rename('fLeftAGB_1985').addBands(ee.Image(0).rename('fLeftAGN_1985'));
 
         var data = ee.Image(ee.List(years).iterate(function (year, previous_year) {
             year = ee.Number.parse(year);
@@ -91,58 +88,85 @@ exports.calcForestFireEmissions = function (params) {
             var tsf_y = tsf_edit.select(ee.String('.*_').cat(year_str));
             var freq_gte2_y = annual_fire_freq_gte2.select(ee.String('.*_').cat(year_str));
 
-            var aRef_loss = tsf_y.remap(tsf_values, p.AGBloss_lookup).multiply(-1).rename(ee.String('aRef_netAGBloss_').cat(year_str));
-            var aRef_gain = tsf_y.remap(tsf_values, p.AGBloss_lookup).rename(ee.String('aRef_netAGNgain_').cat(year_str));
+            var aRef_loss = tsf_y.remap(tsf_values, p.AGBloss_lookup).multiply(-1);
+            var aRef_gain = tsf_y.remap(tsf_values, p.AGBloss_lookup);
 
             var fLeftAGB_prev = ee.Image(previous_year).select(ee.String('fLeftAGB_').cat(prev_str));
-            var agb_update = agb.updateMask(tsf_y.eq(0)).blend(fLeftAGB_prev).rename(ee.String('s_inAGBstock_update_').cat(year_str));
+            var agb_update = agb.updateMask(tsf_y.eq(0)).blend(fLeftAGB_prev);
+            var fNetAGBloss = agb_update.multiply(aRef_loss);
+            var fLeftAGB = agb_update.add(fNetAGBloss);
 
-            var fNetAGBloss = agb_update.multiply(aRef_loss).rename(ee.String('fNetAGBloss_').cat(year_str));
-            var fLeftAGB = agb_update.add(fNetAGBloss).rename(ee.String('fLeftAGB_').cat(year_str));
-            var fAGNinput = agb_update.multiply(aRef_gain).add(agb_update.multiply(p.turnover)).rename(ee.String('fAGNinput_').cat(year_str));
-
-            var fAGN_s = litter.add(cdw);
+            var fAGNinput = agb_update.multiply(aRef_gain).add(agb_update.multiply(p.turnover));
             var agn_prev = ee.Image(previous_year).select(ee.String('fLeftAGN_').cat(prev_str));
-            var agn_update = fAGN_s.updateMask(tsf_y.eq(0)).blend(agn_prev).rename(ee.String('s_inAGNstock_update_').cat(year_str));
+            var agn_update = litter.add(cdw).updateMask(tsf_y.eq(0)).blend(agn_prev);
 
-            var comb_fwd_s = litter.multiply(p.fwd_combf).updateMask(tsf_y.eq(0));
-            var comb_cwd_s = cdw.multiply(p.cwd_combf_s).updateMask(tsf_y.eq(0));
-            var fAGNcomb = ee.Image(0).blend(comb_fwd_s).add(ee.Image(0).blend(comb_cwd_s));
+            var fAGNcomb = ee.Image(0)
+                .blend(litter.multiply(p.fwd_combf).updateMask(tsf_y.eq(0)))
+                .add(ee.Image(0).blend(cdw.multiply(p.cwd_combf_s).updateMask(tsf_y.eq(0))));
 
-            var comb_fwd_m = agn_update.multiply(1 - p.cwd_part_m).multiply(p.fwd_combf).updateMask(freq_gte2_y);
-            var comb_cwd_m = agn_update.multiply(p.cwd_part_m).multiply(p.cwd_combf_m).updateMask(freq_gte2_y);
-            fAGNcomb = fAGNcomb.blend(ee.Image(0).blend(comb_fwd_m).add(ee.Image(0).blend(comb_cwd_m))).rename(ee.String('fAGNcomb_').cat(year_str));
+            fAGNcomb = fAGNcomb.blend(
+                ee.Image(0).blend(agn_update.multiply(1 - p.cwd_part_m).multiply(p.fwd_combf).updateMask(freq_gte2_y))
+                    .add(ee.Image(0).blend(agn_update.multiply(p.cwd_part_m).multiply(p.cwd_combf_m).updateMask(freq_gte2_y)))
+            );
 
-            var fLeftAGN = agn_update.add(fAGNinput).subtract(fAGNcomb).multiply(1 - p.decomp).rename(ee.String('fLeftAGN_').cat(year_str));
+            var fLeftAGN = agn_update.add(fAGNinput).subtract(fAGNcomb).multiply(1 - p.decomp);
             var fCBalance = fLeftAGB.subtract(agb_update).add(fLeftAGN.subtract(agn_update)).rename(ee.String('fCBalance_').cat(year_str));
 
-            return ee.Image(previous_year).addBands(fLeftAGB).addBands(fLeftAGN).addBands(fAGNcomb).addBands(fCBalance).addBands(agb_update).addBands(agn_update);
-        }, first));
+            return ee.Image(previous_year)
+                .addBands(fLeftAGB.rename(ee.String('fLeftAGB_').cat(year_str)))
+                .addBands(fLeftAGN.rename(ee.String('fLeftAGN_').cat(year_str)))
+                .addBands(fAGNcomb.rename(ee.String('fAGNcomb_').cat(year_str)))
+                .addBands(fCBalance);
+        }, first)).float().updateMask(biome_mask);
 
-        data = ee.Image(data).float().updateMask(biome_mask);
-        var fAGNcomb = data.select('fAGNcomb_(.*)');
-        var fCBalance = data.select('fCBalance_(.*)');
+        var fAGNcomb_b = data.select('fAGNcomb_.*');
+        var fCBalance_b = data.select('fCBalance_.*');
 
-        var CO2_tC_ha = fAGNcomb.multiply(0.099).add(fCBalance).multiply(-1).updateMask(forest_mask.reduce(ee.Reducer.anyNonZero()));
-        var co2_bands = years.map(function (y) { return ee.String('CO2_tC_ha_').cat(y); });
-        CO2_tC_ha = CO2_tC_ha.rename(co2_bands).float();
+        var CO2_y = fAGNcomb_b.multiply(0.099).add(fCBalance_b).multiply(-1).rename(years.map(function (y) { return 'CO2_tC_ha_' + y }));
+        var CH4_y = fAGNcomb_b.multiply(2000).multiply(6.8).divide(1e6).rename(years.map(function (y) { return 'CH4_t_ha_' + y }));
+        var N2O_y = fAGNcomb_b.multiply(2000).multiply(0.2).divide(1e6).rename(years.map(function (y) { return 'N2O_t_ha_' + y }));
 
-        var CH4_y = fAGNcomb.multiply(2000).multiply(6.8).divide(1e6).updateMask(forest_mask.reduce(ee.Reducer.anyNonZero()));
-        var N2O_y = fAGNcomb.multiply(2000).multiply(0.2).divide(1e6).updateMask(forest_mask.reduce(ee.Reducer.anyNonZero()));
-        var CO_y = fAGNcomb.multiply(2000).multiply(104).divide(1e6).updateMask(forest_mask.reduce(ee.Reducer.anyNonZero()));
-        var NOX_y = fAGNcomb.multiply(2000).multiply(1.6).divide(1e6).updateMask(forest_mask.reduce(ee.Reducer.anyNonZero()));
-
-        var rename_gas = function (img, prefix) {
-            var newBands = years.map(function (y) { return ee.String(prefix).cat('_').cat(y); });
-            return img.rename(newBands).float();
-        };
-
-        CO2_mosaic = CO2_mosaic.bandNames().size().eq(0) ? CO2_tC_ha : CO2_mosaic.unmask(0).add(CO2_tC_ha.unmask(0));
-        CH4_mosaic = CH4_mosaic.bandNames().size().eq(0) ? rename_gas(CH4_y, 'CH4_t_ha') : CH4_mosaic.unmask(0).add(rename_gas(CH4_y, 'CH4_t_ha').unmask(0));
-        N2O_mosaic = N2O_mosaic.bandNames().size().eq(0) ? rename_gas(N2O_y, 'N2O_t_ha') : N2O_mosaic.unmask(0).add(rename_gas(N2O_y, 'N2O_t_ha').unmask(0));
-        CO_mosaic = CO_mosaic.bandNames().size().eq(0) ? rename_gas(CO_y, 'CO_t_ha') : CO_mosaic.unmask(0).add(rename_gas(CO_y, 'CO_t_ha').unmask(0));
-        NOX_mosaic = NOX_mosaic.bandNames().size().eq(0) ? rename_gas(NOX_y, 'NOX_t_ha') : NOX_mosaic.unmask(0).add(rename_gas(NOX_y, 'NOX_t_ha').unmask(0));
+        CO2_mosaic = CO2_mosaic.where(biome_mask, CO2_y);
+        CH4_mosaic = CH4_mosaic.where(biome_mask, CH4_y);
+        N2O_mosaic = N2O_mosaic.where(biome_mask, N2O_y);
     });
-
-    return CO2_mosaic.addBands(CH4_mosaic).addBands(N2O_mosaic).addBands(CO_mosaic).addBands(NOX_mosaic);
+    return CO2_mosaic.selfMask().addBands(CH4_mosaic.selfMask()).addBands(N2O_mosaic.selfMask());
 };
+
+/*
+// =============================================================================
+// ÁREA DE TESTE (DESCOMENTE PARA VALIDAR)
+// =============================================================================
+var biomas = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
+var qcn = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/RETIFICACAO/c_rect_col10');
+var fire_annual = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_annual_burned_v1').select('burned_area_.*');
+var fire_freq = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_fire_frequency_v1').select('fire_frequency_1985_.*');
+var fire_tsf = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_time_after_fire_v1').select('classification_.*');
+var lulc = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_coverage_v1');
+var forest_mask = lulc.remap([3], [1], 0).rename(lulc.bandNames()); // Simplificado para teste
+
+var years = ['2020', '2021', '2022', '2023'];
+
+var fire_emissions = exports.calcForestFireEmissions({
+    annual_burned: fire_annual,
+    fire_frequency: fire_freq,
+    time_since_fire: fire_tsf,
+    agb: qcn.select('AGB'),
+    cdw: qcn.select('CDW'),
+    litter: qcn.select('LITTER'),
+    forest_mask: forest_mask,
+    biomas: biomas,
+    years: years
+});
+
+// Camadas de Referência (Inputs)
+Map.addLayer(lulc, { bands: ['classification_2023'], }, 'LULC 2023', false);
+Map.addLayer(fire_annual.selfMask(), { bands: ['burned_area_2023'], palette: 'red' }, 'Área Queimada 2023', false);
+Map.addLayer(forest_mask, { bands: ['classification_2023'], palette: 'green' }, 'Máscara Floresta 2023', false);
+
+// Camadas de Saída (Emissões)
+Map.addLayer(fire_emissions, { bands: ['CO2_tC_ha_2023'], min: 0, max: 50, palette: ['white', 'orange', 'red', 'purple'] }, 'Total CO2 (tC/ha)');
+Map.addLayer(fire_emissions, { bands: ['CH4_t_ha_2023'], min: 0, max: 0.5, palette: ['white', 'blue', 'cyan'] }, 'Total CH4 (t/ha)');
+Map.addLayer(fire_emissions, { bands: ['N2O_t_ha_2023'], min: 0, max: 0.05, palette: ['white', 'green', 'lime'] }, 'Total N2O (t/ha)');
+Map.addLayer(fire_emissions, { }, 'Resultado Bruto (Todas Bandas)', false);
+*/

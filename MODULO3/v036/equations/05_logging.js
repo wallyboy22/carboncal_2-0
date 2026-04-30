@@ -60,7 +60,7 @@ exports.calcLoggingEmissions = function (params) {
     return result;
 };
 
-/*
+///*
 // =============================================================================
 // ÁREA DE TESTE (DESCOMENTE PARA VALIDAR)
 // =============================================================================
@@ -94,4 +94,4 @@ Map.addLayer(forest_mask, { bands: ['classification_2023'], palette: 'green' }, 
 // Camadas de Saída
 Map.addLayer(logging_result, { bands: ['logging_tC_ha_2023'], min: 0, max: 20, palette: ['white', 'brown', 'black'] }, 'Corte Seletivo 2023 (tC/ha)');
 Map.addLayer(logging_result, { }, 'Resultado Bruto (Todas Bandas)', false);
-*/
+//*/

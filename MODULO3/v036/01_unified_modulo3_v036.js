@@ -235,7 +235,6 @@ YEARS_FIRE.forEach(function (y, i) {
 
     var stock_bruto_y = biomass_stock.select('biomass_stock_' + y);
     var desf_y = desf_reg_corrected.select('classification_' + y);
-    var stock_bruto_y = biomass_stock.select('biomass_stock_' + y);
     var stock_updated_y = stock_bruto_y.where(desf_y.eq(2), stock_bruto_y.add(accum_y.unmask(0))).rename('stock_' + y).float();
 
     // --- CÁLCULO DO BALANÇO ANUAL (Lógica Refinada)
@@ -248,7 +247,8 @@ YEARS_FIRE.forEach(function (y, i) {
     // 3. Desmatamento Líquido (tC/ha -> tCO2e/pixel)
     // Subtraímos a degradação do balanço para evitar dupla contagem no mesmo ano
     var net_deforestation_tC = delta_stock_tC.subtract(degradation_tC_y).max(0);
-    var loss_deforestation_y = net_deforestation_tC.multiply(TC_TO_TCO2).multiply(pixel_area_ha);
+    var is_deforestation = desf_y.eq(4).or(desf_y.eq(6));
+    var loss_deforestation_y = net_deforestation_tC.multiply(TC_TO_TCO2).multiply(pixel_area_ha).multiply(is_deforestation);
 
     // 4. Ganho por Vegetação Secundária (tC/ha -> tCO2e/pixel)
     // O delta é negativo quando há ganho (Past < Current). Invertemos para positivo.

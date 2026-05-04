@@ -129,6 +129,12 @@ exports.calcForestFireEmissions = function (params) {
         CH4_mosaic = CH4_mosaic.where(biome_mask, CH4_y);
         N2O_mosaic = N2O_mosaic.where(biome_mask, N2O_y);
     });
+    
+    CO2_mosaic = CO2_mosaic.updateMask(forest_mask.slice(1));
+    CH4_mosaic = CH4_mosaic.updateMask(forest_mask.slice(1));
+    N2O_mosaic = N2O_mosaic.updateMask(forest_mask.slice(1));
+    
+    
     return CO2_mosaic.selfMask().addBands(CH4_mosaic.selfMask()).addBands(N2O_mosaic.selfMask());
 };
 
@@ -143,14 +149,35 @@ var fire_annual = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collect
 var fire_freq = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_fire_frequency_v1').select('fire_frequency_1985_.*');
 var fire_tsf = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_time_after_fire_v1').select('classification_.*');
 var lulc = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_coverage_v1');
-var forest_mask = lulc.multiply(0).where(lulc.eq(3), 1);
+var desf_reg = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_deforestation_secondary_vegetation_v1');
 
 var years = [
-            '1986', '1987', '1988', '1989', '1990', '1991', '1992', '1993', '1994',
+    '1985','1986', '1987', '1988', '1989', '1990', '1991', '1992', '1993', '1994',
     '1995', '1996', '1997', '1998', '1999', '2000', '2001', '2002', '2003', '2004',
     '2005', '2006', '2007', '2008', '2009', '2010', '2011', '2012', '2013', '2014',
     '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024'
 ];
+
+
+// --- 3a. Corrige classe 7 (outras transições) no desf/reg via Forward-Backward
+var desf_corrected = ee.Image(years.reduce(function (acc, year, i) {
+    var curr = desf_reg.select('classification_' + year);
+    if (i === 0) return curr.rename('classification_' + year);
+    var prev = ee.Image(acc).slice(-1);
+    return ee.Image(acc).addBands(prev.where(curr.neq(7), curr).rename('classification_' + year));
+}, null));
+
+var desf_corrected_bwd = ee.Image(years.slice().reverse().reduce(function (acc, year, i) {
+    var curr = desf_corrected.select('classification_' + year);
+    if (i === 0) return curr.rename('classification_' + year);
+    var next = ee.Image(acc).slice(0, 1);
+    return ee.Image(acc).addBands(next.where(curr.neq(7), curr).rename('classification_' + year));
+}, null));
+
+var desf_reg_corrected = desf_corrected.where(desf_corrected.eq(7), desf_corrected_bwd);
+
+var forest_mask = lulc.multiply(0).where(lulc.eq(3).and(desf_reg_corrected.eq(2)), 1);
+
 
 var fire_emissions = exports.calcForestFireEmissions({
     annual_burned: fire_annual,
@@ -161,7 +188,7 @@ var fire_emissions = exports.calcForestFireEmissions({
     litter: qcn.select('LITTER'),
     forest_mask: forest_mask,
     biomas: biomas,
-    years: years
+    years: years.slice(1)
 });
 
 // Parâmetros de Visualização (Ref: v036/02_investigate_modulo3.js)

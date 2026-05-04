@@ -540,6 +540,13 @@ function calcForestFireEmissions(params) {
         CH4_mosaic = CH4_mosaic.where(biome_mask, CH4_y);
         N2O_mosaic = N2O_mosaic.where(biome_mask, N2O_y);
     });
+    
+        
+    CO2_mosaic = CO2_mosaic.updateMask(forest_mask.slice(1));
+    CH4_mosaic = CH4_mosaic.updateMask(forest_mask.slice(1));
+    N2O_mosaic = N2O_mosaic.updateMask(forest_mask.slice(1));
+    
+    
     return CO2_mosaic.selfMask().addBands(CH4_mosaic.selfMask()).addBands(N2O_mosaic.selfMask());
 }
 

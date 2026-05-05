@@ -83,7 +83,7 @@ var out_bands = ee.Image().select();
 YEARS_FIRE.forEach(function (y, i) {
     var desf_y = desf_reg_corrected.select('classification_' + y);
     var is_sec = desf_y.eq(3).or(desf_y.eq(5));
-    
+    var is_deforestation = desf_y.eq(4).or(desf_y.eq(6));
     // Componentes de Degradação (tC/ha)
     var f_fl_co2 = fire_forest.select('CO2_tC_ha_' + y).unmask(0);
     var f_sv_co2 = fire_savanna.select('CO2_tC_ha_' + y).unmask(0);
@@ -107,8 +107,7 @@ YEARS_FIRE.forEach(function (y, i) {
     var delta_stock_tC = past_stock_y.subtract(stk_fin);
     var degradation_tC_y = f_fl_co2.add(f_sv_co2).add(mad_tC);
     
-    // Isolamento do Desmatamento (Conversão)
-    var loss_defor_y = delta_stock_tC.subtract(degradation_tC_y).max(0).multiply(TC_TO_TCO2).multiply(pixel_area_ha);
+    var loss_defor_y = delta_stock_tC.subtract(degradation_tC_y).max(0).multiply(TC_TO_TCO2).multiply(pixel_area_ha).multiply(is_deforestation);
     
     // Ganho por Vegetação Secundária
     var gain_secveg_y = delta_stock_tC.min(0).abs().multiply(is_sec).multiply(TC_TO_TCO2).multiply(pixel_area_ha);
@@ -123,6 +122,7 @@ YEARS_FIRE.forEach(function (y, i) {
 });
 
 var final_image = out_bands.float();
+final_image = final_image.select(final_image.bandNames().sort());
 
 // 5. EXPORTAÇÃO
 Export.image.toAsset({
@@ -132,7 +132,8 @@ Export.image.toAsset({
     pyramidingPolicy: 'median',
     region: brazil_bounds,
     scale: SCALE,
-    maxPixels: MAX_PIX
+    maxPixels: MAX_PIX,
+    overwriter:true
 });
 
 Map.addLayer(final_image, {bands:['stock_2023'], min:0, max:250}, 'Balanço Final 2023');

@@ -138,7 +138,8 @@ exports.calcForestFireEmissions = function (params) {
     return CO2_mosaic.selfMask().addBands(CH4_mosaic.selfMask()).addBands(N2O_mosaic.selfMask());
 };
 
-///* 
+//
+/* 
 // =============================================================================
 // ÁREA DE TESTE (DESCOMENTE PARA VALIDAR)
 // =============================================================================

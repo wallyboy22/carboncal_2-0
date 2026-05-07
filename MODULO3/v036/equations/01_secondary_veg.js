@@ -60,7 +60,7 @@ exports.calcSecondaryVegIncrement = function (params) {
         var age_year = age_prev.add(1).multiply(sec_year);
         age_stack = i === 0 ? age_year : age_stack.addBands(age_year);
 
-        var lt20 = age_year.lt(20).and(age_year.gte(0));
+        var lt20 = age_year.lt(20).and(age_year.gt(0));
         var gte20 = age_year.gte(20);
         var prev_stock = (i === 0) ? ee.Image(0) : stock_stack.slice(-1).unmask();
         var increment_year = ee.Image(0).rename('sec_veg_increment_' + year);

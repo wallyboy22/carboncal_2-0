@@ -434,16 +434,19 @@ function calcSecondaryVegIncrement(params) {
         age_stack = (i === 0) ? age_year : age_stack.addBands(age_year);
 
         var lt20 = age_year.lt(20).and(age_year.gt(0)), gte20 = age_year.gte(20);
-        var prev_stock = (i === 0) ? ee.Image(0) : stock_stack.slice(-1);
+        var prev_stock = (i === 0) ? ee.Image(0) : stock_stack.slice(-1).unmask(0);
         var increment_year = ee.Image(0).rename('sec_veg_increment_' + year);
-
+        
+        var is_forest = gf_year.neq(1);
+        var is_grass = gf_year.eq(1);
+        
         biome_list.forEach(function (b) {
             var bm = biome_images[b];
             var result_biome = prev_stock.rename('sec_veg_increment_' + year)
-                .where(gf_year.eq(2).and(lt20).and(bm), prev_stock.add(incr_table[b]['F'].lt20))
-                .where(gf_year.eq(2).and(gte20).and(bm), prev_stock.add(incr_table[b]['F'].gte20))
-                .where(gf_year.eq(1).and(lt20).and(bm), prev_stock.add(incr_table[b]['G'].lt20))
-                .where(gf_year.eq(1).and(gte20).and(bm), prev_stock.add(incr_table[b]['G'].gte20));
+                .where(is_forest.and(lt20).and(bm), prev_stock.add(incr_table[b]['F'].lt20))
+                .where(is_forest.and(gte20).and(bm), prev_stock.add(incr_table[b]['F'].gte20))
+                .where(is_grass.and(lt20).and(bm), prev_stock.add(incr_table[b]['G'].lt20))
+                .where(is_grass.and(gte20).and(bm), prev_stock.add(incr_table[b]['G'].gte20));
 
             increment_year = increment_year.where(bm.and(sec_year), result_biome);
         });

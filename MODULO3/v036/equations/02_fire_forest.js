@@ -138,8 +138,7 @@ exports.calcForestFireEmissions = function (params) {
     return CO2_mosaic.selfMask().addBands(CH4_mosaic.selfMask()).addBands(N2O_mosaic.selfMask());
 };
 
-//
-/* 
+///* 
 // =============================================================================
 // ÁREA DE TESTE (DESCOMENTE PARA VALIDAR)
 // =============================================================================
@@ -197,6 +196,7 @@ var paletaMapBiomas = require('users/mapbiomas/modules:Palettes.js').get('brazil
 // Camadas de Referência (Inputs)
 Map.addLayer(lulc, { bands: ['classification_2023'], min: 0, max: 75, palette: paletaMapBiomas }, 'LULC 2023', false);
 Map.addLayer(fire_annual.selfMask(), { bands: ['burned_area_2023'], palette: ['red'] }, 'Área Queimada 2023', false);
+Map.addLayer(fire_annual.reduce("sum").selfMask(), { palette: ['yellow','red'],min:1,max:30}, 'Frequencia do fogo', false);
 Map.addLayer(forest_mask.selfMask(), { bands: ['classification_2023'], palette: ['green'] }, 'Máscara Floresta 2023', false);
 
 // Camadas de Saída (Emissões)

@@ -60,8 +60,7 @@ exports.calcLoggingEmissions = function (params) {
     return result;
 };
 
-//
-/*
+///*
 // =============================================================================
 // ÁREA DE TESTE (DESCOMENTE PARA VALIDAR)
 // =============================================================================
@@ -69,13 +68,35 @@ var qcn = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/RETIFICACAO/c_rect_col10
 var lulc = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_coverage_v1');
 var biomas = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
 
-var forest_mask = (function() {
-    var out = lulc.multiply(0);
-    [3].forEach(function(v) {
-        out = out.where(lulc.eq(v), 1);
-    });
-    return out;
-})();
+var desf_reg = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_deforestation_secondary_vegetation_v1');
+
+var years = [
+    '1985','1986', '1987', '1988', '1989', '1990', '1991', '1992', '1993', '1994',
+    '1995', '1996', '1997', '1998', '1999', '2000', '2001', '2002', '2003', '2004',
+    '2005', '2006', '2007', '2008', '2009', '2010', '2011', '2012', '2013', '2014',
+    '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024'
+];
+
+
+// --- 3a. Corrige classe 7 (outras transições) no desf/reg via Forward-Backward
+var desf_corrected = ee.Image(years.reduce(function (acc, year, i) {
+    var curr = desf_reg.select('classification_' + year);
+    if (i === 0) return curr.rename('classification_' + year);
+    var prev = ee.Image(acc).slice(-1);
+    return ee.Image(acc).addBands(prev.where(curr.neq(7), curr).rename('classification_' + year));
+}, null));
+
+var desf_corrected_bwd = ee.Image(years.slice().reverse().reduce(function (acc, year, i) {
+    var curr = desf_corrected.select('classification_' + year);
+    if (i === 0) return curr.rename('classification_' + year);
+    var next = ee.Image(acc).slice(0, 1);
+    return ee.Image(acc).addBands(next.where(curr.neq(7), curr).rename('classification_' + year));
+}, null));
+
+var desf_reg_corrected = desf_corrected.where(desf_corrected.eq(7), desf_corrected_bwd);
+
+var forest_mask = lulc.multiply(0).where(lulc.eq(3).and(desf_reg_corrected.eq(2)), 1);
+
 var amazon_mask = ee.Image(0).paint(biomas.filter(ee.Filter.eq('Bioma', 'Amazônia')), 1).eq(1);
 var years = ['2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024'];
 

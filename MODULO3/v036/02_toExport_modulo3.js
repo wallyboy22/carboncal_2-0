@@ -77,12 +77,11 @@ var desf_reg_corrected = desf_corrected.where(desf_corrected.eq(7), desf_correct
 
 // 4. MOTOR DE BALANÇO (INTEGRAÇÃO)
 var pixel_area_ha = ee.Image.pixelArea().divide(10000);
-var TC_TO_TCO2 = 3.67;
 
 // Variáveis de estado que viajam no tempo
 var out_bands = ee.Image().select();
-var degr_acum_tC = ee.Image(0);      // Acumula perda para abater do estoque nativo
-var hist_deg_mask = ee.Image(0);     // A grande sacada: Máscara histórica de áreas degradadas
+var degr_acum_tC = ee.Image(0);      // Acumula perda (tC/ha) para abater do estoque nativo
+var hist_deg_mask = ee.Image(0);     // Máscara histórica de áreas degradadas (cicatriz)
 
 YEARS_FIRE.forEach(function (y, i) {
     // 1. IDENTIFICAÇÃO DO USO E COBERTURA
@@ -91,31 +90,48 @@ YEARS_FIRE.forEach(function (y, i) {
     var is_sec = desf_y.eq(3).or(desf_y.eq(5));
     var is_defor = desf_y.eq(4).or(desf_y.eq(6));
 
-    // 2. ENTRADAS DE DEGRADAÇÃO (Já em t/ha. Assumindo que você já aplicou os GWP 28 e 265 antes)
-    var f_fl_co2e = fire_forest_co2e.select('.*_' + y).unmask(0);
-    var f_sv_co2e = fire_savanna_co2e.select('.*_' + y).unmask(0);
-    var f_gr_co2e = fire_grassland_co2e.select('.*_' + y).unmask(0);
-    var mad_co2e = (i >= YEARS_FIRE.indexOf('2017')) ? logging_co2e.select('.*_' + y).unmask(0) : ee.Image(0);
+    // 2. CONSOLIDAÇÃO EXPLÍCITA DAS EMISSÕES DE FOGO (tCO2e/ha)
+    // =========================================================
+    
+    // --- FLORESTA (CO2 + CH4 + N2O) ---
+    var f_fl_co2 = fire_forest.select('.*CO2.*_' + y).unmask(0);
+    var f_fl_ch4 = fire_forest.select('.*CH4.*_' + y).unmask(0).multiply(28);
+    var f_fl_n2o = fire_forest.select('.*N2O.*_' + y).unmask(0).multiply(265);
+    var f_fl_co2e = f_fl_co2.add(f_fl_ch4).add(f_fl_n2o);
 
-    var fire_co2e = f_fl_co2e.add(f_sv_co2e);
+    // --- SAVANA (CO2 + CH4 + N2O) ---
+    var f_sv_co2 = fire_savanna.select('.*CO2.*_' + y).unmask(0);
+    var f_sv_ch4 = fire_savanna.select('.*CH4.*_' + y).unmask(0).multiply(28);
+    var f_sv_n2o = fire_savanna.select('.*N2O.*_' + y).unmask(0).multiply(265);
+    var f_sv_co2e = f_sv_co2.add(f_sv_ch4).add(f_sv_n2o);
 
-    // 3. CONVERGÊNCIA (Apenas intersecção no mesmo ano)
+    // --- CAMPO / GRASSLAND (APENAS CH4 + N2O) ---
+    // Conforme a v035, CO2 de grassland não é contabilizado (neutro)
+    var f_gr_ch4 = fire_grassland.select('.*CH4.*_' + y).unmask(0).multiply(28);
+    var f_gr_n2o = fire_grassland.select('.*N2O.*_' + y).unmask(0).multiply(265);
+    var f_gr_co2e = f_gr_ch4.add(f_gr_n2o);
+
+    // =========================================================
+
+    // 2.1 TRATAMENTO DA MADEIRA (Vem em tC/ha, convertemos para CO2e para saída)
+    var mad_tC = (i >= YEARS_FIRE.indexOf('2017')) ? logging.select('logging_tC_ha_' + y).unmask(0) : ee.Image(0);
+    var mad_co2e = mad_tC.multiply(TC_TO_TCO2);
+
+    // Agrupa o que é considerado DEGRADAÇÃO (Floresta + Savana)
+    var fire_degr_co2e = f_fl_co2e.add(f_sv_co2e);
+
+    // 3. CONVERGÊNCIA (Intersecção de degradação: Fogo Floresta/Savana + Madeira no mesmo ano)
     var is_convergence = f_fl_co2e.gt(0).and(mad_co2e.gt(0));
     var convergence_co2e = f_fl_co2e.add(mad_co2e).updateMask(is_convergence);
 
-    // 4. ATUALIZAÇÃO DA MÁSCARA HISTÓRICA (A Regra do Pixel Zero)
-    // Se teve alguma degradação hoje (fogo ou madeira), vira 1.
-    var has_degradation_now = fire_co2e.gt(0).or(mad_co2e.gt(0));
-    
-    // O pixel mantém o status de "Área Degradada" (1) SE já era degradado antes OU degradou agora,
-    // DESDE QUE ainda seja Vegetação Nativa. Se for desmatado, ele perde o status.
+    // 4. ATUALIZAÇÃO DA CICATRIZ (Pixel Zero apenas para Degradação histórica)
+    var has_degradation_now = fire_degr_co2e.gt(0).or(mad_co2e.gt(0));
     hist_deg_mask = hist_deg_mask.or(has_degradation_now).and(is_native);
 
     // 5. BALANÇO DE ESTOQUE (Matemática interna em tC/ha)
-    // Transforma CO2e de volta em Carbono para abater do estoque nativo
-    var degr_current_tC = fire_co2e.add(mad_co2e).divide(TC_TO_TCO2);
+    var degr_current_tC = fire_degr_co2e.divide(TC_TO_TCO2).add(mad_tC);
     
-    // ... Aqui entra o incremento da vegetação secundária (como fizemos antes)
+    // Incremento da vegetação secundária (Delta do ano corrente)
     var incr_y = sec_veg_increment.select('sec_veg_increment_' + y).subtract(
         (i === 0) ? ee.Image(0) : sec_veg_increment.select('sec_veg_increment_' + YEARS_FIRE[i-1])
     ).unmask(0);
@@ -128,24 +144,22 @@ YEARS_FIRE.forEach(function (y, i) {
     var past_stock_y = (i === 0) ? biomass_stock_bruto.select('biomass_stock_1985') : out_bands.select('stock_' + YEARS_FIRE[i - 1]);
     var delta_stock_tC = past_stock_y.subtract(stk_fin);
 
-    // 6. CÁLCULO DE EXPORTAÇÃO E MULTIPLICAÇÃO DE ÁREA (Total de tCO2e no pixel)
+    // 6. CÁLCULO DAS SAÍDAS (Total por Pixel em tCO2e)
     var loss_defor_total = delta_stock_tC.subtract(degr_current_tC).max(0).multiply(TC_TO_TCO2).multiply(pixel_area_ha).multiply(is_defor);
     var gain_secveg_total = delta_stock_tC.min(0).abs().multiply(is_sec).multiply(TC_TO_TCO2).multiply(pixel_area_ha);
     
-    // 7. EMPACOTAMENTO DAS BANDAS (Aplicando o "Pixel Zero")
+    // 7. EMPACOTAMENTO DAS BANDAS FINAIS
     out_bands = out_bands.addBands([
-        stk_fin.rename('stock_' + y).float(), // Estoque permanece em tC/ha
+        stk_fin.rename('stock_' + y).float(), 
         gain_secveg_total.rename('gain_secondary_vegetation_' + y).float(),
         loss_defor_total.rename('loss_deforestation_' + y).float(),
         
-        // Emissões de degradação: Usamos .updateMask(hist_deg_mask)
-        // Isso garante que áreas que foram degradadas no passado e continuam nativas 
-        // receberão "0", enquanto o restante do mapa será mascarado.
-        fire_co2e.multiply(pixel_area_ha).updateMask(hist_deg_mask).rename('loss_fire_' + y).float(),
+        // Emissões de Degradação (Floresta/Savana/Madeira) com Pixel Zero na cicatriz
+        fire_degr_co2e.multiply(pixel_area_ha).updateMask(hist_deg_mask).rename('loss_fire_' + y).float(),
         mad_co2e.multiply(pixel_area_ha).updateMask(hist_deg_mask).rename('loss_selective_logging_' + y).float(),
         convergence_co2e.multiply(pixel_area_ha).unmask(0).updateMask(hist_deg_mask).rename('loss_convergence_degradation_' + y).float(),
         
-        // Grassland fire é tratado a parte
+        // Fogo em Campo: Contabiliza apenas CH4+N2O no ano, sem cicatriz histórica (selfMask)
         f_gr_co2e.multiply(pixel_area_ha).selfMask().rename('loss_grassland_' + y).float()
     ]);
 });
@@ -162,7 +176,7 @@ Export.image.toAsset({
     region: brazil_bounds,
     scale: SCALE,
     maxPixels: MAX_PIX,
-    overwriter:true
+    overwrite:true
 });
 
 // =============================================================================
@@ -198,7 +212,7 @@ Map.addLayer(sec_veg_increment.select('sec_veg_increment_.*'), { bands: ['sec_ve
 // -----------------------------------------------------------------------------
 Map.addLayer(fire_forest.select('CO2_tC_ha_.*'), { bands: ['CO2_tC_ha_' + anoVis], min: 0, max: 30, palette: paletaFogo }, 'INPUT: Fogo Floresta ' + anoVis, false);
 Map.addLayer(fire_savanna.select('CO2_tC_ha_.*'), { bands: ['CO2_tC_ha_' + anoVis], min: 0, max: 30, palette: paletaFogo }, 'INPUT: Fogo Savana ' + anoVis, false);
-Map.addLayer(fire_grassland.select('CO2_tC_ha_.*'), { bands: ['CO2_tC_ha_' + anoVis], min: 0, max: 30, palette: paletaFogo }, 'INPUT: Fogo Campestre ' + anoVis, false);
+Map.addLayer(fire_grassland.select('CH4_t_ha_.*'), { bands: ['CH4_t_ha_' + anoVis], min: 0, max: 30, palette: paletaFogo }, 'INPUT: Fogo Campestre ' + anoVis, false);
 Map.addLayer(logging.select('logging_tC_ha_.*'), { bands: ['logging_tC_ha_' + anoVis], min: 0, max: 30, palette: paletaMadeira }, 'INPUT: Extração Madeira ' + anoVis, false);
 
 // -----------------------------------------------------------------------------

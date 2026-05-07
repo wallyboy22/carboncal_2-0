@@ -112,6 +112,7 @@ var logging_result = exports.calcLoggingEmissions({
 var paletaMapBiomas = require('users/mapbiomas/modules:Palettes.js').get('brazil');
 
 // Camadas de Referência (Inputs)
+Map.addLayer(qcn, { bands: ['total'], min: 0, max: 120, }, 'QCN TOTAL', false);
 Map.addLayer(lulc, { bands: ['classification_2023'], min: 0, max: 75, palette: paletaMapBiomas }, 'LULC 2023', false);
 Map.addLayer(amazon_mask.updateMask(amazon_mask), { palette: ['blue'] }, 'Máscara Amazônia', false);
 Map.addLayer(forest_mask.selfMask(), { bands: ['classification_2023'], palette: ['green'] }, 'Máscara Floresta 2023', false);

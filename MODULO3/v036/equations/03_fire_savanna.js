@@ -332,7 +332,8 @@ Export.image.toAsset({
     assetId: 'projects/ee-ipam/assets/CCAL/MODULO3/v036/fire_savanna_emissions_v036',
     scale: 30,
     region: savanna_mask.geometry().bounds(),
-    maxPixels: 1e13
+    maxPixels: 1e13,
+    overwrite:true
 });
 
 //*/

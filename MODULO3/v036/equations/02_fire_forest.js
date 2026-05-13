@@ -214,7 +214,7 @@ exports.calcForestFireEmissions = function (params) {
 
             // --- AGB no início do ano (se primeiro fogo, usar AGB inicial; senão, usar AGB do ano anterior)
             var fLeftAGB_prev = ee.Image(output_image).select(
-                ee.String('fLeftAGB_').cat(year_prev), null
+                ee.String('fLeftAGB_').cat(year_prev)
             );
 
             var s_inAGBstock_update = agb
@@ -252,7 +252,7 @@ exports.calcForestFireEmissions = function (params) {
 
             // Preparar estoque de necromassa do ano anterior
             var fLeftAGN_prev = ee.Image(output_image).select(
-                ee.String('fLeftAGN_').cat(year_prev), null
+                ee.String('fLeftAGN_').cat(year_prev)
             );
 
             var s_inAGNstock_update = litter

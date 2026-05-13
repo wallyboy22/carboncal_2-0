@@ -180,8 +180,8 @@ exports.calcForestFireEmissions = function (params) {
      */
     var fateModel = function (year_input, previous_year_image) {
         year_input = ee.Number.parse(year_input);
-        var year_str = year_input.int();
-        var year_prev = year_input.subtract(1).int();
+        var year_str = ee.String(year_input.int());
+        var year_prev = ee.String(year_input.subtract(1).int());
 
         // Selecionar dados do ano
         var tsf_year = tsf_edit.select(ee.String('.*_').cat(year_str));
@@ -364,13 +364,12 @@ exports.calcForestFireEmissions = function (params) {
     
     var degradation_masks = ee.Image().select();
     years.forEach(function(year) {
-        var year_str = ee.Number.parse(year).format('%d');
         var year_mask = fire_frequency
             .gte(1)
-            .select(ee.String('.*_').cat(year_str))
+            .select('.*_' + year)
             .selfMask()
             .multiply(0)  // Cria máscara 0/null
-            .rename(ee.String('degradation_').cat(year_str));
+            .rename('degradation_' + year);
         degradation_masks = degradation_masks.addBands(year_mask);
     });
 
@@ -408,11 +407,10 @@ exports.calcForestFireEmissions = function (params) {
 
     // Renomear bandas CO2
     var co2_band_names = years.map(function (y) { return 'CO2_tC_ha_' + y; });
-    var CO2_final = CO2_bands.rename(years.map(function (y) { return 'fCBalance_' + y; }), co2_band_names);
-    
+
     // Aplicar máscara de degradação (apenas áreas com fogo)
     var CO2_degradation = degradation_masks.select('degradation_.*');
-    CO2_final = CO2_degradation.blend(CO2_final.selfMask());
+    var CO2_final = CO2_degradation.blend(CO2_bands.selfMask());
 
     // CH4 em t/ha
     // fAGNcomb: tC/ha

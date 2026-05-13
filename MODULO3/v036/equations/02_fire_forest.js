@@ -261,7 +261,7 @@ exports.calcForestFireEmissions = function (params) {
                 .blend(fLeftAGN_prev);        // Senão, usar estoque do ano anterior
 
             // --- COMBUSTÃO: Primeiro Incêndio (TSF = 0)
-            var fAGNcomb_fwd_S = fwd
+            var fAGNcomb_fwd_S = litter
                 .multiply(p.fwd_combf)
                 .updateMask(tsf_year.eq(0));  // Apenas quando há primeiro fogo
 

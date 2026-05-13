@@ -329,7 +329,7 @@ Map.addLayer(fire_emissions.select('NOX_tC_ha_.*'), {bands:['NOX_tC_ha_2023'], m
 Export.image.toAsset({
     image: fire_emissions.select('CO2.*').toFloat(),
     description: 'v036_savana_co2_1986_2024',
-    assetId: 'projects/ee-ipam/assets/CCAL/MODULO3/v036/FOGO/SAVANA/v036_savana_co2_1986_2024',
+    assetId: 'projects/ee-ipam/assets/CCAL/MODULO3/v036/fire_savanna_emissions_v036',
     scale: 30,
     region: savanna_mask.geometry().bounds(),
     maxPixels: 1e13

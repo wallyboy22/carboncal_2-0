@@ -163,7 +163,8 @@ exports.calcSavannaFireEmissions = function (params) {
 
         // Selecionar dados do ano
         var burned_area = annual_burned.select('.*_' + year);
-        var mask = savanna_mask.select('.*_' + year);
+        var mask = savanna_mask.select('.*_' + year).selfMask();
+        var degradation_mask = fire_frequency.gte(1).select('.*1985_.*' + year).selfMask().multiply(0).updateMask(mask);
         var pixel_mask = burned_area.multiply(mask);
 
         // Calcular severidade do fogo e fatores de emissão
@@ -180,6 +181,8 @@ exports.calcSavannaFireEmissions = function (params) {
             .multiply(pixel_mask)
             .multiply(emission_factors)
             .multiply(co2_conversion);
+            
+        co2_tC_ha = degradation_mask.blend(co2_tC_ha.selfMask());
 
         CO2_bands = CO2_bands.addBands(
             co2_tC_ha.rename('CO2_tC_ha_' + year).float()
@@ -195,6 +198,8 @@ exports.calcSavannaFireEmissions = function (params) {
             EF.CO,
             pixel_mask
         );
+        
+        co_year = degradation_mask.blend(co_year.selfMask());
 
         CO_bands = CO_bands.addBands(
             co_year.rename('CO_tC_ha_' + year).float()
@@ -207,6 +212,8 @@ exports.calcSavannaFireEmissions = function (params) {
             pixel_mask
         );
 
+        ch4_year = degradation_mask.blend(ch4_year.selfMask());
+
         CH4_bands = CH4_bands.addBands(
             ch4_year.rename('CH4_tC_ha_' + year).float()
         );
@@ -218,6 +225,8 @@ exports.calcSavannaFireEmissions = function (params) {
             pixel_mask
         );
 
+        n2o_year = degradation_mask.blend(n2o_year.selfMask());
+
         N2O_bands = N2O_bands.addBands(
             n2o_year.rename('N2O_tC_ha_' + year).float()
         );
@@ -228,6 +237,8 @@ exports.calcSavannaFireEmissions = function (params) {
             EF.NOX,
             pixel_mask
         );
+
+        nox_year = degradation_mask.blend(nox_year.selfMask());
 
         NOX_bands = NOX_bands.addBands(
             nox_year.rename('NOX_tC_ha_' + year).float()
@@ -304,13 +315,15 @@ var fire_emissions = exports.calcSavannaFireEmissions({
 var paletaMapBiomas = require('users/mapbiomas/modules:Palettes.js').get('brazil');
 
 Map.addLayer(lulc.selfMask(), { bands: ['classification_2023'], min: 0, max: 75, palette: paletaMapBiomas }, 'LULC 2023', false);
-
+Map.addLayer(savanna_mask.selfMask().reduce("sum"), { min: 0, max: 1, palette: ["aacc80"] }, 'savanna_mask 2023', false);
+Map.addLayer(savanna_mask.selfMask(), { bands: ['classification_2023'], min: 0, max: 1, palette: ["aacc80"] }, 'savanna_mask 2023', false);
 Map.addLayer(fire_annual.selfMask(), { bands: ['burned_area_2023'], min: 0, max: 1, palette: [] }, 'fire 2023', false);
 Map.addLayer(fire_freq.selfMask().slice(0,40), { bands: ['fire_frequency_1985_2023'], min: 0, max: 75, palette: paletaMapBiomas }, 'freq 2023', false);
 Map.addLayer(fire_tsf, { bands: ['burned_area_2023'], min: 0, max: 40, palette: [] }, 'tsf 2023', false);
 Map.addLayer(fire_emissions.select('CO2_tC_ha_.*'), {bands:['CO2_tC_ha_2023'], min: 0, max: 50, palette: ['white', 'orange', 'red'] }, 'CO2 Savana 2023 (tC/ha)');
 Map.addLayer(fire_emissions.select('CH4_tC_ha_.*'), {bands:['CH4_tC_ha_2023'], min: 0, max: 0.1, palette: ['white', 'purple'] }, 'CH4 Savana 2023 (tC/ha)');
 Map.addLayer(fire_emissions.select('N2O_tC_ha_.*'), {bands:['N2O_tC_ha_2023'], min: 0, max: 0.01, palette: ['white', 'cyan'] }, 'N2O Savana 2023 (tC/ha)');
+Map.addLayer(fire_emissions.select('NOX_tC_ha_.*'), {bands:['NOX_tC_ha_2023'], min: 0, max: 0.01, palette: ['white', 'cyan'] }, 'NOX Savana 2023 (tC/ha)');
 
 // Exportar
 Export.image.toAsset({

@@ -2,7 +2,7 @@
 var p_amz = ee.Image("users/celsojunior/prodes_amazonia_2025_v20260407"),
     p_brazil = ee.Image("users/celsojunior/prodes_brasil_2024_v20260407");
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
-
+p_brazil = p_brazil.multiply(p_amz.neq(101));
 
 // ============================================================
 // BRAZIL NATIONAL FREL — Unified GEE Script (v2.1)
@@ -77,7 +77,7 @@ for (var _y = PRODES_START; _y <= PRODES_END; _y++) {
 
 // =================== SHARED ASSETS ===================
 
-var prodesGreaterThan625ha = ee.Image('projects/ee-ipam/assets/REDD/prodes_brasil_2024');
+var prodesGreaterThan625ha = p_brazil;
 var prodesLessThan625ha    = ee.Image('projects/ee-celsojunior/assets/yearly_deforestation_smaller_than_625ha_biome');
 var managedLandAmazon      = ee.Image('projects/ee-ipam/assets/Managed_Land_Brazil').unmask(0);
 

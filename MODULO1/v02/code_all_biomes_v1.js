@@ -1,3 +1,9 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var p_amz = ee.Image("users/celsojunior/prodes_amazonia_2025_v20260407"),
+    p_brazil = ee.Image("users/celsojunior/prodes_brasil_2024_v20260407");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+
+
 // ============================================================
 // BRAZIL NATIONAL FREL — Unified GEE Script (v2.1)
 //

@@ -4,7 +4,7 @@ var p_amz = ee.Image("users/celsojunior/prodes_amazonia_2025_v20260407"),
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 p_brazil = p_brazil.multiply(p_amz.neq(101));
 
-// ============================================================
+// ============================================================ 
 // BRAZIL NATIONAL FREL — Unified GEE Script (v2.1)
 //
 // Reference:

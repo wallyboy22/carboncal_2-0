@@ -364,14 +364,14 @@ createConfigRow('logging_raw', 'MADEIRA (Raw tC/ha)', false, inputs_panel);
 createConfigRow('fire_forest', 'FOGO FLORESTA', false, inputs_panel);
 createConfigRow('fire_forest_co2', '↳ CO2 (tC)', true, inputs_panel);
 createConfigRow('fire_forest_ch4', '↳ CH4 (t)', true, inputs_panel);
-createConfigRow('fire_forest_n2o', '↳ N2O (t)', true, inputs_panel);
+// createConfigRow('fire_forest_n2o', '↳ N2O (t)', true, inputs_panel);
 createConfigRow('fire_savanna', 'FOGO SAVANA', false, inputs_panel);
 createConfigRow('fire_savanna_co2', '↳ CO2 (tC)', true, inputs_panel);
 createConfigRow('fire_savanna_ch4', '↳ CH4 (t)', true, inputs_panel);
-createConfigRow('fire_savanna_n2o', '↳ N2O (t)', true, inputs_panel);
+// createConfigRow('fire_savanna_n2o', '↳ N2O (t)', true, inputs_panel);
 createConfigRow('fire_grassland', 'FOGO CAMPESTRE', false, inputs_panel);
 createConfigRow('fire_grassland_ch4', '↳ CH4 (t)', true, inputs_panel);
-createConfigRow('fire_grassland_n2o', '↳ N2O (t)', true, inputs_panel);
+// createConfigRow('fire_grassland_n2o', '↳ N2O (t)', true, inputs_panel);
 
 var outputs_panel = ui.Panel();
 gaveta_panel.add(ui.Label('Saídas (Produto Final):', { fontSize: '10px', color: '#27ae60', fontWeight: 'bold' }));
@@ -505,8 +505,8 @@ Map.onClick(function (coords) {
     .addBands(fire_forest.select('CH4_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'ff_CH4_t_ha_' + y })))
     .addBands(fire_forest.select('N2O_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'ff_N2O_t_ha_' + y })))
     .addBands(fire_savanna.select('CO2_tC_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fs_CO2_tC_ha_' + y })))
-    .addBands(fire_savanna.select('CH4_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fs_CH4_t_ha_' + y })))
-    .addBands(fire_savanna.select('N2O_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fs_N2O_t_ha_' + y })))
+    // .addBands(fire_savanna.select('CH4_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fs_CH4_t_ha_' + y })))
+    // .addBands(fire_savanna.select('N2O_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fs_N2O_t_ha_' + y })))
     .addBands(fire_grassland.select('CH4_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fg_CH4_t_ha_' + y })))
     .addBands(fire_grassland.select('N2O_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fg_N2O_t_ha_' + y })))
     .addBands(logging.select('logging_tC_ha_.*').unmask(0).rename(['2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024'].map(function (y) { return 'log_logging_tC_ha_' + y })));

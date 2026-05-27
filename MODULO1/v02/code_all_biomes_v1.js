@@ -22,7 +22,13 @@
 //   Eq. 6 — f_biome scalar applied to ALL emission images
 //            (def + fire + sl) across ALL biomes
 //   Stocks — masked to forest2016: QCN vegetation, not deforested
-//            up to 2016 (coded values 2–16), not PRODES non-forest (101)
+//            up to 2016 (coded values 2–16), not PRODES non-forest (91, 101)
+//
+// Changelog v2.1 → v2.1.1:
+//   FIX: corpos hídricos (valor 91 no PRODES) agora excluídos de forest2016.
+//        Anteriormente apenas o valor 101 (não-floresta) era excluído via
+//        prodesNonForest, deixando água permanente (91) passar como floresta.
+//        A variável prodesNonVegetation unifica a exclusão de 91 e 101.
 // ============================================================
 
 // ====================================================================
@@ -85,9 +91,6 @@ var biomesBound = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/bi
 var brazilRegion = biomesBound.geometry().bounds();
 
 // ── Floresta remanescente em 2016 ─────────────────────────────────────
-// Áreas de não-floresta PRODES (valor 101)
-var prodesNonForest = ee.Image('projects/ee-ipam/assets/REDD/prodes_brasil_2023')
-  .unmask(0).eq(101);
 
 // prodesLessThan625ha reclassificado para encoding codificado
 // (mesmo padrão de prodesGreaterThan625ha: ano - 2000)
@@ -104,12 +107,20 @@ var prodesUnified = prodesGreaterThan625ha
 // Valores 17–24 (d2017–d2024) e 50–64 (r*) → não contam como desmatado em 2016
 var deforestedUpTo2016 = prodesUnified.gte(2).and(prodesUnified.lte(16));
 
-// Floresta em 2016 = QCN vegetation AND não desmatada até 2016 AND não não-floresta PRODES
+// FIX v2.1.1 — não-vegetação PRODES: água (91) e não-floresta (101)
+// Anteriormente apenas 101 era excluído; corpos hídricos (91) passavam
+// como floresta porque deforestedUpTo2016 retornava false para eles.
+var prodesRaw = ee.Image('projects/ee-ipam/assets/REDD/prodes_brasil_2023').unmask(0);
+var prodesNonVegetation = prodesRaw.eq(91)   // corpo hídrico
+  .or(prodesRaw.eq(101));                    // não-floresta
+
+// Floresta em 2016 = QCN vegetation AND não desmatada até 2016
+//                    AND não corpo hídrico/não-floresta PRODES
 var forest2016 = vegetationMask.eq(1)
   .and(deforestedUpTo2016.not())
-  .and(prodesNonForest.not());
-  
-Map.centerObject(forest2016, 5); // Centraliza o mapa na sua imagem
+  .and(prodesNonVegetation.not());
+
+Map.centerObject(forest2016, 5);
 Map.addLayer(
   forest2016,
   {min: 0, max: 1, palette: ['lightgray', 'darkgreen']},

@@ -94,21 +94,21 @@ YEARS_FIRE.forEach(function (y, i) {
     // =========================================================
     
     // --- FLORESTA (CO2 + CH4 + N2O) ---
-    var f_fl_co2 = fire_forest.select('.*CO2.*_' + y).unmask(0);
-    var f_fl_ch4 = fire_forest.select('.*CH4.*_' + y).unmask(0).multiply(28);
-    var f_fl_n2o = fire_forest.select('.*N2O.*_' + y).unmask(0).multiply(265);
+    var f_fl_co2 = fire_forest.select('CO2_tC_ha_' + y).unmask(0).multiply(TC_TO_TCO2);
+    var f_fl_ch4 = fire_forest.select('CH4_t_ha_' + y).unmask(0).multiply(28);
+    var f_fl_n2o = fire_forest.select('N2O_t_ha_' + y).unmask(0).multiply(265);
     var f_fl_co2e = f_fl_co2.add(f_fl_ch4).add(f_fl_n2o);
 
     // --- SAVANA (CO2 + CH4 + N2O) ---
-    var f_sv_co2 = fire_savanna.select('.*CO2.*_' + y).unmask(0);
-    var f_sv_ch4 = fire_savanna.select('.*CH4.*_' + y).unmask(0).multiply(28);
-    var f_sv_n2o = fire_savanna.select('.*N2O.*_' + y).unmask(0).multiply(265);
+    var f_sv_co2 = fire_savanna.select('CO2_tC_ha_' + y).unmask(0).multiply(TC_TO_TCO2);
+    var f_sv_ch4 = fire_savanna.select('CH4_t_ha_' + y).unmask(0).multiply(28);
+    var f_sv_n2o = fire_savanna.select('N2O_t_ha_' + y).unmask(0).multiply(265);
     var f_sv_co2e = f_sv_co2.add(f_sv_ch4).add(f_sv_n2o);
 
     // --- CAMPO / GRASSLAND (APENAS CH4 + N2O) ---
     // Conforme a v035, CO2 de grassland não é contabilizado (neutro)
-    var f_gr_ch4 = fire_grassland.select('.*CH4.*_' + y).unmask(0).multiply(28);
-    var f_gr_n2o = fire_grassland.select('.*N2O.*_' + y).unmask(0).multiply(265);
+    var f_gr_ch4 = fire_grassland.select('CH4_t_ha_' + y).unmask(0).multiply(28);
+    var f_gr_n2o = fire_grassland.select('N2O_t_ha_' + y).unmask(0).multiply(265);
     var f_gr_co2e = f_gr_ch4.add(f_gr_n2o);
 
     // =========================================================

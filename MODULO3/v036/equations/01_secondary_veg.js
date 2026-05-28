@@ -92,7 +92,8 @@ exports.calcSecondaryVegIncrement = function (params) {
     return stock_stack;
 };
 
-///*
+//
+/*
 // =============================================================================
 // ÁREA DE TESTE (DESCOMENTE PARA VALIDAR)
 // =============================================================================

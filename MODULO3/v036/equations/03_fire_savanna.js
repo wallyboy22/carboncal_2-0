@@ -17,12 +17,12 @@ var geometry =
  *            queima de biomassa fina e lenhosa, ajustando os fatores de combustão 
  *            de acordo com a recorrência do fogo e acúmulo de combustível vegetal.
  *            
- *            Esta versão refatora SEEG_13 mantendo a mesma metodologia,
- *            mas padronizando as saídas em tC/ha.
- * 
+ *            Reprodução fiel do modelo SEEG_13 como módulo exportável.
+ *            Saídas padronizadas em t/ha (CO2 em tC/ha).
+ *
  * METODOLOGIA ORIGINAL: SEEG_13
  * AUTORES ORIGINAIS: Celso Junior, Camila Silva
- * REFATORAÇÃO: v036 (2026-04-30)
+ * REFATORAÇÃO: v036 (2026-04-30) | CORREÇÃO: 2026-05-27
  * =============================================================================
  */
 
@@ -41,216 +41,95 @@ exports.calcSavannaFireEmissions = function (params) {
     // CONSTANTES E FATORES
     // =========================================================================
 
-    // Fatores de emissão IPCC para savanas (g/kg de biomassa seca queimada)
-    var EF = {
-        CH4: 2.3,    // Metano
-        N2O: 0.21,   // Óxido nitroso
-        CO: 65,      // Monóxido de carbono
-        NOX: 3.9     // Óxidos de nitrogênio
-    };
-
-    // Fatores de combustão (fração que efetivamente queima)
-    var combustion_fwd = 0.873;   // Resíduos finos e serapilheira
-    var combustion_cwd = 0.459;   // Resíduos lenhosos grossos
-
-    // Conteúdo de carbono em madeira seca (47% de carbono)
-    var carbon_content = 1 / 0.47;
-
-    // Proporção de AGB convertida em fine woody debris (Ribeiro et al. 2011)
-    var agb_to_fwd = 0.26;
-
-    // Conversão de unidades
-    var co2_conversion = 44 / 12;  // Conversão de C para CO2
-    var ef_conversion = 0.001;     // g/kg → conversão para unidades corretas
-
+    var agb_to_fwd = 0.26;         // 26% da AGB vira FWD (Ribeiro et al. 2011)
+    var combustion_fwd = 0.873;    // Fator combustão: serapilheira e FWD
+    var combustion_cwd = 0.459;    // Fator combustão: madeira morta grossa
 
     // =========================================================================
-    // FUNÇÕES AUXILIARES
+    // FUNÇÕES AUXILIARES (REPRODUÇÃO FIEL DA v035)
     // =========================================================================
 
-    /**
-     * Reclassifica frequência de fogo em 4 classes de severidade
-     * Baseado em: Reclassificação da Frequência de Fogo (SEEG_13)
-     */
     var reclassifyFireFrequency = function(fire_freq_image) {
-        var freq_mean = fire_freq_image.reduce('mean');
-        
+        var freq_mean = fire_freq_image.slice(1, 40).selfMask().reduce('mean');
         return freq_mean.multiply(0)
-            .where(freq_mean.gte(1).and(freq_mean.lt(3)), 1)   // 1-3: Baixa frequência
-            .where(freq_mean.gte(3).and(freq_mean.lt(5)), 2)   // 3-5: Média-baixa
-            .where(freq_mean.gte(5).and(freq_mean.lt(7)), 3)   // 5-7: Média-alta
-            .where(freq_mean.gte(7), 4);                       // 7+:  Alta frequência
+            .where(freq_mean.gte(1).and(freq_mean.lt(3)), 1)
+            .where(freq_mean.gte(3).and(freq_mean.lt(5)), 2)
+            .where(freq_mean.gte(5).and(freq_mean.lt(7)), 3)
+            .where(freq_mean.gte(7), 4);
     };
 
-    /**
-     * Reclassifica tempo desde fogo em 4 classes de recuperação
-     * Baseado em: Reclassificação de YSF (SEEG_13)
-     */
     var reclassifyTimeSinceFire = function(tsf_image) {
         return tsf_image
-            .where(tsf_image.gte(0).and(tsf_image.lt(4)), 4)   // 0-4 anos:  Baixo tempo (sem recuperação)
-            .where(tsf_image.gte(4).and(tsf_image.lt(7)), 3)   // 4-7 anos:  Médio-baixo
-            .where(tsf_image.gte(7).and(tsf_image.lt(10)), 2)  // 7-10 anos: Médio-alto
-            .where(tsf_image.gte(10), 1);                      // 10+ anos:  Alto tempo (recuperação)
+            .where(tsf_image.gte(0).and(tsf_image.lt(4)), 4)
+            .where(tsf_image.gte(4).and(tsf_image.lt(7)), 3)
+            .where(tsf_image.gte(7).and(tsf_image.lt(10)), 2)
+            .where(tsf_image.gte(10), 1);
     };
 
-    /**
-     * Calcula fatores de emissão de CO2 baseado em severidade de fogo
-     * Baseado em: calcularMudanca (SEEG_13)
-     * 
-     * fire_severity = TSF_reclassificado + Frequência_reclassificada
-     * Varia de 2 (baixa severidade) a 8 (alta severidade)
-     */
     var calculateEmissionFactors = function(fire_severity) {
         return fire_severity
-            .where(fire_severity.gte(2).and(fire_severity.lte(3)), 0.021)    // Severidade baixa-média
-            .where(fire_severity.gt(3).and(fire_severity.lte(6)), -0.004)    // Severidade média
-            .where(fire_severity.gt(6), -0.02);                             // Severidade alta
+            .where(fire_severity.gte(2).and(fire_severity.lte(3)), 0.021)
+            .where(fire_severity.gt(3).and(fire_severity.lte(6)), -0.004)
+            .where(fire_severity.gt(6), -0.02);
     };
-
-    /**
-     * Calcula emissões de um gás (CH4, N2O, CO, NOX)
-     * Baseado em: Fatores de combustão (SEEG_13)
-     */
-    var calculateCombustionEmissions = function(litter_img, cdw_img, agb_fwd_img, 
-                                               emission_factor, pixel_mask_img) {
-        var fwd_component = litter_img
-            .multiply(pixel_mask_img)
-            .multiply(combustion_fwd)
-            .multiply(carbon_content)
-            .multiply(emission_factor)
-            .multiply(ef_conversion);
-
-        var agb_fwd_component = agb_fwd_img
-            .multiply(pixel_mask_img)
-            .multiply(combustion_fwd)
-            .multiply(carbon_content)
-            .multiply(emission_factor)
-            .multiply(ef_conversion);
-
-        var cwd_component = cdw_img
-            .multiply(pixel_mask_img)
-            .multiply(combustion_cwd)
-            .multiply(carbon_content)
-            .multiply(emission_factor)
-            .multiply(ef_conversion);
-
-        return fwd_component.add(agb_fwd_component).add(cwd_component);
-    };
-
 
     // =========================================================================
     // PROCESSAMENTO PRINCIPAL
     // =========================================================================
 
-    // Inicializar coleções de bandas por gás
     var CO2_bands = ee.Image().select();
     var CH4_bands = ee.Image().select();
     var N2O_bands = ee.Image().select();
     var CO_bands = ee.Image().select();
     var NOX_bands = ee.Image().select();
 
-    // AGB atual (será atualizado a cada ano)
     var current_agb = agb;
     var current_agb_fwd = agb.multiply(agb_to_fwd);
 
-    // Reclassificar frequência e tempo desde fogo uma única vez
     var freq_class = reclassifyFireFrequency(fire_frequency);
     var tsf_class = reclassifyTimeSinceFire(time_since_fire);
 
-    // Iterar através dos anos
     years.forEach(function(year) {
 
-        // Selecionar dados do ano
         var burned_area = annual_burned.select('.*_' + year);
         var mask = savanna_mask.select('.*_' + year).selfMask();
-        var degradation_mask = fire_frequency.gte(1).select('.*1985_.*' + year).selfMask().multiply(0).updateMask(mask);
         var pixel_mask = burned_area.multiply(mask);
 
-        // Calcular severidade do fogo e fatores de emissão
+        // Severidade: TSF_class + Freq_class (range 2-8)
         var fire_severity = tsf_class.select('.*_' + year).add(freq_class);
         var emission_factors = calculateEmissionFactors(fire_severity);
 
-        // =====================================================================
-        // EMISSÕES DE CO2 (Tardias)
-        // =====================================================================
-        // Metodologia SEEG_13: agb × burned_area × emission_factor × (44/12)
-        // Resultado: tC/ha (CO2)
-
+        // --- CO2 (AGB loss/gain por severidade) → tC/ha
         var co2_tC_ha = current_agb
             .multiply(pixel_mask)
-            .multiply(emission_factors)
-            .multiply(co2_conversion);
-            
-        co2_tC_ha = degradation_mask.blend(co2_tC_ha.selfMask());
+            .multiply(emission_factors);
 
         CO2_bands = CO2_bands.addBands(
             co2_tC_ha.rename('CO2_tC_ha_' + year).float()
         );
 
-        // =====================================================================
-        // EMISSÕES DE COMBUSTÃO (CO, CH4, N2O, NOX)
-        // =====================================================================
+        // --- Combustão (CH4, N2O, CO, NOX) → t/ha via IPCC
+        // comb_total = litter×0.873 + agb26×0.873 + cdw×0.459  [tC/ha]
+        var comb_total = litter.multiply(combustion_fwd)
+            .add(current_agb_fwd.multiply(combustion_fwd))
+            .add(cdw.multiply(combustion_cwd));
 
-        // CO (Monóxido de carbono)
-        var co_year = calculateCombustionEmissions(
-            litter, cdw, current_agb_fwd,
-            EF.CO,
-            pixel_mask
-        );
-        
-        co_year = degradation_mask.blend(co_year.selfMask());
-
-        CO_bands = CO_bands.addBands(
-            co_year.rename('CO_tC_ha_' + year).float()
-        );
-
-        // CH4 (Metano)
-        var ch4_year = calculateCombustionEmissions(
-            litter, cdw, current_agb_fwd,
-            EF.CH4,
-            pixel_mask
-        );
-
-        ch4_year = degradation_mask.blend(ch4_year.selfMask());
-
+        // CH4: comb_total × 2000 × EF / 1e6
         CH4_bands = CH4_bands.addBands(
-            ch4_year.rename('CH4_tC_ha_' + year).float()
+            comb_total.multiply(pixel_mask).multiply(2000).multiply(2.3).divide(1e6).rename('CH4_t_ha_' + year).float()
         );
-
-        // N2O (Óxido nitroso)
-        var n2o_year = calculateCombustionEmissions(
-            litter, cdw, current_agb_fwd,
-            EF.N2O,
-            pixel_mask
-        );
-
-        n2o_year = degradation_mask.blend(n2o_year.selfMask());
-
         N2O_bands = N2O_bands.addBands(
-            n2o_year.rename('N2O_tC_ha_' + year).float()
+            comb_total.multiply(pixel_mask).multiply(2000).multiply(0.21).divide(1e6).rename('N2O_t_ha_' + year).float()
         );
-
-        // NOX (Óxidos de nitrogênio)
-        var nox_year = calculateCombustionEmissions(
-            litter, cdw, current_agb_fwd,
-            EF.NOX,
-            pixel_mask
+        CO_bands = CO_bands.addBands(
+            comb_total.multiply(pixel_mask).multiply(2000).multiply(65).divide(1e6).rename('CO_t_ha_' + year).float()
         );
-
-        nox_year = degradation_mask.blend(nox_year.selfMask());
-
         NOX_bands = NOX_bands.addBands(
-            nox_year.rename('NOX_tC_ha_' + year).float()
+            comb_total.multiply(pixel_mask).multiply(2000).multiply(3.9).divide(1e6).rename('NOX_t_ha_' + year).float()
         );
 
-        // =====================================================================
-        // ATUALIZAR BIOMASSA PARA PRÓXIMO ANO (CORREÇÃO DO BUG)
-        // =====================================================================
-        // SEEG_13 original usava: agb.add(...) [ERRADO - somava]
-        // Correto: agb.subtract(...) [fogo reduz biomassa]
-
-        current_agb = current_agb.subtract(
+        // --- Atualizar AGB (v035: agb.add(...) — pode ganhar ou perder)
+        current_agb = current_agb.add(
             current_agb
                 .multiply(pixel_mask)
                 .multiply(emission_factors)
@@ -280,7 +159,8 @@ exports.calcSavannaFireEmissions = function (params) {
  * Descomente a seção abaixo para testar e validar contra SEEG_13
  */
 
-///*
+//
+/*
 var qcn = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/RETIFICACAO/c_rect_col10');
 var fire_annual = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_annual_burned_v1');
 var fire_freq = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_fire_frequency_v1');
@@ -321,9 +201,10 @@ Map.addLayer(fire_annual.selfMask(), { bands: ['burned_area_2023'], min: 0, max:
 Map.addLayer(fire_freq.selfMask().slice(0,40), { bands: ['fire_frequency_1985_2023'], min: 0, max: 75, palette: paletaMapBiomas }, 'freq 2023', false);
 Map.addLayer(fire_tsf, { bands: ['burned_area_2023'], min: 0, max: 40, palette: [] }, 'tsf 2023', false);
 Map.addLayer(fire_emissions.select('CO2_tC_ha_.*'), {bands:['CO2_tC_ha_2023'], min: 0, max: 50, palette: ['white', 'orange', 'red'] }, 'CO2 Savana 2023 (tC/ha)');
-Map.addLayer(fire_emissions.select('CH4_tC_ha_.*'), {bands:['CH4_tC_ha_2023'], min: 0, max: 0.1, palette: ['white', 'purple'] }, 'CH4 Savana 2023 (tC/ha)');
-Map.addLayer(fire_emissions.select('N2O_tC_ha_.*'), {bands:['N2O_tC_ha_2023'], min: 0, max: 0.01, palette: ['white', 'cyan'] }, 'N2O Savana 2023 (tC/ha)');
-Map.addLayer(fire_emissions.select('NOX_tC_ha_.*'), {bands:['NOX_tC_ha_2023'], min: 0, max: 0.01, palette: ['white', 'cyan'] }, 'NOX Savana 2023 (tC/ha)');
+Map.addLayer(fire_emissions.select('CH4_t_ha_.*'), {bands:['CH4_t_ha_2023'], min: 0, max: 0.1, palette: ['white', 'purple'] }, 'CH4 Savana 2023 (t/ha)');
+Map.addLayer(fire_emissions.select('N2O_t_ha_.*'), {bands:['N2O_t_ha_2023'], min: 0, max: 0.01, palette: ['white', 'cyan'] }, 'N2O Savana 2023 (t/ha)');
+Map.addLayer(fire_emissions.select('CO_t_ha_.*'), {bands:['CO_t_ha_2023'], min: 0, max: 0.1, palette: ['white', 'blue'] }, 'CO Savana 2023 (t/ha)');
+Map.addLayer(fire_emissions.select('NOX_t_ha_.*'), {bands:['NOX_t_ha_2023'], min: 0, max: 0.01, palette: ['white', 'cyan'] }, 'NOX Savana 2023 (t/ha)');
 
 // Exportar
 Export.image.toAsset({

@@ -13,16 +13,17 @@ var geometry =
  * PROJETO: CCAL - Módulo 3 (Emissões por Mudança de Uso e Degradação)
  * VERSÃO: v036
  * SCRIPT: 04_fire_grassland.js
- * DESCRIÇÃO: Cálculo simplificado de emissões por queima de biomassa campestre. 
- *            Estima a liberação imediata de CH4 e N2O proveniente da combustão de 
- *            gramíneas e biomassa herbácea em pastagens e campos nativos.
+ * DESCRIÇÃO: Reprodução fiel do modelo SEEG_13 para emissões por fogo em campos.
+ *            Estima a liberação imediata de CH4, N2O, CO e NOX provenientes da
+ *            combustão de gramíneas e biomassa herbácea.
+ *            Saídas padronizadas em t/ha.
  * -----------------------------------------------------------------------------
  * INSTITUIÇÃO: IPAM Amazônia
  * EQUIPE CCAL: Ane Alencar; Bárbara Zimbres; Camila Silva; Celso Silva-Junior; 
  *              Edriano Souza; Isabel Silva; Lívia Laureto; Manuela Padilha; 
  *              Paulo Moutinho; Rebecca Maranhão; Valderli Piontekowski; Wallace Silva
  * CONTATO: https://ipam.org.br/contato/fale-conosco/
- * ATUALIZAÇÃO: 2026-04-30
+ * ATUALIZAÇÃO: 2026-04-30 | CORREÇÃO: 2026-05-27
  * =============================================================================
  */
 
@@ -33,23 +34,34 @@ exports.calcGrasslandFireEmissions = function (params) {
     var grassland_mask = params.grassland_mask;
     var years = params.years;
 
-    var EF = { CH4: 2.3, N2O: 0.21 };
-    var combf = 0.883;
+    var combf_fwd = 0.883;
+    var combf_cwd = 0.331;
 
     var CH4_bands = ee.Image().select();
     var N2O_bands = ee.Image().select();
+    var CO_bands = ee.Image().select();
+    var NOX_bands = ee.Image().select();
 
     years.forEach(function (y) {
         var fire_y = annual_burned.select('.*_' + y);
         var mask_y = grassland_mask.select('.*_' + y);
-        var comb_total = litter.add(agb).add(cdw).multiply(combf);
         var pixel_mask = fire_y.multiply(mask_y);
 
-        CH4_bands = CH4_bands.addBands(comb_total.multiply(2000).multiply(EF.CH4).divide(1e6).multiply(pixel_mask).rename('CH4_t_ha_' + y).float());
-        N2O_bands = N2O_bands.addBands(comb_total.multiply(2000).multiply(EF.N2O).divide(1e6).multiply(pixel_mask).rename('N2O_t_ha_' + y).float());
+        // comb_total = litter×0.883 + (agb+cdw)×0.331  [tC/ha]
+        var comb_total = litter.multiply(combf_fwd)
+            .add(agb.add(cdw).multiply(combf_cwd));
+
+        // CH4, N2O, CO, NOX → t/ha via IPCC (×2000×EF/1e6)
+        CH4_bands = CH4_bands.addBands(comb_total.multiply(pixel_mask).multiply(2000).multiply(2.3).divide(1e6).rename('CH4_t_ha_' + y).float());
+        N2O_bands = N2O_bands.addBands(comb_total.multiply(pixel_mask).multiply(2000).multiply(0.21).divide(1e6).rename('N2O_t_ha_' + y).float());
+        CO_bands  = CO_bands.addBands(comb_total.multiply(pixel_mask).multiply(2000).multiply(65).divide(1e6).rename('CO_t_ha_' + y).float());
+        NOX_bands = NOX_bands.addBands(comb_total.multiply(pixel_mask).multiply(2000).multiply(3.9).divide(1e6).rename('NOX_t_ha_' + y).float());
     });
 
-    return CH4_bands.addBands(N2O_bands);
+    return CH4_bands
+        .addBands(N2O_bands)
+        .addBands(CO_bands)
+        .addBands(NOX_bands);
 };
 
 //
@@ -95,5 +107,7 @@ Map.addLayer(grassland_mask.selfMask(), { bands: ['classification_2023'], palett
 // Camadas de Saída
 Map.addLayer(fire_emissions, { bands: ['CH4_t_ha_2023'], min: 0, max: 0.1, palette: ['white', 'purple'] }, 'CH4 Campo (t/ha)');
 Map.addLayer(fire_emissions, { bands: ['N2O_t_ha_2023'], min: 0, max: 0.01, palette: ['white', 'cyan'] }, 'N2O Campo (t/ha)');
+Map.addLayer(fire_emissions, { bands: ['CO_t_ha_2023'], min: 0, max: 0.1, palette: ['white', 'blue'] }, 'CO Campo (t/ha)');
+Map.addLayer(fire_emissions, { bands: ['NOX_t_ha_2023'], min: 0, max: 0.01, palette: ['white', 'yellow'] }, 'NOX Campo (t/ha)');
 Map.addLayer(fire_emissions, { }, 'Resultado Bruto (Todas Bandas)', false);
 //*/

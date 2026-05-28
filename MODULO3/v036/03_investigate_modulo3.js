@@ -138,23 +138,23 @@ var panel = ui.Panel({ style: { padding: '8px' } });
 var is_transposed = true, last_data = null, target_year = '2023';
 
 var config = {
-  lulc_orig: true, trans_orig: false, trans_adj: true, age_secveg: false, fire_annual: false, fire_freq: false, fire_tsf: false, stock_in: false,
-  fire_forest: false, fire_forest_co2: false, fire_forest_ch4: false, fire_forest_n2o: false,
-  fire_savanna: false, fire_savanna_co2: false, fire_savanna_ch4: false, fire_savanna_n2o: false,
-  fire_grassland: false, fire_grassland_ch4: false, fire_grassland_n2o: false,
+  lulc_orig: true, trans_orig: false, trans_adj: true, age_secveg: false, sec_veg_increment: false, fire_annual: false, fire_freq: false, fire_tsf: false, stock_in: false,
+  fire_forest: false, fire_forest_co2: false, fire_forest_ch4: false, fire_forest_n2o: false, fire_forest_co2_gross: false, fire_forest_co: false, fire_forest_nox: false,
+  fire_savanna: false, fire_savanna_co2: false, fire_savanna_ch4: false, fire_savanna_n2o: false, fire_savanna_co: false, fire_savanna_nox: false,
+  fire_grassland: false, fire_grassland_ch4: false, fire_grassland_n2o: false, fire_grassland_co: false, fire_grassland_nox: false,
   logging_raw: false, out_stock: true, out_fire: true, out_logging: true, out_secveg: true, out_defor: true,
   year: true, unit: 'tCO2e/ha'
 };
 
 var row_titles = {
-  'year': 'Year', 'lulc_orig': 'LULC', 'trans_orig': 'TRANS.O', 'trans_adj': 'TRANS.C', 'age_secveg': 'Idade SV', 'fire_annual': 'BURN', 'fire_freq': 'FREQ', 'fire_tsf': 'TSF', 'stock_in': 'Stk.In',
-  'fire_forest': '🔥For', 'fire_forest_co2': 'co2', 'fire_forest_ch4': 'ch4', 'fire_forest_n2o': 'n2o',
-  'fire_savanna': '🔥Sav', 'fire_savanna_co2': 'co2', 'fire_savanna_ch4': 'ch4', 'fire_savanna_n2o': 'n2o',
-  'fire_grassland': '🔥Gra', 'fire_grassland_ch4': 'ch4', 'fire_grassland_n2o': 'n2o',
-  'logging_raw': '🪓Log', 'out_stock': 'Estoque Final', 'out_fire': 'Fogo Total', 'out_logging': 'Madeira Total', 'out_secveg': 'Regeneração Total', 'out_defor': 'Balanço Desmat.'
+  'year': 'Ano', 'lulc_orig': 'LULC', 'trans_orig': 'Trans.O', 'trans_adj': 'Trans.C', 'age_secveg': 'Idade VS', 'sec_veg_increment': 'Incr.VS', 'fire_annual': 'Queima', 'fire_freq': 'Freq', 'fire_tsf': 'TSF', 'stock_in': 'Estq.In',
+  'fire_forest': 'Fg.Flor', 'fire_forest_co2': 'CO2', 'fire_forest_ch4': 'CH4', 'fire_forest_n2o': 'N2O', 'fire_forest_co2_gross': 'CO2b', 'fire_forest_co': 'CO', 'fire_forest_nox': 'NOx',
+  'fire_savanna': 'Fg.Sav', 'fire_savanna_co2': 'CO2', 'fire_savanna_ch4': 'CH4', 'fire_savanna_n2o': 'N2O', 'fire_savanna_co': 'CO', 'fire_savanna_nox': 'NOx',
+  'fire_grassland': 'Fg.Camp', 'fire_grassland_ch4': 'CH4', 'fire_grassland_n2o': 'N2O', 'fire_grassland_co': 'CO', 'fire_grassland_nox': 'NOx',
+  'logging_raw': 'Cort.Sel', 'out_stock': 'Estq.Fin', 'out_fire': 'Fogo Tot', 'out_logging': 'Mad.Tot', 'out_secveg': 'Reg.Tot', 'out_defor': 'Desmat.'
 };
 
-var click_layer = ui.Map.Layer(ee.Geometry.Point([0, 0]), { color: 'FF00FF' }, '📍 Ponto Selecionado', false);
+var click_layer = ui.Map.Layer(ee.Geometry.Point([0, 0]), { color: 'FF00FF' }, 'Ponto Selecionado', false);
 
 function updateLayerVisibility(key, shown) {
   var ly = getLayerInstance(key);
@@ -191,6 +191,10 @@ function getLayerInstance(key) {
     case 'age_secveg':
       img = final_image;
       vis = { bands: ['age_secveg_' + target_year], min: 1, max: 40, palette: ['#edf8e9', '#bae4b3', '#74c476', '#31a354', '#006d2c'] };
+      break;
+    case 'sec_veg_increment':
+      img = sec_veg_increment.updateMask(sec_veg_increment.select('sec_veg_increment_' + target_year).neq(0));
+      vis = { bands: ['sec_veg_increment_' + target_year], min: 0, max: 100, palette: ['#edf8e9', '#bae4b3', '#74c476', '#31a354', '#006d2c'] };
       break;
     case 'out_stock':
       img = final_image;
@@ -266,6 +270,21 @@ function getLayerInstance(key) {
       img = fire_forest.updateMask(fire_forest.select(b_name).neq(0));
       vis = { bands: [b_name], min: 0, max: 0.01, palette: ['white', 'cyan'] };
       break;
+    case 'fire_forest_co2_gross':
+      b_name = 'CO2_gross_t_ha_' + target_year;
+      img = fire_forest.updateMask(fire_forest.select(b_name).neq(0));
+      vis = { bands: [b_name], min: 0, max: 50, palette: ['white', 'orange', 'red'] };
+      break;
+    case 'fire_forest_co':
+      b_name = 'CO_t_ha_' + target_year;
+      img = fire_forest.updateMask(fire_forest.select(b_name).neq(0));
+      vis = { bands: [b_name], min: 0, max: 0.1, palette: ['white', 'blue'] };
+      break;
+    case 'fire_forest_nox':
+      b_name = 'NOX_t_ha_' + target_year;
+      img = fire_forest.updateMask(fire_forest.select(b_name).neq(0));
+      vis = { bands: [b_name], min: 0, max: 0.01, palette: ['white', 'yellow'] };
+      break;
     case 'fire_savanna_ch4':
       b_name = 'CH4_t_ha_' + target_year;
       img = fire_savanna.updateMask(fire_savanna.select(b_name).neq(0));
@@ -276,10 +295,30 @@ function getLayerInstance(key) {
       img = fire_savanna.updateMask(fire_savanna.select(b_name).neq(0));
       vis = { bands: [b_name], min: 0, max: 0.01, palette: ['white', 'cyan'] };
       break;
+    case 'fire_savanna_co':
+      b_name = 'CO_t_ha_' + target_year;
+      img = fire_savanna.updateMask(fire_savanna.select(b_name).neq(0));
+      vis = { bands: [b_name], min: 0, max: 0.1, palette: ['white', 'blue'] };
+      break;
+    case 'fire_savanna_nox':
+      b_name = 'NOX_t_ha_' + target_year;
+      img = fire_savanna.updateMask(fire_savanna.select(b_name).neq(0));
+      vis = { bands: [b_name], min: 0, max: 0.01, palette: ['white', 'yellow'] };
+      break;
     case 'fire_grassland_n2o':
       b_name = 'N2O_t_ha_' + target_year;
       img = fire_grassland.updateMask(fire_grassland.select(b_name).neq(0));
       vis = { bands: [b_name], min: 0, max: 0.01, palette: ['white', 'cyan'] };
+      break;
+    case 'fire_grassland_co':
+      b_name = 'CO_t_ha_' + target_year;
+      img = fire_grassland.updateMask(fire_grassland.select(b_name).neq(0));
+      vis = { bands: [b_name], min: 0, max: 0.1, palette: ['white', 'blue'] };
+      break;
+    case 'fire_grassland_nox':
+      b_name = 'NOX_t_ha_' + target_year;
+      img = fire_grassland.updateMask(fire_grassland.select(b_name).neq(0));
+      vis = { bands: [b_name], min: 0, max: 0.01, palette: ['white', 'yellow'] };
       break;
     default:
       return null;
@@ -299,7 +338,7 @@ panel.add(ui.Label('CCAL M3 — Auditoria Técnica', { fontWeight: 'bold', fontS
 var inspector_results = ui.Panel();
 panel.add(inspector_results);
 panel.add(ui.Button({
-  label: '🔄 Inverter Matriz',
+  label: 'Inverter Matriz',
   onClick: function () {
     is_transposed = !is_transposed;
     if (last_data) renderMatrix(last_data);
@@ -323,11 +362,11 @@ panel.add(matrix_outer);
 var gaveta_panel = ui.Panel({ layout: ui.Panel.Layout.flow('vertical'), style: { margin: '10px 0', border: '1px solid #eee', shown: false } });
 var is_gaveta_shown = false;
 var toggle_gaveta = ui.Button({
-  label: 'Configurações e Ajuda',
+  label: 'Configurações',
   onClick: function () {
     is_gaveta_shown = !is_gaveta_shown;
     gaveta_panel.style().set('shown', is_gaveta_shown);
-    toggle_gaveta.setLabel(is_gaveta_shown ? 'Fechar Configurações' : 'Configurações e Ajuda');
+    toggle_gaveta.setLabel(is_gaveta_shown ? 'Fechar' : 'Configurações');
   },
   style: { stretch: 'horizontal' }
 });
@@ -350,12 +389,13 @@ function createConfigRow(key, label_text, is_sub, target_panel) {
 }
 
 var inputs_panel = ui.Panel();
-gaveta_panel.add(ui.Label('Entradas (Inputs):', { fontSize: '10px', color: '#3498db', fontWeight: 'bold' }));
+gaveta_panel.add(ui.Label('Entradas:', { fontSize: '10px', color: '#3498db', fontWeight: 'bold' }));
 gaveta_panel.add(inputs_panel);
 createConfigRow('lulc_orig', 'LULC (MapBiomas)', false, inputs_panel);
 createConfigRow('trans_orig', 'TRANS (Original)', false, inputs_panel);
 createConfigRow('trans_adj', 'TRANS (Ajustado)', false, inputs_panel);
 createConfigRow('age_secveg', 'IDADE SECUNDÁRIA', false, inputs_panel);
+createConfigRow('sec_veg_increment', 'INCREMENTO VEG. SEC.', false, inputs_panel);
 createConfigRow('fire_annual', 'ÁREA QUEIMADA', false, inputs_panel);
 createConfigRow('fire_freq', 'FREQ. FOGO', false, inputs_panel);
 createConfigRow('fire_tsf', 'TSF (Anos)', false, inputs_panel);
@@ -364,17 +404,24 @@ createConfigRow('logging_raw', 'MADEIRA (Raw tC/ha)', false, inputs_panel);
 createConfigRow('fire_forest', 'FOGO FLORESTA', false, inputs_panel);
 createConfigRow('fire_forest_co2', '↳ CO2 (tC)', true, inputs_panel);
 createConfigRow('fire_forest_ch4', '↳ CH4 (t)', true, inputs_panel);
-// createConfigRow('fire_forest_n2o', '↳ N2O (t)', true, inputs_panel);
+createConfigRow('fire_forest_n2o', '↳ N2O (t)', true, inputs_panel);
+createConfigRow('fire_forest_co2_gross', '↳ CO2 bruto (t)', true, inputs_panel);
+createConfigRow('fire_forest_co', '↳ CO (t)', true, inputs_panel);
+createConfigRow('fire_forest_nox', '↳ NOX (t)', true, inputs_panel);
 createConfigRow('fire_savanna', 'FOGO SAVANA', false, inputs_panel);
 createConfigRow('fire_savanna_co2', '↳ CO2 (tC)', true, inputs_panel);
 createConfigRow('fire_savanna_ch4', '↳ CH4 (t)', true, inputs_panel);
-// createConfigRow('fire_savanna_n2o', '↳ N2O (t)', true, inputs_panel);
+createConfigRow('fire_savanna_n2o', '↳ N2O (t)', true, inputs_panel);
+createConfigRow('fire_savanna_co', '↳ CO (t)', true, inputs_panel);
+createConfigRow('fire_savanna_nox', '↳ NOX (t)', true, inputs_panel);
 createConfigRow('fire_grassland', 'FOGO CAMPESTRE', false, inputs_panel);
 createConfigRow('fire_grassland_ch4', '↳ CH4 (t)', true, inputs_panel);
-// createConfigRow('fire_grassland_n2o', '↳ N2O (t)', true, inputs_panel);
+createConfigRow('fire_grassland_n2o', '↳ N2O (t)', true, inputs_panel);
+createConfigRow('fire_grassland_co', '↳ CO (t)', true, inputs_panel);
+createConfigRow('fire_grassland_nox', '↳ NOX (t)', true, inputs_panel);
 
 var outputs_panel = ui.Panel();
-gaveta_panel.add(ui.Label('Saídas (Produto Final):', { fontSize: '10px', color: '#27ae60', fontWeight: 'bold' }));
+gaveta_panel.add(ui.Label('Saídas:', { fontSize: '10px', color: '#27ae60', fontWeight: 'bold' }));
 gaveta_panel.add(outputs_panel);
 createConfigRow('out_stock', 'Estoque Final', false, outputs_panel);
 createConfigRow('out_fire', 'Fogo Total', false, outputs_panel);
@@ -401,6 +448,7 @@ function getColor(key, val) {
     color = palette[i];
   } else if (key === 'out_defor') color = val > 0 ? '#ffcccc' : '#ffffff';
   else if (key === 'out_secveg') color = val > 0 ? '#ccffcc' : '#ffffff';
+  else if (key === 'sec_veg_increment') color = val > 0 ? '#cce5cc' : '#ffffff';
   else if (key === 'out_fire') color = val > 0 ? '#ffddbb' : '#ffffff';
   else if (key === 'out_logging') color = val > 0 ? '#eeddcc' : '#ffffff';
   return color;
@@ -444,6 +492,7 @@ function renderMatrix(obj) {
         else if (k === 'trans_orig') base = obj['trans_o_' + year];
         else if (k === 'trans_adj') base = obj['trans_c_' + year];
         else if (k === 'age_secveg') base = obj['age_secveg_' + year];
+        else if (k === 'sec_veg_increment') base = obj['sv_incr_' + year];
         else if (k === 'out_stock') base = obj['stock_' + year];
         else if (k === 'out_fire' || k === 'out_defor' || k === 'out_logging' || k === 'out_secveg') {
           var area_fact = obj.pixel_area_ha || 0.09;
@@ -458,11 +507,32 @@ function renderMatrix(obj) {
         else if (k === 'fire_freq') base = obj['freq_' + year];
         else if (k === 'fire_tsf') base = obj['tsf_' + year];
         else if (k === 'logging_raw') base = obj['log_logging_tC_ha_' + year];
-        else if (k.indexOf('fire_forest') !== -1) base = obj['ff_' + (k.indexOf('_ch4') !== -1 ? 'CH4_t_ha_' : k.indexOf('_n2o') !== -1 ? 'N2O_t_ha_' : 'CO2_tC_ha_') + year];
-        else if (k.indexOf('fire_savanna') !== -1) base = obj['fs_' + (k.indexOf('_ch4') !== -1 ? 'CH4_t_ha_' : k.indexOf('_n2o') !== -1 ? 'N2O_t_ha_' : 'CO2_tC_ha_') + year];
-        else if (k.indexOf('fire_grassland') !== -1) base = obj['fg_' + (k.indexOf('_n2o') !== -1 ? 'N2O_t_ha_' : 'CH4_t_ha_') + year];
+        else if (k.indexOf('fire_forest') !== -1) {
+          var suffix_ff = (k.indexOf('_co2_gross') !== -1) ? 'CO2_gross_t_ha_' :
+                          (k.indexOf('_co2') !== -1) ? 'CO2_tC_ha_' :
+                          (k.indexOf('_co') !== -1) ? 'CO_t_ha_' :
+                          (k.indexOf('_nox') !== -1) ? 'NOX_t_ha_' :
+                          (k.indexOf('_ch4') !== -1) ? 'CH4_t_ha_' :
+                          (k.indexOf('_n2o') !== -1) ? 'N2O_t_ha_' : 'CO2_tC_ha_';
+          base = obj['ff_' + suffix_ff + year];
+        }
+        else if (k.indexOf('fire_savanna') !== -1) {
+          var suffix_fs = (k.indexOf('_co') !== -1 && k.indexOf('_co2') === -1) ? 'CO_t_ha_' :
+                          (k.indexOf('_co2') !== -1) ? 'CO2_tC_ha_' :
+                          (k.indexOf('_nox') !== -1) ? 'NOX_t_ha_' :
+                          (k.indexOf('_ch4') !== -1) ? 'CH4_t_ha_' :
+                          (k.indexOf('_n2o') !== -1) ? 'N2O_t_ha_' : 'CO2_tC_ha_';
+          base = obj['fs_' + suffix_fs + year];
+        }
+        else if (k.indexOf('fire_grassland') !== -1) {
+          var suffix_fg = (k.indexOf('_co') !== -1) ? 'CO_t_ha_' :
+                          (k.indexOf('_nox') !== -1) ? 'NOX_t_ha_' :
+                          (k.indexOf('_n2o') !== -1) ? 'N2O_t_ha_' :
+                          'CH4_t_ha_';
+          base = obj['fg_' + suffix_fg + year];
+        }
 
-        var is_gas = (k.indexOf('_ch4') !== -1 || k.indexOf('_n2o') !== -1);
+        var is_gas = (k.indexOf('_ch4') !== -1 || k.indexOf('_n2o') !== -1 || k.indexOf('_co2_gross') !== -1 || k.indexOf('_nox') !== -1 || (k.indexOf('_co') !== -1 && k.indexOf('_co2') === -1));
         if (['trans_orig', 'trans_adj', 'fire_annual', 'fire_freq', 'fire_tsf', 'age_secveg'].indexOf(k) !== -1) {
           val = (base !== null && base !== undefined) ? base.toFixed(0) : '--';
         } else {
@@ -495,6 +565,7 @@ Map.onClick(function (coords) {
     .addBands(ee.Image.pixelArea().divide(10000).rename('pixel_area_ha'))
     .addBands(final_image.unmask(0))
     .addBands(biomass_stock_bruto.unmask(0))
+    .addBands(sec_veg_increment.select('sec_veg_increment_.*').unmask(0).rename(YEARS_ALL.map(function (y) { return 'sv_incr_' + y })))
     .addBands(lulc.select('classification_.*').unmask(0).rename(YEARS_ALL.map(function (y) { return 'lulc_' + y })))
     .addBands(desf_reg.select('classification_.*').unmask(0).rename(YEARS_ALL.map(function (y) { return 'trans_o_' + y })))
     .addBands(desf_reg_corrected.select('classification_.*').unmask(0).rename(YEARS_ALL.map(function (y) { return 'trans_c_' + y })))
@@ -504,11 +575,18 @@ Map.onClick(function (coords) {
     .addBands(fire_forest.select('CO2_tC_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'ff_CO2_tC_ha_' + y })))
     .addBands(fire_forest.select('CH4_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'ff_CH4_t_ha_' + y })))
     .addBands(fire_forest.select('N2O_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'ff_N2O_t_ha_' + y })))
+    .addBands(fire_forest.select('CO2_gross_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'ff_CO2_gross_t_ha_' + y })))
+    .addBands(fire_forest.select('CO_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'ff_CO_t_ha_' + y })))
+    .addBands(fire_forest.select('NOX_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'ff_NOX_t_ha_' + y })))
     .addBands(fire_savanna.select('CO2_tC_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fs_CO2_tC_ha_' + y })))
-    // .addBands(fire_savanna.select('CH4_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fs_CH4_t_ha_' + y })))
-    // .addBands(fire_savanna.select('N2O_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fs_N2O_t_ha_' + y })))
+    .addBands(fire_savanna.select('CH4_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fs_CH4_t_ha_' + y })))
+    .addBands(fire_savanna.select('N2O_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fs_N2O_t_ha_' + y })))
+    .addBands(fire_savanna.select('CO_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fs_CO_t_ha_' + y })))
+    .addBands(fire_savanna.select('NOX_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fs_NOX_t_ha_' + y })))
     .addBands(fire_grassland.select('CH4_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fg_CH4_t_ha_' + y })))
     .addBands(fire_grassland.select('N2O_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fg_N2O_t_ha_' + y })))
+    .addBands(fire_grassland.select('CO_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fg_CO_t_ha_' + y })))
+    .addBands(fire_grassland.select('NOX_t_ha_.*').unmask(0).rename(YEARS_FIRE.map(function (y) { return 'fg_NOX_t_ha_' + y })))
     .addBands(logging.select('logging_tC_ha_.*').unmask(0).rename(['2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024'].map(function (y) { return 'log_logging_tC_ha_' + y })));
 
   print('Executando reduceRegion no ponto...');

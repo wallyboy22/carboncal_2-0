@@ -172,7 +172,7 @@ Export.image.toAsset({
     image: final_image,
     description: 'WSilva-CCAL_MODULO3_FINAL_' + VERSION,
     assetId: FINAL_ASSET,
-    pyramidingPolicy: 'median',
+    pyramidingPolicy: 'mean',
     region: brazil_bounds,
     scale: SCALE,
     maxPixels: MAX_PIX,

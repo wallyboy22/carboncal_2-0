@@ -406,7 +406,7 @@ Object.keys(export_assets).forEach(function (key) {
         region: brazil_bounds,
         scale: SCALE,
         maxPixels: MAX_PIX,
-        pyramidingPolicy: key === 'final_image' ? 'median' : 'mean',
+        pyramidingPolicy: 'mean',
         overwrite: true
     });
     print('Task created for: ' + key);

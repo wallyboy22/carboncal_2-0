@@ -436,11 +436,11 @@ function initCCALInspector(final_image, tech_assets) {
     };
 
     var row_titles = {
-        'year': 'Year', 'lulc_orig': 'LULC', 'trans_orig': 'TRANS.O', 'trans_adj': 'TRANS.C', 'fire_annual': 'BURN', 'fire_freq': 'FREQ', 'fire_tsf': 'TSF', 'stock_in': 'Stk.In',
-        'logging_raw': 'Log.Raw', 'fire_forest': '🔥For', 'fire_forest_co2': '↳ CO2', 'fire_forest_ch4': '↳ CH4', 'fire_forest_n2o': '↳ N2O',
-        'fire_savanna': '🔥Sav', 'fire_savanna_co2': '↳ CO2', 'fire_savanna_ch4': '↳ CH4', 'fire_savanna_n2o': '↳ N2O',
-        'fire_grassland': '🔥Gra', 'fire_grassland_ch4': '↳ CH4', 'fire_grassland_n2o': '↳ N2O',
-        'out_stock': 'Stk.Out', 'out_fire': 'Loss.F', 'out_logging': 'Loss.L', 'out_secveg': 'Gain.V', 'out_defor': '📉Def'
+        'year': 'Ano', 'lulc_orig': 'LULC', 'trans_orig': 'Trans.O', 'trans_adj': 'Trans.C', 'fire_annual': 'Queima', 'fire_freq': 'Freq', 'fire_tsf': 'TSF', 'stock_in': 'Estq.In',
+        'logging_raw': 'Cort.Sel', 'fire_forest': 'Fg.Flor', 'fire_forest_co2': 'CO2', 'fire_forest_ch4': 'CH4', 'fire_forest_n2o': 'N2O',
+        'fire_savanna': 'Fg.Sav', 'fire_savanna_co2': 'CO2', 'fire_savanna_ch4': 'CH4', 'fire_savanna_n2o': 'N2O',
+        'fire_grassland': 'Fg.Camp', 'fire_grassland_ch4': 'CH4', 'fire_grassland_n2o': 'N2O',
+        'out_stock': 'Estq.Fin', 'out_fire': 'Fogo Tot', 'out_logging': 'Mad.Tot', 'out_secveg': 'Reg.Tot', 'out_defor': 'Desmat.'
     };
 
     function convertValue(val, unit) {
@@ -484,9 +484,9 @@ function initCCALInspector(final_image, tech_assets) {
     var inspector_results = ui.Panel();
     var matrix_outer = ui.Panel({ style: { stretch: 'both', padding: '2px', backgroundColor: '#f8f9fa', border: '1px solid #dee2e6' } });
 
-    panel.add(ui.Label('CCAL M3 Auditor v036', { fontWeight: 'bold', fontSize: '18px', color: '#2c3e50' }));
+    panel.add(ui.Label('CCAL M3 Auditor', { fontWeight: 'bold', fontSize: '18px', color: '#2c3e50' }));
     panel.add(inspector_results);
-    panel.add(ui.Button({ label: '🔄 Inverter Matriz', onClick: function () { config.is_transposed = !config.is_transposed; if (config.last_data) renderMatrix(config.last_data); }, style: { stretch: 'horizontal' } }));
+    panel.add(ui.Button({ label: 'Inverter Matriz', onClick: function () { config.is_transposed = !config.is_transposed; if (config.last_data) renderMatrix(config.last_data); }, style: { stretch: 'horizontal' } }));
 
     var unit_panel = ui.Panel({ layout: ui.Panel.Layout.flow('horizontal'), style: { margin: '5px 0' } });
     unit_panel.add(ui.Label('Exibir em:', { fontSize: '11px', fontWeight: 'bold' }));

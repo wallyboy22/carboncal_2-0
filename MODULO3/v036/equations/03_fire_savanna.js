@@ -150,6 +150,26 @@ exports.calcSavannaFireEmissions = function (params) {
         .addBands(NOX_bands);
 };
 
+exports.description = '## CCAL M3: Emissões por Fogo em Savanas\n\n' +
+    '**Modelo**: Severity-based (SEEG_13) — severidade = TSF_class + Freq_class.\n' +
+    '**Fatores AGB**: +2.1% (severidade 2-3), −0.4% (4-6), −2.0% (7+).\n' +
+    '**Combustão**: 3 compartimentos (litter×0.873, agb26×0.873, cdw×0.459) via IPCC.\n\n' +
+    '**Bandas** (5 gases, 1986–2024, 39 anos cada):\n' +
+    '- `CO2_tC_ha_[ANO]` — Balanço de biomassa (tC/ha)\n' +
+    '- `CH4_t_ha_[ANO]` — Metano (t/ha)\n' +
+    '- `N2O_t_ha_[ANO]` — Óxido nitroso (t/ha)\n' +
+    '- `CO_t_ha_[ANO]` — Monóxido de carbono (t/ha)\n' +
+    '- `NOX_t_ha_[ANO]` — Óxidos de nitrogênio (t/ha)\n\n' +
+    '```javascript\n' +
+    '// Plot simples\n' +
+    'Map.addLayer(fire_savanna.select("CO2_tC_ha_2023"),\n' +
+    '  { min: 0, max: 50, palette: ["white","orange","red"] }, "CO2 Savana 2023 (tC/ha)");\n' +
+    'Map.addLayer(fire_savanna.select("CH4_t_ha_2023"),\n' +
+    '  { min: 0, max: 0.1, palette: ["white","purple"] }, "CH4 Savana 2023 (t/ha)");\n' +
+    '```';
+
+//
+
 
 /**
  * =============================================================================

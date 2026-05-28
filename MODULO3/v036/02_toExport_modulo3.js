@@ -168,8 +168,26 @@ var final_image = out_bands.float();
 final_image = final_image.select(final_image.bandNames().sort());
 
 // 5. EXPORTAÇÃO
+var final_desc = '## CCAL M3: Balanço Consolidado (' + VERSION + ')\n\n' +
+    '**Bandas** (1986–2024, 39 anos cada exceto logging):\n' +
+    '- `loss_fire_[ANO]` — Emissões por fogo (tCO2e/pixel)\n' +
+    '- `loss_grassland_[ANO]` — Emissões fogo campo (tCO2e/pixel)\n' +
+    '- `loss_selective_logging_[ANO]` — Corte seletivo (tCO2e/pixel, 2017–2024)\n' +
+    '- `loss_convergence_[ANO]` — Convergência fogo+logging (tCO2e/pixel)\n' +
+    '- `loss_deforestation_[ANO]` — Desmatamento (tCO2e/pixel)\n' +
+    '- `gain_secondary_vegetation_[ANO]` — Remoção por regeneração (tCO2e/pixel)\n' +
+    '- `stock_[ANO]` — Estoque remanescente (tC/ha)\n\n' +
+    '```javascript\n' +
+    'Map.addLayer(final_image.select("stock_2023"),\n' +
+    '  { min: 0, max: 250, palette: ["#440154","#46327e","#365c8d","#277f8e","#1fa187","#4ac16d","#a0da39","#fde725"] },\n' +
+    '  "Estoque 2023 (tC/ha)");\n' +
+    'Map.addLayer(final_image.select("loss_fire_2023"),\n' +
+    '  { min: 0, max: 50, palette: ["#fee5d9","#fcae91","#fb6a4a","#de2d26","#a50f15"] },\n' +
+    '  "Emissão Fogo 2023 (tCO2e/pixel)");\n' +
+    '```';
+
 Export.image.toAsset({
-    image: final_image,
+    image: final_image.float().set({ 'description': final_desc }),
     description: 'WSilva-CCAL_MODULO3_FINAL_' + VERSION,
     assetId: FINAL_ASSET,
     pyramidingPolicy: 'mean',

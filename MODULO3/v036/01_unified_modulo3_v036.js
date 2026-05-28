@@ -325,52 +325,48 @@ function getMarkdownDescription(key) {
     var desc = '';
     switch (key) {
         case 'biomass_stock':
-            desc = '## CCAL Módulo 3: Estoque de Biomassa\n\n' +
+            desc = '## CCAL M3: Estoque de Biomassa\n\n' +
                 '**Unidade**: `tC/ha`\n' +
-                '**Descrição**: Estoque de carbono atualizado ano a ano, contabilizando crescimento secundário e perdas por degradação (fogo e extração madeireira) para áreas de vegetação natural.\n' +
-                '**Bandas**: `biomass_stock_[ANO]`';
+                '**Bandas**: `biomass_stock_[ANO]` (1985–2024)\n\n' +
+                '```javascript\n' +
+                'Map.addLayer(biomass_stock.select("biomass_stock_2023"),\n' +
+                '  { min: 0, max: 250, palette: ["#440154","#46327e","#365c8d","#277f8e","#1fa187","#4ac16d","#a0da39","#fde725"] },\n' +
+                '  "Estoque de Biomassa 2023 (tC/ha)");\n' +
+                '```';
             break;
         case 'secondary_veg_increment':
-            desc = '## CCAL Módulo 3: Incremento de Vegetação Secundária\n\n' +
-                '**Unidade**: `tC/ha`\n' +
-                '**Descrição**: Incremento anual de carbono para áreas de vegetação secundária, baseado na idade da vegetação (MapBiomas) e equações específicas por bioma.\n' +
-                '**Bandas**: `sec_veg_increment_[ANO]`';
+            desc = secVeg.description;
             break;
         case 'fire_forest_emissions':
-            desc = '## CCAL Módulo 3: Emissões por Fogo em Florestas\n\n' +
-                '**Unidades**: `tC/ha` (para CO2), `t/ha` (para CH4 e N2O)\n' +
-                '**Descrição**: Emissões de gases de efeito estufa derivadas de queimadas em áreas florestais, incluindo biomassa acima do solo, liteira e madeira morta.\n' +
-                '**Bandas**: `CO2_tC_ha_[ANO]`, `CH4_t_ha_[ANO]`, `N2O_t_ha_[ANO]`';
+            desc = fireFor.description;
             break;
         case 'fire_savanna_emissions':
-            desc = '## CCAL Módulo 3: Emissões por Fogo em Formações Savânicas\n\n' +
-                '**Unidades**: `tC/ha` (para CO2), `t/ha` (para CH4 e N2O)\n' +
-                '**Descrição**: Emissões de gases de efeito estufa derivadas de queimadas em áreas de savana (Cerrado, Caatinga, etc).\n' +
-                '**Bandas**: `CO2_tC_ha_[ANO]`, `CH4_t_ha_[ANO]`, `N2O_t_ha_[ANO]`';
+            desc = fireSav.description;
             break;
         case 'fire_grassland_emissions':
-            desc = '## CCAL Módulo 3: Emissões por Fogo em Formações Campestres\n\n' +
-                '**Unidades**: `t/ha` (para CH4 e N2O)\n' +
-                '**Descrição**: Emissões de gases de efeito estufa (CH4 e N2O) derivadas de queimadas em áreas campestres. Assume-se que o CO2 é reabsorvido rapidamente.\n' +
-                '**Bandas**: `CH4_t_ha_[ANO]`, `N2O_t_ha_[ANO]`';
+            desc = fireGra.description;
             break;
         case 'logging_emissions':
-            desc = '## CCAL Módulo 3: Emissões por Extração Madeireira Seletiva\n\n' +
-                '**Unidade**: `tC/ha`\n' +
-                '**Descrição**: Emissões por extração de madeira (geométrica e desordenada) na Amazônia, resultando na perda de biomassa.\n' +
-                '**Bandas**: `logging_tC_ha_[ANO]`';
+            desc = loggM.description;
             break;
         case 'final_image':
-            desc = '## CCAL Módulo 3: Balanço Consolidado de Carbono (' + VERSION + ')\n\n' +
-                '**Unidades**: Várias (veja abaixo)\n' +
-                '**Descrição**: Produto final unificado contendo todas as transições de uso e cobertura e suas emissões ou remoções totais por pixel.\n\n' +
-                '### Bandas:\n' +
-                '- `loss_deforestation_[ANO]`: Emissões líquidas por desmatamento (**tCO2e / pixel**)\n' +
-                '- `loss_fire_[ANO]`: Emissões totais (CO2, CH4, N2O em GWP) por fogo em floresta e savana (**tCO2e / pixel**)\n' +
-                '- `loss_grassland_[ANO]`: Emissões totais (CH4, N2O em GWP) por fogo em campo (**tCO2e / pixel**)\n' +
-                '- `loss_selective_logging_[ANO]`: Emissões por extração madeireira (**tCO2e / pixel**)\n' +
-                '- `gain_secondary_vegetation_[ANO]`: Remoção por crescimento de vegetação secundária (**tCO2e / pixel**)\n' +
-                '- `stock_[ANO]`: Estoque dinâmico de carbono remanescente (**tC / ha**)';
+            desc = '## CCAL M3: Balanço Consolidado (' + VERSION + ')\n\n' +
+                '**Bandas** (1986–2024, 39 anos cada exceto logging):\n' +
+                '- `loss_fire_[ANO]` — Emissões por fogo (tCO2e/pixel)\n' +
+                '- `loss_grassland_[ANO]` — Emissões fogo campo (tCO2e/pixel)\n' +
+                '- `loss_selective_logging_[ANO]` — Corte seletivo (tCO2e/pixel, 2017–2024)\n' +
+                '- `loss_convergence_[ANO]` — Convergência fogo+logging (tCO2e/pixel)\n' +
+                '- `loss_deforestation_[ANO]` — Desmatamento (tCO2e/pixel)\n' +
+                '- `gain_secondary_vegetation_[ANO]` — Remoção por regeneração (tCO2e/pixel)\n' +
+                '- `stock_[ANO]` — Estoque remanescente (tC/ha)\n\n' +
+                '```javascript\n' +
+                'Map.addLayer(final_image.select("stock_2023"),\n' +
+                '  { min: 0, max: 250, palette: ["#440154","#46327e","#365c8d","#277f8e","#1fa187","#4ac16d","#a0da39","#fde725"] },\n' +
+                '  "Estoque 2023 (tC/ha)");\n' +
+                'Map.addLayer(final_image.select("loss_fire_2023"),\n' +
+                '  { min: 0, max: 50, palette: ["#fee5d9","#fcae91","#fb6a4a","#de2d26","#a50f15"] },\n' +
+                '  "Emissão Fogo 2023 (tCO2e/pixel)");\n' +
+                '```';
             break;
         default:
             desc = 'Descrição não disponível para ' + key;

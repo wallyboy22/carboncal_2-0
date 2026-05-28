@@ -60,6 +60,17 @@ exports.calcLoggingEmissions = function (params) {
     return result;
 };
 
+exports.description = '## CCAL M3: Emissões por Corte Seletivo\n\n' +
+    '**Fonte**: DETER Amazônia (2017–2024) — `degradation_YYYY_sl_disordered` + `degradation_YYYY_sl_geometric`.\n' +
+    '**Fração de perda**: 19.6% do AGB no pixel afetado.\n' +
+    '**AGB update**: Cumulativo ano a ano dentro do bioma Amazônia.\n\n' +
+    '**Banda**: `logging_tC_ha_[ANO]` (2017–2024, 8 bandas) — tC/ha\n\n' +
+    '```javascript\n' +
+    '// Plot simples\n' +
+    'Map.addLayer(logging.select("logging_tC_ha_2023"),\n' +
+    '  { min: 0, max: 10, palette: ["white","brown"] }, "Corte Seletivo 2023 (tC/ha)");\n' +
+    '```';
+
 //
 /*
 // =============================================================================

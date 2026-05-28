@@ -64,6 +64,23 @@ exports.calcGrasslandFireEmissions = function (params) {
         .addBands(NOX_bands);
 };
 
+exports.description = '## CCAL M3: Emissões por Fogo em Campos\n\n' +
+    '**Modelo**: Combustão simples — apenas gases não-CO₂ (CO₂ é neutro).\n' +
+    '**Combustão**: litter×0.883 + (AGB+CDW)×0.331.\n' +
+    '**AGB**: Não atualizado (campo se recupera integralmente após fogo).\n\n' +
+    '**Bandas** (4 gases, 1986–2024, 39 anos cada):\n' +
+    '- `CH4_t_ha_[ANO]` — Metano (t/ha)\n' +
+    '- `N2O_t_ha_[ANO]` — Óxido nitroso (t/ha)\n' +
+    '- `CO_t_ha_[ANO]` — Monóxido de carbono (t/ha)\n' +
+    '- `NOX_t_ha_[ANO]` — Óxidos de nitrogênio (t/ha)\n\n' +
+    '```javascript\n' +
+    '// Plot simples\n' +
+    'Map.addLayer(fire_grassland.select("CH4_t_ha_2023"),\n' +
+    '  { min: 0, max: 0.1, palette: ["white","purple"] }, "CH4 Campo 2023 (t/ha)");\n' +
+    'Map.addLayer(fire_grassland.select("NOX_t_ha_2023"),\n' +
+    '  { min: 0, max: 0.01, palette: ["white","yellow"] }, "NOX Campo 2023 (t/ha)");\n' +
+    '```';
+
 //
 /*
 // =============================================================================

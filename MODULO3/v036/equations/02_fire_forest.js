@@ -351,6 +351,29 @@ exports.calcForestFireEmissions = function (params) {
         .addBands(NOX_mosaic.selfMask());
 };
 
+exports.description = '## CCAL M3: Emissões por Fogo em Florestas\n\n' +
+    '**Modelo**: FATE v2-1 (SEEG_12) — balanço integrado de carbono.\n' +
+    '**Processos**: Mortalidade, combustão (single + multi-fire), decomposição, regeneração.\n' +
+    '**Parâmetros por bioma**: fwd_combf, cwd_combf_s, cwd_combf_m, cwd_part_m, turnover, decomp.\n\n' +
+    '**Bandas** (6 gases, 1986–2024, 39 anos cada):\n' +
+    '- `CO2_tC_ha_[ANO]` — Balanço líquido (tC/ha)\n' +
+    '- `CO2_gross_t_ha_[ANO]` — Combustão bruta (t/ha)\n' +
+    '- `CH4_t_ha_[ANO]` — Metano (t/ha)\n' +
+    '- `N2O_t_ha_[ANO]` — Óxido nitroso (t/ha)\n' +
+    '- `CO_t_ha_[ANO]` — Monóxido de carbono (t/ha)\n' +
+    '- `NOX_t_ha_[ANO]` — Óxidos de nitrogênio (t/ha)\n\n' +
+    '```javascript\n' +
+    '// Plot simples\n' +
+    'Map.addLayer(fire_forest.select("CO2_tC_ha_2023"),\n' +
+    '  { min: 0, max: 50, palette: ["white","orange","red"] }, "CO2 Floresta 2023 (tC/ha)");\n' +
+    'Map.addLayer(fire_forest.select("CH4_t_ha_2023"),\n' +
+    '  { min: 0, max: 0.1, palette: ["white","purple"] }, "CH4 Floresta 2023 (t/ha)");\n' +
+    'Map.addLayer(fire_forest.select("NOX_t_ha_2023"),\n' +
+    '  { min: 0, max: 0.01, palette: ["white","yellow"] }, "NOX Floresta 2023 (t/ha)");\n' +
+    '```';
+
+//
+
 
 /**
  * =============================================================================

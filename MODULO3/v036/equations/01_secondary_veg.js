@@ -92,6 +92,18 @@ exports.calcSecondaryVegIncrement = function (params) {
     return stock_stack;
 };
 
+exports.description = '## CCAL M3: Incremento de Vegetação Secundária\n\n' +
+    '**Método**: Age-based — acumula idade a cada ano, aplica incremento por bioma e classe (Floresta/Campo).\n' +
+    '**Unidade**: tC/ha acumulado (não delta anual).\n' +
+    '**Teto**: Cap no estoque total de carbono da QCN.\n\n' +
+    '**Banda**: `sec_veg_increment_[ANO]` (1985–2024, 40 bandas)\n\n' +
+    '```javascript\n' +
+    '// Plot simples\n' +
+    'Map.addLayer(sec_veg_increment.select("sec_veg_increment_2023"),\n' +
+    '  { min: 0, max: 100, palette: ["#edf8e9","#bae4b3","#74c476","#31a354","#006d2c"] },\n' +
+    '  "Vegetação Secundária 2023 (tC/ha)");\n' +
+    '```';
+
 //
 /*
 // =============================================================================

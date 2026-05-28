@@ -1,12 +1,11 @@
 /**
  * =============================================================================
  * PROJETO: CCAL - Módulo 3 (Emissões por Mudança de Uso e Degradação)
- * VERSÃO: v036
- * SCRIPT: 00_unified_modulo3_v036.js
- * DESCRIÇÃO: Orquestrador central do Módulo 3. Integra o processamento completo de 
- *            emissões por mudança de uso da terra e degradação florestal. Contém 
- *            a lógica de orquestração temporal e espacial, permitindo a execução 
- *            modular das equações de fogo, regeneração e exploração madeireira.
+ * VERSÃO: v036 (MODULAR)
+ * SCRIPT: 01_unified_modulo3_v036.js
+ * DESCRIÇÃO: Orquestrador central do Módulo 3 — consome os módulos de equação
+ *            via require(). Integra o processamento completo de emissões por
+ *            mudança de uso da terra e degradação florestal.
  * -----------------------------------------------------------------------------
  * INSTITUIÇÃO: IPAM Amazônia
  * EQUIPE CCAL: Ane Alencar; Bárbara Zimbres; Camila Silva; Celso Silva-Junior; 
@@ -14,7 +13,7 @@
  *              Paulo Moutinho; Rebecca Maranhão; Valderli Piontekowski; Wallace Silva
  * ORGANIZAÇÃO: Bárbara Zimbres e Wallace Silva
  * CONTATO: https://ipam.org.br/contato/fale-conosco/
- * ATUALIZAÇÃO: 2026-04-30
+ * ATUALIZAÇÃO: 2026-05-28
  * =============================================================================
  */
 
@@ -37,6 +36,13 @@ var YEARS_FIRE = YEARS_ALL.slice(1); // 1986–2024 (fogo começa em 1986)
 var GWP_CH4 = 28;
 var GWP_N2O = 265;
 var TC_TO_TCO2 = 3.67;
+
+// --- Módulos de equação (require)
+var secVeg  = require('users/workspaceipam/CCAL:MODULO3/v036/equations/01_secondary_veg');
+var fireFor = require('users/workspaceipam/CCAL:MODULO3/v036/equations/02_fire_forest');
+var fireSav = require('users/workspaceipam/CCAL:MODULO3/v036/equations/03_fire_savanna');
+var fireGra = require('users/workspaceipam/CCAL:MODULO3/v036/equations/04_fire_grassland');
+var loggM   = require('users/workspaceipam/CCAL:MODULO3/v036/equations/05_logging');
 
 // =============================================================================
 // 2. DATASETS DE ENTRADA
@@ -128,7 +134,7 @@ var always_submerged = lulc.eq(33).reduce(ee.Reducer.sum()).gte(38);
 // =============================================================================
 
 // --- 4a. Incremento de veg. secundária (age-based)
-var sec_veg_increment = calcSecondaryVegIncrement({
+var sec_veg_increment = secVeg.calcSecondaryVegIncrement({
     desf_reg_corrected: desf_reg_corrected,
     grass_forest: grass_forest,
     total_carbon: total,
@@ -155,7 +161,7 @@ YEARS_ALL.forEach(function (y) {
 // 5. EMISSÕES POR DEGRADAÇÃO
 // =============================================================================
 
-var fire_forest = calcForestFireEmissions({
+var fire_forest = fireFor.calcForestFireEmissions({
     annual_burned: annual_burned,
     fire_frequency: fire_frequency,
     time_since_fire: time_since_fire,
@@ -165,7 +171,7 @@ var fire_forest = calcForestFireEmissions({
     years: YEARS_FIRE
 });
 
-var fire_savanna = calcSavannaFireEmissions({
+var fire_savanna = fireSav.calcSavannaFireEmissions({
     annual_burned: annual_burned,
     fire_frequency: fire_frequency,
     time_since_fire: time_since_fire,
@@ -174,7 +180,7 @@ var fire_savanna = calcSavannaFireEmissions({
     years: YEARS_FIRE
 });
 
-var fire_grassland = calcGrasslandFireEmissions({
+var fire_grassland = fireGra.calcGrasslandFireEmissions({
     annual_burned: annual_burned,
     agb: agb, cdw: cdw, litter: litter,
     grassland_mask: grassland_mask,
@@ -182,7 +188,7 @@ var fire_grassland = calcGrasslandFireEmissions({
     years: YEARS_FIRE
 });
 
-var logging = calcLoggingEmissions({
+var logging = loggM.calcLoggingEmissions({
     agb: agb,
     forest_mask: forest_mask,
     amazon_mask: ee.Image(0).paint(biomas.filter(ee.Filter.equals('Bioma', 'Amazônia')), 1).eq(1),
@@ -405,285 +411,6 @@ Object.keys(export_assets).forEach(function (key) {
     });
     print('Task created for: ' + key);
 });
-
-// =============================================================================
-// 10. EQUAÇÕES (FUNÇÕES PURAS)
-// =============================================================================
-
-function calcSecondaryVegIncrement(params) {
-    var desf_reg = params.desf_reg_corrected;
-    var gf = params.grass_forest;
-    var total = params.total_carbon;
-    var biomas = params.biomas;
-    var years = params.years;
-
-    var incr_table = {
-        "Amazônia": { "F": { "gte20": 1.1698, "lt20": 4.7841 }, "G": { "gte20": 0, "lt20": 1.7000 } },
-        "Caatinga": { "F": { "gte20": 0.5928, "lt20": 2.4378 }, "G": { "gte20": 0, "lt20": 0.6000 } },
-        "Cerrado": { "F": { "gte20": 0.9484, "lt20": 3.8789 }, "G": { "gte20": 0, "lt20": 1.7000 } },
-        "Mata Atlântica": { "F": { "gte20": 0.7780, "lt20": 3.1690 }, "G": { "gte20": 0, "lt20": 0.6000 } },
-        "Pampa": { "F": { "gte20": 0.7340, "lt20": 2.9896 }, "G": { "gte20": 0, "lt20": 1.7000 } },
-        "Pantanal": { "F": { "gte20": 0.9622, "lt20": 3.9159 }, "G": { "gte20": 0, "lt20": 1.7000 } }
-    };
-
-    var biome_list = ['Amazônia', 'Caatinga', 'Cerrado', 'Mata Atlântica', 'Pampa', 'Pantanal'];
-    var biome_images = {};
-    biome_list.forEach(function (b) {
-        biome_images[b] = ee.Image(0).paint(biomas.filter(ee.Filter.eq('Bioma', b)), 1).eq(1);
-    });
-
-    var is_sec_veg = desf_reg.eq(3).or(desf_reg.eq(5));
-    var age_stack = ee.Image(0);
-    var stock_stack = ee.Image().select();
-
-    years.forEach(function (year, i) {
-        var sec_year = is_sec_veg.select('.*_' + year);
-        var gf_year = gf.select('.*_' + year);
-        var age_prev = age_stack.slice(-1);
-        var age_year = age_prev.add(1).multiply(sec_year);
-
-        age_stack = (i === 0) ? age_year : age_stack.addBands(age_year);
-
-        var lt20 = age_year.lt(20).and(age_year.gt(0)), gte20 = age_year.gte(20);
-        var prev_stock = (i === 0) ? ee.Image(0) : stock_stack.slice(-1).unmask(0);
-        var increment_year = ee.Image(0).rename('sec_veg_increment_' + year);
-        
-        var is_forest = gf_year.neq(1);
-        var is_grass = gf_year.eq(1);
-        
-        biome_list.forEach(function (b) {
-            var bm = biome_images[b];
-            var result_biome = prev_stock.rename('sec_veg_increment_' + year)
-                .where(is_forest.and(lt20).and(bm), prev_stock.add(incr_table[b]['F'].lt20))
-                .where(is_forest.and(gte20).and(bm), prev_stock.add(incr_table[b]['F'].gte20))
-                .where(is_grass.and(lt20).and(bm), prev_stock.add(incr_table[b]['G'].lt20))
-                .where(is_grass.and(gte20).and(bm), prev_stock.add(incr_table[b]['G'].gte20));
-
-            increment_year = increment_year.where(bm.and(sec_year), result_biome);
-        });
-
-        increment_year = increment_year.where(increment_year.gt(total), total).float();
-        stock_stack = stock_stack.addBands(increment_year);
-    });
-
-    return stock_stack;
-}
-
-function calcForestFireEmissions(params) {
-    var annual_burned = params.annual_burned;
-    var fire_frequency = params.fire_frequency;
-    var time_since_fire = params.time_since_fire;
-    var agb = params.agb; var cdw = params.cdw; var litter = params.litter;
-    var forest_mask = params.forest_mask; var biomas = params.biomas; var years = params.years;
-
-    var biome_dict = {
-        'Amazônia': { AGBloss_lookup: [0, 0.104, 0.080, 0.060, 0.044, 0.032, 0.023, 0.016, 0.011, 0.008, 0.006, 0.004, 0.003, 0.002, 0.001, 0.001, 0.001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], turnover: 0.03, decomp_rate: 0.19, fwd_combf: 0.683, cwd_combf_single: 0.643, cwd_combf_multi: 0.824, cwd_part_multi: 0.757 },
-        'Caatinga': { AGBloss_lookup: [0, 0.104, 0.080, 0.060, 0.044, 0.032, 0.023, 0.016, 0.011, 0.008, 0.006, 0.004, 0.003, 0.002, 0.001, 0.001, 0.001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], turnover: 0.03, decomp_rate: 0.19, fwd_combf: 0.983, cwd_combf_single: 0.719, cwd_combf_multi: 0.824, cwd_part_multi: 0.757 },
-        'Cerrado': { AGBloss_lookup: [0, 0.104, 0.080, 0.060, 0.044, 0.032, 0.023, 0.016, 0.011, 0.008, 0.006, 0.004, 0.003, 0.002, 0.001, 0.001, 0.001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], turnover: 0.03, decomp_rate: 0.19, fwd_combf: 0.683, cwd_combf_single: 0.629, cwd_combf_multi: 0.824, cwd_part_multi: 0.757 },
-        'Mata Atlântica': { AGBloss_lookup: [0, 0.104, 0.080, 0.060, 0.044, 0.032, 0.023, 0.016, 0.011, 0.008, 0.006, 0.004, 0.003, 0.002, 0.001, 0.001, 0.001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], turnover: 0.03, decomp_rate: 0.19, fwd_combf: 0.683, cwd_combf_single: 0.643, cwd_combf_multi: 0.824, cwd_part_multi: 0.757 },
-        'Pampa': { AGBloss_lookup: [0, 0.104, 0.080, 0.060, 0.044, 0.032, 0.023, 0.016, 0.011, 0.008, 0.006, 0.004, 0.003, 0.002, 0.001, 0.001, 0.001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], turnover: 0.03, decomp_rate: 0.19, fwd_combf: 0.683, cwd_combf_single: 0.629, cwd_combf_multi: 0.824, cwd_part_multi: 0.757 },
-        'Pantanal': { AGBloss_lookup: [0, 0.104, 0.080, 0.060, 0.044, 0.032, 0.023, 0.016, 0.011, 0.008, 0.006, 0.004, 0.003, 0.002, 0.001, 0.001, 0.001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], turnover: 0.03, decomp_rate: 0.19, fwd_combf: 0.683, cwd_combf_single: 0.629, cwd_combf_multi: 0.824, cwd_part_multi: 0.757 }
-    };
-
-    var biome_list = Object.keys(biome_dict);
-    var tsfValues = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38];
-
-    var annual_fire_freq_gte2 = annual_burned.updateMask(fire_frequency.gte(2)).gte(1);
-    var tsf_edit = annual_burned.multiply(0).slice(1).blend(time_since_fire);
-    var s_inAGNstock = litter.add(cdw);
-
-    var co2_names = years.map(function (y) { return 'CO2_tC_ha_' + y; });
-    var ch4_names = years.map(function (y) { return 'CH4_t_ha_' + y; });
-    var n2o_names = years.map(function (y) { return 'N2O_t_ha_' + y; });
-
-    var CO2_mosaic = ee.Image.constant(ee.List.repeat(0, co2_names.length)).rename(co2_names).float();
-    var CH4_mosaic = ee.Image.constant(ee.List.repeat(0, ch4_names.length)).rename(ch4_names).float();
-    var N2O_mosaic = ee.Image.constant(ee.List.repeat(0, n2o_names.length)).rename(n2o_names).float();
-
-    biome_list.forEach(function (biome_str) {
-        var p = biome_dict[biome_str];
-        var biome_img = ee.Image(0).paint(biomas.filter(ee.Filter.eq('Bioma', biome_str)), 1).eq(1);
-
-        var AGBloss_lookup = p.AGBloss_lookup;
-        var turnover = p.turnover;
-        var aREF_decomposition = p.decomp_rate;
-        var aREF_combF_fwd_sF = p.fwd_combf;
-        var aREF_combF_cwd_sF = p.cwd_combf_single;
-        var cwd_combf_multi = p.cwd_combf_multi;
-        var cwd_part_multi = p.cwd_part_multi;
-
-        function model(year, previous_year) {
-            year = ee.Number.parse(year);
-            var year_prev = year.subtract(1);
-
-            var tsf_year = tsf_edit.select(ee.String('.*_').cat(year));
-            var annual_fire_freq_gte2_year = annual_fire_freq_gte2.select(ee.String('.*_').cat(year));
-
-            var aRef_netAGBloss = tsf_year.remap(tsfValues, AGBloss_lookup).multiply(-1);
-            var aRef_netAGNgain = tsf_year.remap(tsfValues, AGBloss_lookup);
-
-            var fLeftAGB_prev = ee.Image(previous_year).select(ee.String('fLeftAGB_').cat(year_prev));
-            var s_inAGBstock_update = agb.updateMask(tsf_year.eq(0)).blend(fLeftAGB_prev);
-            var fNetAGBloss = s_inAGBstock_update.multiply(aRef_netAGBloss);
-            var fLeftAGB = s_inAGBstock_update.add(fNetAGBloss);
-
-            var fAGNinput_Mortality = s_inAGBstock_update.multiply(aRef_netAGNgain);
-            var fAGNinput_TurnOver = s_inAGBstock_update.multiply(turnover);
-            var fAGNinput = fAGNinput_Mortality.add(fAGNinput_TurnOver);
-
-            var fAGNcomb_fwd = litter.multiply(aREF_combF_fwd_sF).updateMask(tsf_year.eq(0));
-            fAGNcomb_fwd = ee.Image(0).blend(fAGNcomb_fwd);
-            var fAGNcomb_cwd = cdw.multiply(aREF_combF_cwd_sF).updateMask(tsf_year.eq(0));
-            fAGNcomb_cwd = ee.Image(0).blend(fAGNcomb_cwd);
-            var fAGNcomb = fAGNcomb_fwd.add(fAGNcomb_cwd);
-
-            var fLeftAGN_prev = ee.Image(previous_year).select(ee.String('fLeftAGN_').cat(year_prev));
-            var s_inAGNstock_update = s_inAGNstock.updateMask(tsf_year.eq(0)).blend(fLeftAGN_prev);
-
-            var fAGNcomb_fwd_M = s_inAGNstock_update.multiply(ee.Image(1).subtract(cwd_part_multi)).multiply(aREF_combF_fwd_sF).updateMask(annual_fire_freq_gte2_year);
-            var fAGNcomb_cwd_M = s_inAGNstock_update.multiply(cwd_part_multi).multiply(cwd_combf_multi).updateMask(annual_fire_freq_gte2_year);
-            fAGNcomb_cwd_M = ee.Image(0).blend(fAGNcomb_cwd_M);
-            var fAGNcomb_M = fAGNcomb_fwd_M.add(fAGNcomb_cwd_M);
-            fAGNcomb = fAGNcomb.blend(fAGNcomb_M);
-
-            var fLeftAGN = s_inAGNstock_update.add(fAGNinput).subtract(fAGNcomb).multiply(1 - aREF_decomposition);
-            var fAGNdecomp = s_inAGNstock_update.add(fAGNinput).subtract(fAGNcomb).multiply(aREF_decomposition);
-            var fCBalance = fLeftAGB.subtract(s_inAGBstock_update).add(fLeftAGN.subtract(s_inAGNstock_update));
-
-            return ee.Image(previous_year)
-                .addBands(fLeftAGB.rename(ee.String('fLeftAGB_').cat(year)))
-                .addBands(fLeftAGN.rename(ee.String('fLeftAGN_').cat(year)))
-                .addBands(fAGNcomb.rename(ee.String('fAGNcomb_').cat(year)))
-                .addBands(fCBalance.rename(ee.String('fCBalance_').cat(year)));
-        }
-
-        var first = ee.Image().rename('fLeftAGB_1985').addBands(ee.Image().rename('fLeftAGN_1985'));
-        var data = ee.Image(ee.List(years).iterate(model, first)).float().updateMask(biome_img);
-
-        var fAGNcomb_b = data.select('fAGNcomb_.*');
-        var fCBalance_b = data.select('fCBalance_.*');
-
-        var CO2_y = fAGNcomb_b.multiply(0.099).add(fCBalance_b).multiply(-1).rename(years.map(function (y) { return 'CO2_tC_ha_' + y; }));
-        var CH4_y = fAGNcomb_b.multiply(2000).multiply(6.8).divide(1e6).rename(years.map(function (y) { return 'CH4_t_ha_' + y; }));
-        var N2O_y = fAGNcomb_b.multiply(2000).multiply(0.2).divide(1e6).rename(years.map(function (y) { return 'N2O_t_ha_' + y; }));
-
-        CO2_mosaic = CO2_mosaic.where(biome_img, CO2_y);
-        CH4_mosaic = CH4_mosaic.where(biome_img, CH4_y);
-        N2O_mosaic = N2O_mosaic.where(biome_img, N2O_y);
-    });
-
-    var fmask = forest_mask.slice(1);
-    CO2_mosaic = CO2_mosaic.updateMask(fmask);
-    CH4_mosaic = CH4_mosaic.updateMask(fmask);
-    N2O_mosaic = N2O_mosaic.updateMask(fmask);
-
-    return CO2_mosaic.selfMask().addBands(CH4_mosaic.selfMask()).addBands(N2O_mosaic.selfMask());
-}
-
-function calcSavannaFireEmissions(params) {
-    var annual_burned = params.annual_burned;
-    var time_since_fire = params.time_since_fire;
-    var fire_frequency = params.fire_frequency;
-    var agb = params.agb; var litter = params.litter; var cdw = params.cdw;
-    var mask = params.savanna_mask; var years = params.years;
-
-    var agb_to_fwd = 0.26;
-    var combustion_fwd = 0.873;
-    var combustion_cwd = 0.459;
-
-    var freq_mean = fire_frequency.slice(1, 40).selfMask().reduce('mean');
-    var freq_class = freq_mean.multiply(0)
-        .where(freq_mean.gte(1).and(freq_mean.lt(3)), 1)
-        .where(freq_mean.gte(3).and(freq_mean.lt(5)), 2)
-        .where(freq_mean.gte(5).and(freq_mean.lt(7)), 3)
-        .where(freq_mean.gte(7), 4);
-
-    var tsf_class = time_since_fire
-        .where(time_since_fire.gte(0).and(time_since_fire.lt(4)), 4)
-        .where(time_since_fire.gte(4).and(time_since_fire.lt(7)), 3)
-        .where(time_since_fire.gte(7).and(time_since_fire.lt(10)), 2)
-        .where(time_since_fire.gte(10), 1);
-
-    var CO2_b = ee.Image().select();
-    var CH4_b = ee.Image().select();
-    var N2O_b = ee.Image().select();
-    var current_agb = agb;
-    var current_agb_fwd = agb.multiply(agb_to_fwd);
-
-    years.forEach(function (y) {
-        var fire_y = annual_burned.select('.*_' + y);
-        var mask_y = mask.select('.*_' + y);
-        var pixel_mask = fire_y.multiply(mask_y);
-
-        var fire_severity = tsf_class.select('.*_' + y).add(freq_class);
-        var emission_factors = fire_severity
-            .where(fire_severity.gte(2).and(fire_severity.lte(3)), 0.021)
-            .where(fire_severity.gt(3).and(fire_severity.lte(6)), -0.004)
-            .where(fire_severity.gt(6), -0.02);
-
-        // CO2: tC/ha
-        var co2_y = current_agb.multiply(pixel_mask).multiply(emission_factors).rename('CO2_tC_ha_' + y).float();
-        CO2_b = CO2_b.addBands(co2_y);
-
-        // Combustão: t/ha via IPCC
-        var comb_total = litter.multiply(combustion_fwd)
-            .add(current_agb_fwd.multiply(combustion_fwd))
-            .add(cdw.multiply(combustion_cwd));
-
-        CH4_b = CH4_b.addBands(comb_total.multiply(pixel_mask).multiply(2000).multiply(2.3).divide(1e6).rename('CH4_t_ha_' + y).float());
-        N2O_b = N2O_b.addBands(comb_total.multiply(pixel_mask).multiply(2000).multiply(0.21).divide(1e6).rename('N2O_t_ha_' + y).float());
-
-        // Atualizar AGB: .add() — pode ganhar (severidade baixa) ou perder
-        current_agb = current_agb.add(current_agb.multiply(pixel_mask).multiply(emission_factors).unmask(0));
-        current_agb_fwd = current_agb.multiply(agb_to_fwd);
-    });
-    return CO2_b.addBands(CH4_b).addBands(N2O_b);
-}
-
-function calcGrasslandFireEmissions(params) {
-    var annual_burned = params.annual_burned;
-    var agb = params.agb; var cdw = params.cdw; var litter = params.litter;
-    var mask = params.grassland_mask; var biomas = params.biomas; var years = params.years;
-
-    var combf_fwd = 0.883;
-    var combf_cwd = 0.331;
-
-    var CH4_b = ee.Image().select();
-    var N2O_b = ee.Image().select();
-
-    years.forEach(function (y) {
-        var fire_y = annual_burned.select('.*_' + y);
-        var mask_y = mask.select('.*_' + y);
-        var comb_total = litter.multiply(combf_fwd).add(agb.add(cdw).multiply(combf_cwd));
-        var pixel_mask = fire_y.multiply(mask_y);
-
-        CH4_b = CH4_b.addBands(comb_total.multiply(pixel_mask).multiply(2000).multiply(2.3).divide(1e6).rename('CH4_t_ha_' + y).float());
-        N2O_b = N2O_b.addBands(comb_total.multiply(pixel_mask).multiply(2000).multiply(0.21).divide(1e6).rename('N2O_t_ha_' + y).float());
-    });
-    return CH4_b.addBands(N2O_b);
-}
-
-function calcLoggingEmissions(params) {
-    var agb = params.agb;
-    var forest_mask = params.forest_mask;
-    var amazon_mask = params.amazon_mask;
-    var loss_fraction = params.loss_fraction;
-    var years = params.years;
-
-    var agbUpdated = agb;
-    var result = ee.Image().select();
-
-    years.forEach(function (year) {
-        var dis = ee.Image('projects/ee-ipam/assets/MRV_REDD_PARA/0_Activity_Year/degradation_' + year + '_sl_disordered').unmask(0);
-        var geo = ee.Image('projects/ee-ipam/assets/MRV_REDD_PARA/0_Activity_Year/degradation_' + year + '_sl_geometric').unmask(0);
-        var sl_year = dis.eq(1).or(geo.eq(1)).multiply(forest_mask.select('.*_' + year)).multiply(amazon_mask);
-
-        var logging_carbon_year = agbUpdated.multiply(sl_year).multiply(loss_fraction).rename('logging_tC_ha_' + year).float();
-        agbUpdated = agbUpdated.subtract(logging_carbon_year.unmask(0));
-        result = result.addBands(logging_carbon_year);
-    });
-    return result;
-}
 
 /**
  * =============================================================================

@@ -24,14 +24,20 @@ var geometry =
  *              Camila Silva, Aline Pontes, Edriano Souza, Livia Laureto,
  *              Paulo Moutinho, Ane Alencar
  * ATUALIZACAO: 2026-05-28
+ * 
  * =============================================================================
- * New features
+ * +New features
  * Vamos ter que realizar os cálculos para o asset projetos privados
  * asset: projects/ee-souza759/assets/CO2_proj_priv/proj_priv_sf_pa_v1
- * acredito que encapsulamos
- * fazemos os cálculos para cada feature e
+ * WSilva: Acredito que encapsulamos, fazemos os cálculos para cada feature e
  * flatten para juntar por cada uma das features do asset
+ * Implementado: E
+ *  * ATUALIZACAO: 2026-05-29
+ * 
+ * =============================================================================
+ * 
  */
+
 
 // 1. PARAMETROS
 var VERSION = 'v036';

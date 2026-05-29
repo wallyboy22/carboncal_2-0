@@ -87,7 +87,13 @@ var desf_corrected_bwd = ee.Image(YEARS_ALL.slice().reverse().reduce(function (a
 }, null));
 var desf_reg_corrected = desf_corrected.where(desf_corrected.eq(7), desf_corrected_bwd);
 
-// 3. MOTOR DE CÁLCULO (BALANÇO VIA ASSETS)
+// 3. PRODUTO FINAL
+// Usa o asset ja exportado. Para recalcular o balanco via assets
+// intermediarios, descomente o bloco comentado abaixo.
+var final_image = ee.Image(FINAL_ASSET);
+
+/*
+// --- MOTOR DE BALANCO (via assets intermediarios) ---
 var pixel_area_ha = ee.Image.pixelArea().divide(10000);
 var age_acum = ee.Image(0);
 var degr_acum = ee.Image(0);
@@ -97,13 +103,10 @@ YEARS_FIRE.forEach(function (y, i) {
   var desf_y = desf_reg_corrected.select('classification_' + y);
   var is_sec = desf_y.eq(3).or(desf_y.eq(5));
 
-  // Cálculo da Idade (acumulada no auditor)
   age_acum = age_acum.add(1).multiply(is_sec);
 
-  // Componentes via Assets
   var f_fl_co2 = fire_forest.select('CO2_tC_ha_' + y).unmask(0);
   var f_sv_co2 = fire_savanna.select('CO2_tC_ha_' + y).unmask(0);
-
   var mad_tC = (i >= YEARS_FIRE.indexOf('2017')) ? logging.select('logging_tC_ha_' + y).unmask(0) : ee.Image(0);
 
   var incr_y = sec_veg_increment.select('sec_veg_increment_' + y).subtract(
@@ -132,6 +135,18 @@ YEARS_FIRE.forEach(function (y, i) {
   ]);
 });
 var final_image = out_bands.float();
+*/
+
+// Idade da veg. secundaria (nao esta no asset final, calculada separado)
+var age_acum = ee.Image(0);
+var age_img = ee.Image().select();
+YEARS_FIRE.forEach(function (y, i) {
+  var desf_y = desf_reg_corrected.select('classification_' + y);
+  var is_sec = desf_y.eq(3).or(desf_y.eq(5));
+  age_acum = age_acum.add(1).multiply(is_sec);
+  age_img = age_img.addBands(age_acum.rename('age_secveg_' + y));
+});
+final_image = final_image.addBands(age_img);
 
 // Camada fixa — produto final bruto (não interage com a interface)
 Map.addLayer(final_image, {}, 'Produto Final (todas bandas)', true);

@@ -221,7 +221,7 @@ Export.table.toDrive({
     fileNamePrefix: 'CCAL_MODULO3_statistics_ufs_' + VERSION,
     fileFormat: 'CSV',
     folder: 'CCAL_MODULO3',
-    selectors: ee.List(['Ano', 'Codigo', 'Cobertura', 'UF', 'Unidade Federativa', 'Area ha']).cat(metric_prefixes)
+    selectors: ['Ano', 'Codigo', 'Cobertura', 'UF', 'Unidade Federativa', 'Area ha'].concat(metric_prefixes)
 });
 
 print('Tabela final (previa):', tableFinal.limit(10));

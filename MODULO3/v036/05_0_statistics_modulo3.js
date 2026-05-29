@@ -241,9 +241,7 @@ metric_prefixes.forEach(function (prefix) {
 });
 
 // 9. EXPORTAR CSV
-var selectors = ee.List([
-    'Ano', 'Codigo', 'Cobertura', 'Bioma', 'UF', 'Unidade Federativa', 'Area ha'
-]).cat(metric_prefixes);
+var selectors = ['Ano', 'Codigo', 'Cobertura', 'Bioma', 'UF', 'Unidade Federativa', 'Area ha'].concat(metric_prefixes);
 
 Export.table.toDrive({
     collection: tableFinal,

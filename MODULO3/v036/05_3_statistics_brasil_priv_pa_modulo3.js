@@ -25,9 +25,13 @@ var geometry =
  *              Paulo Moutinho, Ane Alencar
  * ATUALIZACAO: 2026-05-28
  * =============================================================================
+ * New features
+ * Vamos ter que realizar os cálculos para o asset projetos privados
+ * asset: projects/ee-souza759/assets/CO2_proj_priv/proj_priv_sf_pa_v1
+ * acredito que encapsulamos
+ * fazemos os cálculos para cada feature e
+ * flatten para juntar por cada uma das features do asset
  */
-
-
 
 // 1. PARAMETROS
 var VERSION = 'v036';
@@ -182,7 +186,7 @@ metric_prefixes.forEach(function (prefix) {
     });
 });
 
-// 9. EXPORTAR CSV
+// 9. EXPORTAR CSV — Brasil
 Export.table.toDrive({
     collection: tableFinal,
     description: 'WSilva-CCAL_MODULO3_statistics_brasil_' + VERSION,
@@ -192,4 +196,130 @@ Export.table.toDrive({
     selectors: ['Ano', 'Codigo', 'Cobertura', 'Area ha'].concat(metric_prefixes)
 });
 
-print('Tabela final (previa):', tableFinal.limit(10));
+print('Tabela final Brasil (previa):', tableFinal.limit(10));
+
+// =============================================================================
+// 10. ESTATISTICAS POR PROJETO PRIVADO
+// =============================================================================
+
+var proj_priv = ee.FeatureCollection(
+    'projects/ee-souza759/assets/CO2_proj_priv/proj_priv_sf_pa_v1'
+);
+
+// Captura todos os nomes de propriedades do asset para preserva-las no output
+// Usamos a primeira feature como referencia para listar as colunas
+var proj_priv_prop_names = proj_priv.first().propertyNames()
+    .remove('system:index');  // remove propriedade interna do GEE
+
+// ----- Funcao que replica a logica das secoes 7-8 para uma geometria arbitraria -----
+function computeStatsForGeom(geom) {
+
+    // 10a. Tabela de area para a geometria
+    var tbl_area = ee.FeatureCollection(YEARS_STATS.map(function (year) {
+        year = ee.String(year);
+
+        var observed = ee.Image.pixelArea().divide(1e4)
+            .addBands(desf_reg_corrected.select(ee.String('classification_').cat(year)));
+
+        var groups = observed.reduceRegion({
+            reducer: ee.Reducer.sum().group(1, 'classe'),
+            geometry: geom,
+            scale: SCALE,
+            maxPixels: MAX_PIX
+        }).get('groups');
+
+        return ee.FeatureCollection(ee.List(groups).map(function (g) {
+            g = ee.Dictionary(g);
+            var classe_int = ee.Number(g.get('classe')).int();
+            return ee.Feature(null).set({
+                'index'   : makeIndex(classe_int, year),
+                'Ano'     : year,
+                'Area ha' : g.getNumber('sum'),
+                'Cobertura': desf_legends.get(classe_int),
+                'Codigo'  : classe_int
+            });
+        }));
+    })).flatten();
+
+    // 10b. Loop por metrica para a geometria
+    var tblOut = tbl_area;
+
+    metric_prefixes.forEach(function (prefix) {
+        var metricBands = pixelTonelada.select(ee.String(prefix).cat('_.*')).bandNames();
+
+        var tbl_metric = ee.FeatureCollection(metricBands.map(function (bandname) {
+            bandname = ee.String(bandname);
+            var year  = ee.String(bandname.slice(-4));
+
+            var observed = pixelTonelada.select([bandname])
+                .addBands(desf_reg_corrected.select(ee.String('classification_').cat(year)));
+
+            var groups = observed.reduceRegion({
+                reducer  : ee.Reducer.sum().group(1, 'classe'),
+                geometry : geom,
+                scale    : SCALE,
+                maxPixels: MAX_PIX
+            }).get('groups');
+
+            return ee.FeatureCollection(ee.List(groups).map(function (g) {
+                g = ee.Dictionary(g);
+                var classe_int = ee.Number(g.get('classe')).int();
+                return ee.Feature(null)
+                    .set('index', makeIndex(classe_int, year))
+                    .set(prefix, g.getNumber('sum'));
+            }));
+        })).flatten();
+
+        var join        = ee.Join.saveFirst({ matchKey: 'secondary' });
+        var filter_join = ee.Filter.equals({ leftField: 'index', rightField: 'index' });
+
+        tblOut = ee.FeatureCollection(
+            join.apply(tblOut, tbl_metric, filter_join)
+        ).map(function (f) {
+            f = ee.Feature(f);
+            var out       = ee.Feature(null).copyProperties(f);
+            var secondary = ee.Feature(f.get('secondary'));
+            return ee.Algorithms.If(secondary, out.copyProperties(secondary), out);
+        });
+    });
+
+    return tblOut;
+}
+
+// ----- Itera sobre cada projeto privado, computa stats e anexa atributos do projeto -----
+var tableFinal_projPriv = ee.FeatureCollection(
+    proj_priv.toList(proj_priv.size()).map(function (feat) {
+
+        feat = ee.Feature(feat);
+        var geom      = feat.geometry();
+        var proj_props = feat.toDictionary(proj_priv_prop_names);  // todos os atributos do projeto
+
+        // Computa estatisticas para a geometria deste projeto
+        var stats = computeStatsForGeom(geom);
+
+        // Adiciona os atributos do projeto a cada linha de estatistica
+        return stats.map(function (row) {
+            return ee.Feature(row).set(proj_props);
+        });
+    })
+).flatten();
+
+// ----- Selectors: colunas do projeto + mesmas colunas do Brasil -----
+// ID_OK e Name vem primeiro por legibilidade; demais colunas do asset vem a seguir
+var asset_cols    = proj_priv_prop_names.remove('ID_OK').remove('Name');
+var base_cols     = ee.List(['ID_OK', 'Name'])
+    .cat(asset_cols)
+    .cat(['Ano', 'Codigo', 'Cobertura', 'Area ha'])
+    .cat(metric_prefixes);
+
+// 10c. EXPORTAR CSV — Projetos Privados
+Export.table.toDrive({
+    collection     : tableFinal_projPriv,
+    description    : 'WSilva-CCAL_MODULO3_statistics_projPriv_' + VERSION,
+    fileNamePrefix : 'CCAL_MODULO3_statistics_projPriv_' + VERSION,
+    fileFormat     : 'CSV',
+    folder         : 'CCAL_MODULO3',
+    selectors      : base_cols
+});
+
+print('Tabela Projetos Privados (previa):', tableFinal_projPriv.limit(10));

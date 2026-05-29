@@ -133,6 +133,9 @@ YEARS_FIRE.forEach(function (y, i) {
 });
 var final_image = out_bands.float();
 
+// Camada fixa — produto final bruto (não interage com a interface)
+Map.addLayer(final_image, {}, 'Produto Final (todas bandas)', true);
+
 // 4. INTERFACE E CONFIGURAÇÃO
 var panel = ui.Panel({ style: { padding: '8px' } });
 var is_transposed = true, last_data = null, target_year = '2023';
@@ -193,8 +196,9 @@ function getLayerInstance(key) {
       vis = { bands: ['age_secveg_' + target_year], min: 1, max: 40, palette: ['#edf8e9', '#bae4b3', '#74c476', '#31a354', '#006d2c'] };
       break;
     case 'sec_veg_increment':
-      img = sec_veg_increment.updateMask(sec_veg_increment.select('sec_veg_increment_' + target_year).neq(0));
-      vis = { bands: ['sec_veg_increment_' + target_year], min: 0, max: 100, palette: ['#edf8e9', '#bae4b3', '#74c476', '#31a354', '#006d2c'] };
+      b_name = 'sec_veg_increment_' + target_year;
+      img = sec_veg_increment.select(b_name.slice(0, -4) + '.*').selfMask();
+      vis = { bands: [b_name], min: 0, max: 100, palette: ['#edf8e9', '#bae4b3', '#74c476', '#31a354', '#006d2c'] };
       break;
     case 'out_stock':
       img = final_image;
@@ -202,27 +206,27 @@ function getLayerInstance(key) {
       break;
     case 'out_defor':
       b_name = 'loss_deforestation_' + target_year;
-      img = final_image.updateMask(final_image.select(b_name).neq(0));
+      img = final_image.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], min: 0, max: 100, palette: ['white', 'red'] };
       break;
     case 'out_secveg':
       b_name = 'gain_secondary_vegetation_' + target_year;
-      img = final_image.updateMask(final_image.select(b_name).neq(0));
+      img = final_image.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], min: 0, max: 10, palette: ['white', 'green'] };
       break;
     case 'out_fire':
       b_name = 'loss_fire_' + target_year;
-      img = final_image.updateMask(final_image.select(b_name).neq(0));
+      img = final_image.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], min: 0, max: 50, palette: ['white', 'orange', 'red'] };
       break;
     case 'out_logging':
       b_name = 'loss_selective_logging_' + target_year;
-      img = final_image.updateMask(final_image.select(b_name).neq(0));
+      img = final_image.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], min: 0, max: 50, palette: ['white', 'brown'] };
       break;
     case 'fire_annual':
       b_name = 'burned_area_' + target_year;
-      img = fire_annual.updateMask(fire_annual.select(b_name).neq(0));
+      img = fire_annual.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], palette: ['red'] };
       break;
     case 'fire_freq':
@@ -239,85 +243,85 @@ function getLayerInstance(key) {
       break;
     case 'logging_raw':
       b_name = 'logging_tC_ha_' + target_year;
-      img = logging.updateMask(logging.select(b_name).neq(0));
+      img = logging.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], min: 0, max: 10, palette: ['white', 'brown'] };
       break;
     case 'fire_forest':
     case 'fire_forest_co2':
       b_name = 'CO2_tC_ha_' + target_year;
-      img = fire_forest.updateMask(fire_forest.select(b_name).neq(0));
+      img = fire_forest.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], min: 0, max: 50, palette: ['white', 'orange', 'red'] };
       break;
     case 'fire_savanna':
     case 'fire_savanna_co2':
       b_name = 'CO2_tC_ha_' + target_year;
-      img = fire_savanna.updateMask(fire_savanna.select(b_name).neq(0));
+      img = fire_savanna.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], min: 0, max: 50, palette: ['white', 'orange', 'red'] };
       break;
     case 'fire_grassland':
     case 'fire_grassland_ch4':
       b_name = 'CH4_t_ha_' + target_year;
-      img = fire_grassland.updateMask(fire_grassland.select(b_name).neq(0));
+      img = fire_grassland.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], min: 0, max: 0.1, palette: ['white', 'purple'] };
       break;
     case 'fire_forest_ch4':
       b_name = 'CH4_t_ha_' + target_year;
-      img = fire_forest.updateMask(fire_forest.select(b_name).neq(0));
+      img = fire_forest.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], min: 0, max: 0.1, palette: ['white', 'purple'] };
       break;
     case 'fire_forest_n2o':
       b_name = 'N2O_t_ha_' + target_year;
-      img = fire_forest.updateMask(fire_forest.select(b_name).neq(0));
+      img = fire_forest.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], min: 0, max: 0.01, palette: ['white', 'cyan'] };
       break;
     case 'fire_forest_co2_gross':
       b_name = 'CO2_gross_t_ha_' + target_year;
-      img = fire_forest.updateMask(fire_forest.select(b_name).neq(0));
+      img = fire_forest.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], min: 0, max: 50, palette: ['white', 'orange', 'red'] };
       break;
     case 'fire_forest_co':
       b_name = 'CO_t_ha_' + target_year;
-      img = fire_forest.updateMask(fire_forest.select(b_name).neq(0));
+      img = fire_forest.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], min: 0, max: 0.1, palette: ['white', 'blue'] };
       break;
     case 'fire_forest_nox':
       b_name = 'NOX_t_ha_' + target_year;
-      img = fire_forest.updateMask(fire_forest.select(b_name).neq(0));
+      img = fire_forest.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], min: 0, max: 0.01, palette: ['white', 'yellow'] };
       break;
     case 'fire_savanna_ch4':
       b_name = 'CH4_t_ha_' + target_year;
-      img = fire_savanna.updateMask(fire_savanna.select(b_name).neq(0));
+      img = fire_savanna.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], min: 0, max: 0.1, palette: ['white', 'purple'] };
       break;
     case 'fire_savanna_n2o':
       b_name = 'N2O_t_ha_' + target_year;
-      img = fire_savanna.updateMask(fire_savanna.select(b_name).neq(0));
+      img = fire_savanna.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], min: 0, max: 0.01, palette: ['white', 'cyan'] };
       break;
     case 'fire_savanna_co':
       b_name = 'CO_t_ha_' + target_year;
-      img = fire_savanna.updateMask(fire_savanna.select(b_name).neq(0));
+      img = fire_savanna.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], min: 0, max: 0.1, palette: ['white', 'blue'] };
       break;
     case 'fire_savanna_nox':
       b_name = 'NOX_t_ha_' + target_year;
-      img = fire_savanna.updateMask(fire_savanna.select(b_name).neq(0));
+      img = fire_savanna.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], min: 0, max: 0.01, palette: ['white', 'yellow'] };
       break;
     case 'fire_grassland_n2o':
       b_name = 'N2O_t_ha_' + target_year;
-      img = fire_grassland.updateMask(fire_grassland.select(b_name).neq(0));
+      img = fire_grassland.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], min: 0, max: 0.01, palette: ['white', 'cyan'] };
       break;
     case 'fire_grassland_co':
       b_name = 'CO_t_ha_' + target_year;
-      img = fire_grassland.updateMask(fire_grassland.select(b_name).neq(0));
+      img = fire_grassland.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], min: 0, max: 0.1, palette: ['white', 'blue'] };
       break;
     case 'fire_grassland_nox':
       b_name = 'NOX_t_ha_' + target_year;
-      img = fire_grassland.updateMask(fire_grassland.select(b_name).neq(0));
+      img = fire_grassland.select(b_name.slice(0, -4) + '.*').selfMask();
       vis = { bands: [b_name], min: 0, max: 0.01, palette: ['white', 'yellow'] };
       break;
     default:

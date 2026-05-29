@@ -126,11 +126,11 @@ var table_area = ee.FeatureCollection(YEARS_STATS.map(function (year) {
         var area_ha = g.getNumber('sum');
 
         return ee.Feature(null).set({
-            'index': makeIndex(classe_int, year),
-            'Ano': year,
-            'Area ha': area_ha,
+            'index'    : makeIndex(classe_int, year),
+            'Ano'      : year,
+            'Area ha'  : area_ha,
             'Cobertura': desf_legends.get(classe_int),
-            'Codigo': classe_int
+            'Codigo'   : classe_int
         });
     }));
 
@@ -188,12 +188,12 @@ metric_prefixes.forEach(function (prefix) {
 
 // 9. EXPORTAR CSV — Brasil
 Export.table.toDrive({
-    collection: tableFinal,
-    description: 'WSilva-CCAL_MODULO3_statistics_brasil_' + VERSION,
+    collection    : tableFinal,
+    description   : 'WSilva-CCAL_MODULO3_statistics_brasil_' + VERSION,
     fileNamePrefix: 'CCAL_MODULO3_statistics_brasil_' + VERSION,
-    fileFormat: 'CSV',
-    folder: 'CCAL_MODULO3',
-    selectors: ['Ano', 'Codigo', 'Cobertura', 'Area ha'].concat(metric_prefixes)
+    fileFormat    : 'CSV',
+    folder        : 'CCAL_MODULO3',
+    selectors     : ['Ano', 'Codigo', 'Cobertura', 'Area ha'].concat(metric_prefixes)
 });
 
 print('Tabela final Brasil (previa):', tableFinal.limit(10));
@@ -206,10 +206,9 @@ var proj_priv = ee.FeatureCollection(
     'projects/ee-souza759/assets/CO2_proj_priv/proj_priv_sf_pa_v1'
 );
 
-// Captura todos os nomes de propriedades do asset para preserva-las no output
-// Usamos a primeira feature como referencia para listar as colunas
+// Captura todos os nomes de propriedades do asset (server-side)
 var proj_priv_prop_names = proj_priv.first().propertyNames()
-    .remove('system:index');  // remove propriedade interna do GEE
+    .remove('system:index');
 
 // ----- Funcao que replica a logica das secoes 7-8 para uma geometria arbitraria -----
 function computeStatsForGeom(geom) {
@@ -222,9 +221,9 @@ function computeStatsForGeom(geom) {
             .addBands(desf_reg_corrected.select(ee.String('classification_').cat(year)));
 
         var groups = observed.reduceRegion({
-            reducer: ee.Reducer.sum().group(1, 'classe'),
-            geometry: geom,
-            scale: SCALE,
+            reducer  : ee.Reducer.sum().group(1, 'classe'),
+            geometry : geom,
+            scale    : SCALE,
             maxPixels: MAX_PIX
         }).get('groups');
 
@@ -232,11 +231,11 @@ function computeStatsForGeom(geom) {
             g = ee.Dictionary(g);
             var classe_int = ee.Number(g.get('classe')).int();
             return ee.Feature(null).set({
-                'index'   : makeIndex(classe_int, year),
-                'Ano'     : year,
-                'Area ha' : g.getNumber('sum'),
+                'index'    : makeIndex(classe_int, year),
+                'Ano'      : year,
+                'Area ha'  : g.getNumber('sum'),
                 'Cobertura': desf_legends.get(classe_int),
-                'Codigo'  : classe_int
+                'Codigo'   : classe_int
             });
         }));
     })).flatten();
@@ -249,7 +248,7 @@ function computeStatsForGeom(geom) {
 
         var tbl_metric = ee.FeatureCollection(metricBands.map(function (bandname) {
             bandname = ee.String(bandname);
-            var year  = ee.String(bandname.slice(-4));
+            var year = ee.String(bandname.slice(-4));
 
             var observed = pixelTonelada.select([bandname])
                 .addBands(desf_reg_corrected.select(ee.String('classification_').cat(year)));
@@ -289,37 +288,39 @@ function computeStatsForGeom(geom) {
 // ----- Itera sobre cada projeto privado, computa stats e anexa atributos do projeto -----
 var tableFinal_projPriv = ee.FeatureCollection(
     proj_priv.toList(proj_priv.size()).map(function (feat) {
-
         feat = ee.Feature(feat);
-        var geom      = feat.geometry();
-        var proj_props = feat.toDictionary(proj_priv_prop_names);  // todos os atributos do projeto
+        var geom       = feat.geometry();
+        var proj_props = feat.toDictionary(proj_priv_prop_names);
 
-        // Computa estatisticas para a geometria deste projeto
-        var stats = computeStatsForGeom(geom);
-
-        // Adiciona os atributos do projeto a cada linha de estatistica
-        return stats.map(function (row) {
+        return computeStatsForGeom(geom).map(function (row) {
             return ee.Feature(row).set(proj_props);
         });
     })
 ).flatten();
 
-// ----- Selectors: colunas do projeto + mesmas colunas do Brasil -----
-// ID_OK e Name vem primeiro por legibilidade; demais colunas do asset vem a seguir
-var asset_cols    = proj_priv_prop_names.remove('ID_OK').remove('Name');
-var base_cols     = ee.List(['ID_OK', 'Name'])
-    .cat(asset_cols)
-    .cat(['Ano', 'Codigo', 'Cobertura', 'Area ha'])
-    .cat(metric_prefixes);
-
-// 10c. EXPORTAR CSV — Projetos Privados
-Export.table.toDrive({
-    collection     : tableFinal_projPriv,
-    description    : 'WSilva-CCAL_MODULO3_statistics_projPriv_' + VERSION,
-    fileNamePrefix : 'CCAL_MODULO3_statistics_projPriv_' + VERSION,
-    fileFormat     : 'CSV',
-    folder         : 'CCAL_MODULO3',
-    selectors      : base_cols
-});
-
 print('Tabela Projetos Privados (previa):', tableFinal_projPriv.limit(10));
+
+// ----- Export dentro do evaluate para resolver selectors no cliente -----
+// proj_priv_prop_names é server-side (ee.List); o .evaluate() traz os
+// valores para o cliente JS antes de registrar o Export.
+proj_priv_prop_names.evaluate(function (cols) {
+
+    // Colunas do asset: ID_OK e Name na frente, demais atributos a seguir
+    var asset_extra_cols = cols.filter(function (c) {
+        return c !== 'ID_OK' && c !== 'Name';
+    });
+
+    var base_cols = ['ID_OK', 'Name']
+        .concat(asset_extra_cols)
+        .concat(['Ano', 'Codigo', 'Cobertura', 'Area ha'])
+        .concat(metric_prefixes);
+
+    Export.table.toDrive({
+        collection    : tableFinal_projPriv,
+        description   : 'WSilva-CCAL_MODULO3_statistics_projPriv_' + VERSION,
+        fileNamePrefix: 'CCAL_MODULO3_statistics_projPriv_' + VERSION,
+        fileFormat    : 'CSV',
+        folder        : 'CCAL_MODULO3',
+        selectors     : base_cols
+    });
+});

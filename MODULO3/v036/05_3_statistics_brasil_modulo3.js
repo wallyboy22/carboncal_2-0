@@ -67,6 +67,7 @@ var desf_reg_corrected = desf_corrected.where(desf_corrected.eq(7), desf_correct
 
 // 4. LEGENDAS (sem territorio)
 var desf_legends = ee.Dictionary({
+    0: 'Não Observado',  
     1: 'Antropico', 2: 'Vegetacao Primaria', 3: 'Vegetacao Secundaria',
     4: 'Supressao de Veg. Primaria', 5: 'Regrowth de Veg. Secundaria',
     6: 'Supressao de Veg. Secundaria', 7: 'Outra Transicao'

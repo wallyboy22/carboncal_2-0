@@ -205,50 +205,89 @@ Export.table.toDrive({
 print('Tabela final Brasil (previa):', tableFinal.limit(10));
 
 // =============================================================================
-// 10. ESTATISTICAS POR PROJETO PRIVADO
+// 10. ESTATISTICAS POR PROJETO PRIVADO (versao otimizada — sem map por feature)
 // =============================================================================
 
 var proj_priv = ee.FeatureCollection(
     'projects/ee-souza759/assets/CO2_proj_priv/proj_priv_sf_pa_v1'
 );
 
-// Captura todos os nomes de propriedades do asset (server-side)
-var proj_priv_prop_names = proj_priv.first().propertyNames()
-    .remove('system:index');
+// Rasteriza o ID_OK do asset para usar como banda de agrupamento
+// Usamos Int32 pois IDs numericos cabem; ajuste se ID_OK for string
+var proj_priv_id_img = proj_priv
+    .filter(ee.Filter.notNull(['ID_OK']))
+    .reduceToImage(['ID_OK'], ee.Reducer.first())
+    .rename('proj_id')
+    .toInt32();
 
-// ----- Funcao que replica a logica das secoes 7-8 para uma geometria arbitraria -----
-function computeStatsForGeom(geom) {
+// Bounding box cobrindo todos os projetos (muito menor que o Brasil inteiro)
+var proj_bounds = proj_priv.geometry().bounds();
 
-    // 10a. Tabela de area para a geometria
-    var tbl_area = ee.FeatureCollection(YEARS_STATS.map(function (year) {
-        year = ee.String(year);
+// Dicionario ID_OK -> propriedades do projeto (para join no cliente)
+// Resolvido via evaluate — so para montar a lookup table JS
+proj_priv.toList(proj_priv.size()).evaluate(function (features) {
 
-        var observed = ee.Image.pixelArea().divide(1e4)
-            .addBands(desf_reg_corrected.select(ee.String('classification_').cat(year)));
+    // Monta lookup: { ID_OK: { Name, ...outras props } }
+    var lookup = {};
+    features.forEach(function (f) {
+        var props = f.properties;
+        lookup[props['ID_OK']] = props;
+    });
 
-        var groups = observed.reduceRegion({
-            reducer  : ee.Reducer.sum().group(1, 'classe'),
-            geometry : geom,
+    // ----- Funcao: roda reduceRegion com grupo duplo (proj_id + classe) -----
+    function reduceDouble(valueImg, groupImg_classe, groupImg_proj) {
+        // Empilha: [value, classe, proj_id]
+        var stacked = valueImg
+            .addBands(groupImg_classe)
+            .addBands(groupImg_proj);
+
+        // Reducer: sum, agrupado por banda 1 (classe), depois por banda 2 (proj_id)
+        // GEE nao suporta group duplo nativo, entao usamos repeatedReducer + group por proj_id
+        // Estrategia: group por proj_id primeiro, dentro de cada grupo fazemos group por classe
+        // via Reducer.sum().group(1).group(2)
+        var result = stacked.reduceRegion({
+            reducer  : ee.Reducer.sum().group({ groupField: 1, groupName: 'classe' })
+                                       .group({ groupField: 2, groupName: 'proj_id' }),
+            geometry : proj_bounds,
             scale    : SCALE,
             maxPixels: MAX_PIX
-        }).get('groups');
+        });
 
-        return ee.FeatureCollection(ee.List(groups).map(function (g) {
-            g = ee.Dictionary(g);
-            var classe_int = ee.Number(g.get('classe')).int();
-            return ee.Feature(null).set({
-                'index'    : makeIndex(classe_int, year),
-                'Ano'      : year,
-                'Area ha'  : g.getNumber('sum'),
-                'Cobertura': desf_legends.get(classe_int),
-                'Codigo'   : classe_int
-            });
-        }));
+        return ee.List(result.get('groups')); // lista por proj_id
+    }
+
+    // ----- Tabela de area -----
+    var rows_area = ee.FeatureCollection(YEARS_STATS.map(function (year) {
+        year = ee.String(year);
+
+        var areaImg   = ee.Image.pixelArea().divide(1e4);
+        var classeImg = desf_reg_corrected.select(ee.String('classification_').cat(year));
+
+        var groups_proj = reduceDouble(areaImg, classeImg, proj_priv_id_img);
+
+        return ee.FeatureCollection(groups_proj.map(function (gp) {
+            gp = ee.Dictionary(gp);
+            var proj_id      = ee.Number(gp.get('proj_id')).toInt32();
+            var groups_class = ee.List(gp.get('groups'));
+
+            return ee.FeatureCollection(groups_class.map(function (gc) {
+                gc = ee.Dictionary(gc);
+                var classe_int = ee.Number(gc.get('classe')).int();
+                return ee.Feature(null).set({
+                    'index'    : ee.String(proj_id).cat('-').cat(makeIndex(classe_int, year)),
+                    'proj_id'  : proj_id,
+                    'Ano'      : year,
+                    'Area ha'  : gc.getNumber('sum'),
+                    'Cobertura': desf_legends.get(classe_int),
+                    'Codigo'   : classe_int
+                });
+            }));
+        })).flatten();
     })).flatten();
 
-    // 10b. Loop por metrica para a geometria
-    var tblOut = tbl_area;
+    var tblFinal_priv = rows_area;
 
+    // ----- Loop por metrica -----
     metric_prefixes.forEach(function (prefix) {
         var metricBands = pixelTonelada.select(ee.String(prefix).cat('_.*')).bandNames();
 
@@ -256,30 +295,31 @@ function computeStatsForGeom(geom) {
             bandname = ee.String(bandname);
             var year = ee.String(bandname.slice(-4));
 
-            var observed = pixelTonelada.select([bandname])
-                .addBands(desf_reg_corrected.select(ee.String('classification_').cat(year)));
+            var valueImg  = pixelTonelada.select([bandname]);
+            var classeImg = desf_reg_corrected.select(ee.String('classification_').cat(year));
 
-            var groups = observed.reduceRegion({
-                reducer  : ee.Reducer.sum().group(1, 'classe'),
-                geometry : geom,
-                scale    : SCALE,
-                maxPixels: MAX_PIX
-            }).get('groups');
+            var groups_proj = reduceDouble(valueImg, classeImg, proj_priv_id_img);
 
-            return ee.FeatureCollection(ee.List(groups).map(function (g) {
-                g = ee.Dictionary(g);
-                var classe_int = ee.Number(g.get('classe')).int();
-                return ee.Feature(null)
-                    .set('index', makeIndex(classe_int, year))
-                    .set(prefix, g.getNumber('sum'));
-            }));
+            return ee.FeatureCollection(groups_proj.map(function (gp) {
+                gp = ee.Dictionary(gp);
+                var proj_id      = ee.Number(gp.get('proj_id')).toInt32();
+                var groups_class = ee.List(gp.get('groups'));
+
+                return ee.FeatureCollection(groups_class.map(function (gc) {
+                    gc = ee.Dictionary(gc);
+                    var classe_int = ee.Number(gc.get('classe')).int();
+                    return ee.Feature(null)
+                        .set('index', ee.String(proj_id).cat('-').cat(makeIndex(classe_int, year)))
+                        .set(prefix, gc.getNumber('sum'));
+                }));
+            })).flatten();
         })).flatten();
 
         var join        = ee.Join.saveFirst({ matchKey: 'secondary' });
         var filter_join = ee.Filter.equals({ leftField: 'index', rightField: 'index' });
 
-        tblOut = ee.FeatureCollection(
-            join.apply(tblOut, tbl_metric, filter_join)
+        tblFinal_priv = ee.FeatureCollection(
+            join.apply(tblFinal_priv, tbl_metric, filter_join)
         ).map(function (f) {
             f = ee.Feature(f);
             var out       = ee.Feature(null).copyProperties(f);
@@ -288,45 +328,36 @@ function computeStatsForGeom(geom) {
         });
     });
 
-    return tblOut;
-}
-
-// ----- Itera sobre cada projeto privado, computa stats e anexa atributos do projeto -----
-var tableFinal_projPriv = ee.FeatureCollection(
-    proj_priv.toList(proj_priv.size()).map(function (feat) {
-        feat = ee.Feature(feat);
-        var geom       = feat.geometry();
-        var proj_props = feat.toDictionary(proj_priv_prop_names);
-
-        return computeStatsForGeom(geom).map(function (row) {
-            return ee.Feature(row).set(proj_props);
-        });
-    })
-).flatten();
-
-print('Tabela Projetos Privados (previa):', tableFinal_projPriv.limit(10));
-
-// ----- Export dentro do evaluate para resolver selectors no cliente -----
-// proj_priv_prop_names é server-side (ee.List); o .evaluate() traz os
-// valores para o cliente JS antes de registrar o Export.
-proj_priv_prop_names.evaluate(function (cols) {
-
-    // Colunas do asset: ID_OK e Name na frente, demais atributos a seguir
-    var asset_extra_cols = cols.filter(function (c) {
-        return c !== 'ID_OK' && c !== 'Name';
+    // ----- Anexa propriedades do projeto via proj_id (join no cliente via set) -----
+    tblFinal_priv = tblFinal_priv.map(function (row) {
+        // proj_id esta disponivel em cada row; usamos ee.Dictionary para lookup server-side
+        // Como lookup é JS, convertemos para ee.Dictionary e buscamos por proj_id string
+        var proj_id_str = ee.Number(ee.Feature(row).get('proj_id')).toInt32().format();
+        var proj_dict   = ee.Dictionary(
+            ee.Dictionary(lookup).get(proj_id_str, ee.Dictionary({}))
+        );
+        return ee.Feature(row).set(proj_dict);
     });
 
+    // ----- Selectors -----
+    // Pega colunas do primeiro projeto do lookup para montar base_cols
+    var first_key    = Object.keys(lookup)[0];
+    var proj_cols    = Object.keys(lookup[first_key])
+        .filter(function (c) { return c !== 'ID_OK' && c !== 'Name'; });
+
     var base_cols = ['ID_OK', 'Name']
-        .concat(asset_extra_cols)
+        .concat(proj_cols)
         .concat(['Ano', 'Codigo', 'Cobertura', 'Area ha'])
         .concat(metric_prefixes);
 
     Export.table.toDrive({
-        collection    : tableFinal_projPriv,
+        collection    : tblFinal_priv,
         description   : 'WSilva-CCAL_MODULO3_statistics_projPriv_' + VERSION,
         fileNamePrefix: 'CCAL_MODULO3_statistics_projPriv_' + VERSION,
         fileFormat    : 'CSV',
         folder        : 'CCAL_MODULO3',
         selectors     : base_cols
     });
+
+    print('Tabela Projetos Privados (previa):', tblFinal_priv.limit(10));
 });

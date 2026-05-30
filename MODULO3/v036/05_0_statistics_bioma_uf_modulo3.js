@@ -98,6 +98,7 @@ var ufClasses = ee.Dictionary({
 
 // Legendas do desf_reg (classes 1-7)
 var desf_legends = ee.Dictionary({
+    0: 'Não Observado',  
     1: 'Antropico',
     2: 'Vegetacao Primaria',
     3: 'Vegetacao Secundaria',

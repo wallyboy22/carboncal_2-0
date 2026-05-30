@@ -202,68 +202,92 @@ Export.table.toDrive({
     selectors     : ['Ano', 'Codigo', 'Cobertura', 'Area ha'].concat(metric_prefixes)
 });
 
-print('Tabela final Brasil (previa):', tableFinal.limit(10));
+print('Tabela final Brasil (previa):', tableFinal.limit(1));
 
 // =============================================================================
-// 10. ESTATISTICAS POR PROJETO PRIVADO (versao otimizada — sem map por feature)
+// 10. ESTATISTICAS POR PROJETO PRIVADO (v3 — join server-side via ee.Join)
 // =============================================================================
 
 var proj_priv = ee.FeatureCollection(
     'projects/ee-souza759/assets/CO2_proj_priv/proj_priv_sf_pa_v1'
 );
 
-// Rasteriza o ID_OK do asset para usar como banda de agrupamento
-// Usamos Int32 pois IDs numericos cabem; ajuste se ID_OK for string
-var proj_priv_id_img = proj_priv
+// Garante que ID_OK seja Int32 no asset (para bater com a imagem rasterizada)
+var proj_priv_int = proj_priv.map(function (f) {
+    return f.set('ID_OK', ee.Number(f.get('ID_OK')).toInt32());
+});
+
+// Rasteriza ID_OK para usar como banda de agrupamento
+var proj_priv_id_img = proj_priv_int
     .filter(ee.Filter.notNull(['ID_OK']))
     .reduceToImage(['ID_OK'], ee.Reducer.first())
     .rename('proj_id')
     .toInt32();
 
-// Bounding box cobrindo todos os projetos (muito menor que o Brasil inteiro)
+// Bounding box cobrindo todos os projetos
 var proj_bounds = proj_priv.geometry().bounds();
 
-// Dicionario ID_OK -> propriedades do projeto (para join no cliente)
-// Resolvido via evaluate — so para montar a lookup table JS
-proj_priv.toList(proj_priv.size()).evaluate(function (features) {
+// ----- Reducer duplo: sum agrupado por classe (banda 1) e proj_id (banda 2) -----
+function reduceDouble(valueImg, classeImg) {
+    var stacked = valueImg
+        .addBands(classeImg.rename('classe'))
+        .addBands(proj_priv_id_img);
 
-    // Monta lookup: { ID_OK: { Name, ...outras props } }
-    var lookup = {};
-    features.forEach(function (f) {
-        var props = f.properties;
-        lookup[props['ID_OK']] = props;
+    var result = stacked.reduceRegion({
+        reducer  : ee.Reducer.sum()
+                             .group({ groupField: 1, groupName: 'classe' })
+                             .group({ groupField: 2, groupName: 'proj_id' }),
+        geometry : proj_bounds,
+        scale    : SCALE,
+        maxPixels: MAX_PIX
     });
 
-    // ----- Funcao: roda reduceRegion com grupo duplo (proj_id + classe) -----
-    function reduceDouble(valueImg, groupImg_classe, groupImg_proj) {
-        // Empilha: [value, classe, proj_id]
-        var stacked = valueImg
-            .addBands(groupImg_classe)
-            .addBands(groupImg_proj);
+    return ee.List(result.get('groups')); // lista de { proj_id, groups: [{classe, sum}] }
+}
 
-        // Reducer: sum, agrupado por banda 1 (classe), depois por banda 2 (proj_id)
-        // GEE nao suporta group duplo nativo, entao usamos repeatedReducer + group por proj_id
-        // Estrategia: group por proj_id primeiro, dentro de cada grupo fazemos group por classe
-        // via Reducer.sum().group(1).group(2)
-        var result = stacked.reduceRegion({
-            reducer  : ee.Reducer.sum().group({ groupField: 1, groupName: 'classe' })
-                                       .group({ groupField: 2, groupName: 'proj_id' }),
-            geometry : proj_bounds,
-            scale    : SCALE,
-            maxPixels: MAX_PIX
-        });
+// ----- Tabela de area -----
+var rows_area = ee.FeatureCollection(YEARS_STATS.map(function (year) {
+    year = ee.String(year);
 
-        return ee.List(result.get('groups')); // lista por proj_id
-    }
+    var areaImg   = ee.Image.pixelArea().divide(1e4);
+    var classeImg = desf_reg_corrected.select(ee.String('classification_').cat(year));
 
-    // ----- Tabela de area -----
-    var rows_area = ee.FeatureCollection(YEARS_STATS.map(function (year) {
-        year = ee.String(year);
+    var groups_proj = reduceDouble(areaImg, classeImg);
 
-        var areaImg   = ee.Image.pixelArea().divide(1e4);
+    return ee.FeatureCollection(groups_proj.map(function (gp) {
+        gp = ee.Dictionary(gp);
+        var proj_id      = ee.Number(gp.get('proj_id')).toInt32();
+        var groups_class = ee.List(gp.get('groups'));
+
+        return ee.FeatureCollection(groups_class.map(function (gc) {
+            gc = ee.Dictionary(gc);
+            var classe_int = ee.Number(gc.get('classe')).int();
+            return ee.Feature(null).set({
+                'index'    : ee.String(proj_id).cat('-').cat(makeIndex(classe_int, year)),
+                'proj_id'  : proj_id,
+                'Ano'      : year,
+                'Area ha'  : gc.getNumber('sum'),
+                'Cobertura': desf_legends.get(classe_int),
+                'Codigo'   : classe_int
+            });
+        }));
+    })).flatten();
+})).flatten();
+
+var tblFinal_priv = rows_area;
+
+// ----- Loop por metrica -----
+metric_prefixes.forEach(function (prefix) {
+    var metricBands = pixelTonelada.select(ee.String(prefix).cat('_.*')).bandNames();
+
+    var tbl_metric = ee.FeatureCollection(metricBands.map(function (bandname) {
+        bandname = ee.String(bandname);
+        var year = ee.String(bandname.slice(-4));
+
+        var valueImg  = pixelTonelada.select([bandname]);
         var classeImg = desf_reg_corrected.select(ee.String('classification_').cat(year));
 
-        var groups_proj = reduceDouble(areaImg, classeImg, proj_priv_id_img);
+        var groups_proj = reduceDouble(valueImg, classeImg);
 
         return ee.FeatureCollection(groups_proj.map(function (gp) {
             gp = ee.Dictionary(gp);
@@ -273,91 +297,73 @@ proj_priv.toList(proj_priv.size()).evaluate(function (features) {
             return ee.FeatureCollection(groups_class.map(function (gc) {
                 gc = ee.Dictionary(gc);
                 var classe_int = ee.Number(gc.get('classe')).int();
-                return ee.Feature(null).set({
-                    'index'    : ee.String(proj_id).cat('-').cat(makeIndex(classe_int, year)),
-                    'proj_id'  : proj_id,
-                    'Ano'      : year,
-                    'Area ha'  : gc.getNumber('sum'),
-                    'Cobertura': desf_legends.get(classe_int),
-                    'Codigo'   : classe_int
-                });
+                return ee.Feature(null)
+                    .set('index', ee.String(proj_id).cat('-').cat(makeIndex(classe_int, year)))
+                    .set(prefix, gc.getNumber('sum'));
             }));
         })).flatten();
     })).flatten();
 
-    var tblFinal_priv = rows_area;
+    var join        = ee.Join.saveFirst({ matchKey: 'secondary' });
+    var filter_join = ee.Filter.equals({ leftField: 'index', rightField: 'index' });
 
-    // ----- Loop por metrica -----
-    metric_prefixes.forEach(function (prefix) {
-        var metricBands = pixelTonelada.select(ee.String(prefix).cat('_.*')).bandNames();
-
-        var tbl_metric = ee.FeatureCollection(metricBands.map(function (bandname) {
-            bandname = ee.String(bandname);
-            var year = ee.String(bandname.slice(-4));
-
-            var valueImg  = pixelTonelada.select([bandname]);
-            var classeImg = desf_reg_corrected.select(ee.String('classification_').cat(year));
-
-            var groups_proj = reduceDouble(valueImg, classeImg, proj_priv_id_img);
-
-            return ee.FeatureCollection(groups_proj.map(function (gp) {
-                gp = ee.Dictionary(gp);
-                var proj_id      = ee.Number(gp.get('proj_id')).toInt32();
-                var groups_class = ee.List(gp.get('groups'));
-
-                return ee.FeatureCollection(groups_class.map(function (gc) {
-                    gc = ee.Dictionary(gc);
-                    var classe_int = ee.Number(gc.get('classe')).int();
-                    return ee.Feature(null)
-                        .set('index', ee.String(proj_id).cat('-').cat(makeIndex(classe_int, year)))
-                        .set(prefix, gc.getNumber('sum'));
-                }));
-            })).flatten();
-        })).flatten();
-
-        var join        = ee.Join.saveFirst({ matchKey: 'secondary' });
-        var filter_join = ee.Filter.equals({ leftField: 'index', rightField: 'index' });
-
-        tblFinal_priv = ee.FeatureCollection(
-            join.apply(tblFinal_priv, tbl_metric, filter_join)
-        ).map(function (f) {
-            f = ee.Feature(f);
-            var out       = ee.Feature(null).copyProperties(f);
-            var secondary = ee.Feature(f.get('secondary'));
-            return ee.Algorithms.If(secondary, out.copyProperties(secondary), out);
-        });
+    tblFinal_priv = ee.FeatureCollection(
+        join.apply(tblFinal_priv, tbl_metric, filter_join)
+    ).map(function (f) {
+        f = ee.Feature(f);
+        var out       = ee.Feature(null).copyProperties(f);
+        var secondary = ee.Feature(f.get('secondary'));
+        return ee.Algorithms.If(secondary, out.copyProperties(secondary), out);
     });
-
-    // ----- Anexa propriedades do projeto via proj_id (join no cliente via set) -----
-    tblFinal_priv = tblFinal_priv.map(function (row) {
-        // proj_id esta disponivel em cada row; usamos ee.Dictionary para lookup server-side
-        // Como lookup é JS, convertemos para ee.Dictionary e buscamos por proj_id string
-        var proj_id_str = ee.Number(ee.Feature(row).get('proj_id')).toInt32().format();
-        var proj_dict   = ee.Dictionary(
-            ee.Dictionary(lookup).get(proj_id_str, ee.Dictionary({}))
-        );
-        return ee.Feature(row).set(proj_dict);
-    });
-
-    // ----- Selectors -----
-    // Pega colunas do primeiro projeto do lookup para montar base_cols
-    var first_key    = Object.keys(lookup)[0];
-    var proj_cols    = Object.keys(lookup[first_key])
-        .filter(function (c) { return c !== 'ID_OK' && c !== 'Name'; });
-
-    var base_cols = ['ID_OK', 'Name']
-        .concat(proj_cols)
-        .concat(['Ano', 'Codigo', 'Cobertura', 'Area ha'])
-        .concat(metric_prefixes);
-
-    Export.table.toDrive({
-        collection    : tblFinal_priv,
-        description   : 'WSilva-CCAL_MODULO3_statistics_projPriv_' + VERSION,
-        fileNamePrefix: 'CCAL_MODULO3_statistics_projPriv_' + VERSION,
-        fileFormat    : 'CSV',
-        folder        : 'CCAL_MODULO3',
-        selectors     : base_cols
-    });
-
-    print('Tabela Projetos Privados (previa):', tblFinal_priv.limit(10));
 });
+
+// ----- Anexa propriedades do projeto via ee.Join server-side -----
+// Prepara proj_priv com ID_OK como string para bater com proj_id das stats
+var proj_priv_for_join = proj_priv_int.map(function (f) {
+    return f.set('proj_id_join', ee.Number(f.get('ID_OK')).toInt32());
+});
+
+// Adiciona proj_id_join nas stats tambem
+tblFinal_priv = tblFinal_priv.map(function (f) {
+    return ee.Feature(f).set('proj_id_join', ee.Number(ee.Feature(f).get('proj_id')).toInt32());
+});
+
+// Join: cada row de stats recebe as propriedades do projeto correspondente
+var join_proj   = ee.Join.saveFirst({ matchKey: 'proj_feature' });
+var filter_proj = ee.Filter.equals({ leftField: 'proj_id_join', rightField: 'proj_id_join' });
+
+tblFinal_priv = ee.FeatureCollection(
+    join_proj.apply(tblFinal_priv, proj_priv_for_join, filter_proj)
+).map(function (f) {
+    f = ee.Feature(f);
+    var out          = ee.Feature(null).copyProperties(f);
+    var proj_feature = ee.Feature(f.get('proj_feature'));
+    // Copia todas as propriedades do projeto; exclui a chave auxiliar de join
+    return out.copyProperties(proj_feature).set('proj_feature', null).set('proj_id_join', null);
+});
+
+// ----- Export via evaluate para resolver selectors no cliente -----
+proj_priv.first().propertyNames()
+    .remove('system:index')
+    .evaluate(function (cols) {
+
+        var proj_cols = cols.filter(function (c) {
+            return c !== 'ID_OK' && c !== 'Name';
+        });
+
+        var base_cols = ['ID_OK', 'Name']
+            .concat(proj_cols)
+            .concat(['Ano', 'Codigo', 'Cobertura', 'Area ha'])
+            .concat(metric_prefixes);
+
+        Export.table.toDrive({
+            collection    : tblFinal_priv,
+            description   : 'WSilva-CCAL_MODULO3_statistics_projPriv_' + VERSION,
+            fileNamePrefix: 'CCAL_MODULO3_statistics_projPriv_' + VERSION,
+            fileFormat    : 'CSV',
+            folder        : 'CCAL_MODULO3',
+            selectors     : base_cols
+        });
+
+        print('Tabela Projetos Privados (previa):', tblFinal_priv.limit(10));
+    });

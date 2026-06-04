@@ -2,9 +2,11 @@
 // BRAZIL NATIONAL FREL — Unified GEE Script (v2.1.2)
 //
 // Changelog v2.1.1 → v2.1.2:
-//   FIX: processCerrado() — adicionado .multiply(f2016) em
-//        prodesDeforestation, alinhando com processSimpleBiome().
-//        Impedia que pixels fora da floresta 2016 gerassem emissões.
+//   FIX 1: processCerrado() — adicionado .multiply(f2016) em
+//           prodesDeforestation, alinhando com processSimpleBiome().
+//   FIX 2: processAmazon() — adicionado .multiply(f2016) em
+//           prodesLessThan625ha dentro do blend de prodesDeforestation,
+//           garantindo consistência com demais biomas.
 //
 // Reference:
 //   Silva-Junior, C. H. L. et al. (2026). Increased deforestation
@@ -170,8 +172,6 @@ function exportStockImageSimple(totalImage, prefix, year) {
 }
 
 // =================== MAPA DE VERIFICAÇÃO ===================
-// Gera mapa de desmatamento por bioma para VIS_YEAR
-// Chama ANTES de exportar — não depende dos assets exportados
 
 function addDefCheckLayer(defCO2image, biomeName, biomeFC) {
   var clipped = defCO2image
@@ -210,8 +210,9 @@ function processAmazon() {
     .remap(PRODES_FROM, PRODES_TO, 0)
     .clip(biomeFC);
 
+  // FIX v2.1.2 — .multiply(f2016) adicionado em prodesLessThan625ha
   var prodesDeforestation = prodes625
-    .blend(prodesLessThan625ha.clip(biomeFC))
+    .blend(prodesLessThan625ha.multiply(f2016).clip(biomeFC))
     .remap(PRODES_TO, PRODES_TO, 0)
     .clip(biomeFC);
 
@@ -285,10 +286,10 @@ function processAmazon() {
     exportEmissionImage(slCO2.multiply(C_TO_CO2), prefix + '_emission_sl_co2_' + year, year, fBiome);
 
     // ---- Deforestation ----
-    var defMask = prodesDeforestation.eq(year);
-    var defCO2  = agbDwL.add(bgb).multiply(defMask);
-    var defCH4  = agbDwL.multiply(defMask).multiply(1 / 0.47).multiply(0.368).multiply(6.8).multiply(0.001);
-    var defN2O  = agbDwL.multiply(defMask).multiply(1 / 0.47).multiply(0.368).multiply(0.2).multiply(0.001);
+    var defMask      = prodesDeforestation.eq(year);
+    var defCO2       = agbDwL.add(bgb).multiply(defMask);
+    var defCH4       = agbDwL.multiply(defMask).multiply(1 / 0.47).multiply(0.368).multiply(6.8).multiply(0.001);
+    var defN2O       = agbDwL.multiply(defMask).multiply(1 / 0.47).multiply(0.368).multiply(0.2).multiply(0.001);
 
     var defCO2_CO2eq = defCO2.multiply(C_TO_CO2);
     var defCH4_CO2eq = defCH4.multiply(GWP_CH4);
@@ -324,7 +325,7 @@ function processAmazon() {
 processAmazon();
 
 // ============================================================
-//  CERRADO  — v2.1.2: adicionado .multiply(f2016) em prodesDeforestation
+//  CERRADO — FIX v2.1.2: .multiply(f2016) em prodesDeforestation
 // ============================================================
 
 function processCerrado() {
@@ -336,9 +337,10 @@ function processCerrado() {
 
   var f2016 = forest2016.clip(biomeFC);
 
+  // FIX v2.1.2 — .multiply(f2016) adicionado
   var prodesDeforestation = prodesGreaterThan625ha
     .unmask(0)
-    .multiply(f2016)   // ← FIX v2.1.2
+    .multiply(f2016)
     .remap(PRODES_FROM, PRODES_TO, 0)
     .clip(biomeFC);
 
@@ -444,5 +446,80 @@ processSimpleBiome('Mata Atlântica', 'ma');
 // ============================================================
 //  MOSAIC — rodar APENAS após todos os exports de bioma concluírem
 // ============================================================
-...
+
+var EMISSION_TYPES = [
+  'emission_fire_co2', 'emission_fire_ch4', 'emission_fire_n2o',
+  'emission_sl_co2',
+  'emission_def_co2',  'emission_def_ch4',  'emission_def_n2o'
+];
+
+var BIOME_PREFIXES = ['amz', 'cerr', 'pan', 'pam', 'caa', 'ma'];
+
+var biomeIC = ee.ImageCollection(EXPORT_ASSET_ROOT);
+
+function mosaicEmissions() {
+  for (var ei = 0; ei < EMISSION_TYPES.length; ei++) {
+    var emType = EMISSION_TYPES[ei];
+    for (var yi = START_YEAR; yi <= END_YEAR; yi++) {
+      var year = yi;
+      var biomeImages = ee.ImageCollection(
+        BIOME_PREFIXES.map(function(pfx) {
+          return biomeIC
+            .filter(ee.Filter.eq('description', pfx + '_' + emType + '_' + year))
+            .first()
+            .unmask(0);
+        })
+      );
+      var brazilMosaic = biomeImages
+        .sum()
+        .rename('emission_tCO2e_pixel')
+        .set('system:time_start', ee.Date.fromYMD(year, 1, 1).millis())
+        .set('year', year)
+        .set('emission_type', emType);
+      var desc = 'brazil_' + emType + '_' + year;
+      Export.image.toAsset({
+        image: brazilMosaic,
+        description: desc,
+        assetId: EXPORT_MOSAIC_ROOT + '/' + desc,
+        region: brazilRegion,
+        scale: SPATIAL_SCALE,
+        maxPixels: 1e13,
+        pyramidingPolicy: { '.default': 'mean' }
+      });
+    }
+  }
+}
+
+function mosaicStocks() {
+  for (var yi = START_YEAR - 1; yi <= END_YEAR; yi++) {
+    var year = yi;
+    var stockImages = ee.ImageCollection(
+      BIOME_PREFIXES.map(function(pfx) {
+        return biomeIC
+          .filter(ee.Filter.eq('description', pfx + '_stock_carbon_' + year))
+          .first()
+          .select(['total'])
+          .unmask(0);
+      })
+    );
+    var brazilStock = stockImages
+      .sum()
+      .rename('total_tC_ha')
+      .set('system:time_start', ee.Date.fromYMD(year, 1, 1).millis())
+      .set('year', year);
+    var desc = 'brazil_stock_carbon_' + year;
+    Export.image.toAsset({
+      image: brazilStock,
+      description: desc,
+      assetId: EXPORT_MOSAIC_ROOT + '/' + desc,
+      region: brazilRegion,
+      scale: SPATIAL_SCALE,
+      maxPixels: 1e13,
+      pyramidingPolicy: { '.default': 'mean' }
+    });
+  }
+}
+
+mosaicEmissions();
+mosaicStocks();
 */

@@ -37,13 +37,6 @@ var GWP_CH4 = 28;
 var GWP_N2O = 265;
 var TC_TO_TCO2 = 3.67;
 
-// --- Módulos de equação (require)
-var secVeg  = require('users/workspaceipam/CCAL:MODULO3/v036/equations/01_secondary_veg.js');
-var fireFor = require('users/workspaceipam/CCAL:MODULO3/v036/equations/02_fire_forest.js');
-var fireSav = require('users/workspaceipam/CCAL:MODULO3/v036/equations/03_fire_savanna.js');
-var fireGra = require('users/workspaceipam/CCAL:MODULO3/v036/equations/04_fire_grassland.js');
-var loggM   = require('users/workspaceipam/CCAL:MODULO3/v036/equations/05_logging.js');
-
 // =============================================================================
 // 2. DATASETS DE ENTRADA
 // =============================================================================
@@ -132,6 +125,13 @@ var always_submerged = lulc.eq(33).reduce(ee.Reducer.sum()).gte(38);
 // =============================================================================
 // 4. ESTOQUE DE BIOMASSA DINÂMICO
 // =============================================================================
+
+// --- Módulos de equação (require)
+var secVeg  = require('users/workspaceipam/CCAL:MODULO3/v036/equations/01_secondary_veg.js');
+var fireFor = require('users/workspaceipam/CCAL:MODULO3/v036/equations/02_fire_forest.js');
+var fireSav = require('users/workspaceipam/CCAL:MODULO3/v036/equations/03_fire_savanna.js');
+var fireGra = require('users/workspaceipam/CCAL:MODULO3/v036/equations/04_fire_grassland.js');
+var loggM   = require('users/workspaceipam/CCAL:MODULO3/v036/equations/05_logging.js');
 
 // --- 4a. Incremento de veg. secundária (age-based)
 var sec_veg_increment = secVeg.calcSecondaryVegIncrement({

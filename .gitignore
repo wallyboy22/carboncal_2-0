@@ -1,0 +1,16 @@
+# Arquivos locais (não subir para o remote GEE)
+docs/
+references/
+CCAL-remote/
+wiki-obsidian/
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*.swo

@@ -73,12 +73,7 @@ exports.calcForestFireEmissions = function (params) {
     var annual_fire_freq_gte2 = annual_burned.updateMask(fire_frequency.gte(2)).gte(1);
     var tsf_edit = annual_burned.multiply(0).slice(1).blend(time_since_fire);
 
-    var CO2_mosaic = ee.Image().select();
-    var CO2_gross_mosaic = ee.Image().select();
-    var CH4_mosaic = ee.Image().select();
-    var N2O_mosaic = ee.Image().select();
-    var CO_mosaic = ee.Image().select();
-    var NOX_mosaic = ee.Image().select();
+    var firstBiome = true;
 
     Object.keys(BIOME_DICT).forEach(function (biome_str) {
         var p = BIOME_DICT[biome_str];
@@ -152,14 +147,24 @@ exports.calcForestFireEmissions = function (params) {
         var NOX_y = fAGNcomb_b.multiply(2000).multiply(1.6).divide(1e6)
             .rename(years.map(function (y) { return 'NOX_t_ha_' + y; }));
 
-        // blend em vez de addBands: cada bioma preenche apenas seus pixels,
-        // resultando em 39 bandas (nao 6x39)
-        CO2_mosaic = CO2_mosaic.blend(CO2_y);
-        CO2_gross_mosaic = CO2_gross_mosaic.blend(CO2_gross_y);
-        CH4_mosaic = CH4_mosaic.blend(CH4_y);
-        N2O_mosaic = N2O_mosaic.blend(N2O_y);
-        CO_mosaic = CO_mosaic.blend(CO_y);
-        NOX_mosaic = NOX_mosaic.blend(NOX_y);
+        // Primeiro bioma: atribui diretamente (blend nao aceita 0 bandas)
+        // Biomas seguintes: blend para preencher apenas pixels do bioma
+        if (firstBiome) {
+            CO2_mosaic = CO2_y;
+            CO2_gross_mosaic = CO2_gross_y;
+            CH4_mosaic = CH4_y;
+            N2O_mosaic = N2O_y;
+            CO_mosaic = CO_y;
+            NOX_mosaic = NOX_y;
+            firstBiome = false;
+        } else {
+            CO2_mosaic = CO2_mosaic.blend(CO2_y);
+            CO2_gross_mosaic = CO2_gross_mosaic.blend(CO2_gross_y);
+            CH4_mosaic = CH4_mosaic.blend(CH4_y);
+            N2O_mosaic = N2O_mosaic.blend(N2O_y);
+            CO_mosaic = CO_mosaic.blend(CO_y);
+            NOX_mosaic = NOX_mosaic.blend(NOX_y);
+        }
     });
 
     // Aplicar máscara de floresta estável

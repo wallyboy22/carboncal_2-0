@@ -152,7 +152,7 @@ print('  ✅ degradation_mask concluído');
 print('✅ Todos os cálculos do Stage 1 concluídos!');
 
 // =============================================================================
-// 5. EXPORTS (11 assets)
+// 5. EXPORTS (19 assets)
 // =============================================================================
 
 print('⏳ Iniciando exports...');
@@ -167,11 +167,20 @@ Export.image.toAsset({
     pyramidingPolicy: 'median'
 });
 
-// Fogo Floresta (3 assets)
+// Fogo Floresta (6 assets)
 Export.image.toAsset({
     image: fire_f.CO2,
     description: EXPORT_FLAG + '_fire_forest_CO2_' + VERSION,
     assetId: BASE_ASSET + 'fire_forest_CO2',
+    scale: SCALE,
+    maxPixels: MAX_PIX,
+    pyramidingPolicy: 'median'
+});
+
+Export.image.toAsset({
+    image: fire_f.CO2_gross,
+    description: EXPORT_FLAG + '_fire_forest_CO2_gross_' + VERSION,
+    assetId: BASE_ASSET + 'fire_forest_CO2_gross',
     scale: SCALE,
     maxPixels: MAX_PIX,
     pyramidingPolicy: 'median'
@@ -195,11 +204,38 @@ Export.image.toAsset({
     pyramidingPolicy: 'median'
 });
 
-// Fogo Savana (3 assets)
+Export.image.toAsset({
+    image: fire_f.CO,
+    description: EXPORT_FLAG + '_fire_forest_CO_' + VERSION,
+    assetId: BASE_ASSET + 'fire_forest_CO',
+    scale: SCALE,
+    maxPixels: MAX_PIX,
+    pyramidingPolicy: 'median'
+});
+
+Export.image.toAsset({
+    image: fire_f.NOX,
+    description: EXPORT_FLAG + '_fire_forest_NOX_' + VERSION,
+    assetId: BASE_ASSET + 'fire_forest_NOX',
+    scale: SCALE,
+    maxPixels: MAX_PIX,
+    pyramidingPolicy: 'median'
+});
+
+// Fogo Savana (6 assets)
 Export.image.toAsset({
     image: fire_s.CO2,
     description: EXPORT_FLAG + '_fire_savanna_CO2_' + VERSION,
     assetId: BASE_ASSET + 'fire_savanna_CO2',
+    scale: SCALE,
+    maxPixels: MAX_PIX,
+    pyramidingPolicy: 'median'
+});
+
+Export.image.toAsset({
+    image: fire_s.CO2_gross,
+    description: EXPORT_FLAG + '_fire_savanna_CO2_gross_' + VERSION,
+    assetId: BASE_ASSET + 'fire_savanna_CO2_gross',
     scale: SCALE,
     maxPixels: MAX_PIX,
     pyramidingPolicy: 'median'
@@ -223,7 +259,25 @@ Export.image.toAsset({
     pyramidingPolicy: 'median'
 });
 
-// Fogo Campo (2 assets)
+Export.image.toAsset({
+    image: fire_s.CO,
+    description: EXPORT_FLAG + '_fire_savanna_CO_' + VERSION,
+    assetId: BASE_ASSET + 'fire_savanna_CO',
+    scale: SCALE,
+    maxPixels: MAX_PIX,
+    pyramidingPolicy: 'median'
+});
+
+Export.image.toAsset({
+    image: fire_s.NOX,
+    description: EXPORT_FLAG + '_fire_savanna_NOX_' + VERSION,
+    assetId: BASE_ASSET + 'fire_savanna_NOX',
+    scale: SCALE,
+    maxPixels: MAX_PIX,
+    pyramidingPolicy: 'median'
+});
+
+// Fogo Campo (4 assets)
 Export.image.toAsset({
     image: fire_g.CH4,
     description: EXPORT_FLAG + '_fire_grassland_CH4_' + VERSION,
@@ -237,6 +291,24 @@ Export.image.toAsset({
     image: fire_g.N2O,
     description: EXPORT_FLAG + '_fire_grassland_N2O_' + VERSION,
     assetId: BASE_ASSET + 'fire_grassland_N2O',
+    scale: SCALE,
+    maxPixels: MAX_PIX,
+    pyramidingPolicy: 'median'
+});
+
+Export.image.toAsset({
+    image: fire_g.CO,
+    description: EXPORT_FLAG + '_fire_grassland_CO_' + VERSION,
+    assetId: BASE_ASSET + 'fire_grassland_CO',
+    scale: SCALE,
+    maxPixels: MAX_PIX,
+    pyramidingPolicy: 'median'
+});
+
+Export.image.toAsset({
+    image: fire_g.NOX,
+    description: EXPORT_FLAG + '_fire_grassland_NOX_' + VERSION,
+    assetId: BASE_ASSET + 'fire_grassland_NOX',
     scale: SCALE,
     maxPixels: MAX_PIX,
     pyramidingPolicy: 'median'
@@ -267,17 +339,25 @@ Export.image.toAsset({
 // =============================================================================
 
 print('✅ Stage 1 concluído!');
-print('📦 11 assets a serem exportados:');
+print('📦 19 assets a serem exportados:');
 print('   - secondary_veg_increment (tC/ha)');
-print('   - fire_forest_CO2 (tCO₂e/ha)');
-print('   - fire_forest_CH4 (tCO₂e/ha)');
-print('   - fire_forest_N2O (tCO₂e/ha)');
-print('   - fire_savanna_CO2 (tCO₂e/ha)');
-print('   - fire_savanna_CH4 (tCO₂e/ha)');
-print('   - fire_savanna_N2O (tCO₂e/ha)');
-print('   - fire_grassland_CH4 (tCO₂e/ha)');
-print('   - fire_grassland_N2O (tCO₂e/ha)');
-print('   - logging_forest_CO2 (tCO₂e/ha)');
+print('   - fire_forest_CO2 (tC/ha)');
+print('   - fire_forest_CO2_gross (t/ha)');
+print('   - fire_forest_CH4 (t/ha)');
+print('   - fire_forest_N2O (t/ha)');
+print('   - fire_forest_CO (t/ha)');
+print('   - fire_forest_NOX (t/ha)');
+print('   - fire_savanna_CO2 (tC/ha)');
+print('   - fire_savanna_CO2_gross (t/ha)');
+print('   - fire_savanna_CH4 (t/ha)');
+print('   - fire_savanna_N2O (t/ha)');
+print('   - fire_savanna_CO (t/ha)');
+print('   - fire_savanna_NOX (t/ha)');
+print('   - fire_grassland_CH4 (t/ha)');
+print('   - fire_grassland_N2O (t/ha)');
+print('   - fire_grassland_CO (t/ha)');
+print('   - fire_grassland_NOX (t/ha)');
+print('   - logging_forest_CO2 (tC/ha)');
 print('   - degradation_mask (0/1)');
 print('');
 print('⏳ Aguarde a conclusão no GEE Task Manager.');

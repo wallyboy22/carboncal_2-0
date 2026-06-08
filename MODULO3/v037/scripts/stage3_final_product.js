@@ -63,11 +63,11 @@ var emergent_mask = lulc.eq(33).reduce(ee.Reducer.sum()).lt(38);
 var biomass_stock_bruto = ee.Image().select();
 YEARS_ALL.forEach(function (y) {
     var desf_y = desf_reg_corrected.select('classification_' + y);
-    var sec_y = secondary_veg_increment.select(y).unmask(0);
+    var sec_y = secondary_veg_increment.select('sec_veg_increment_' + y).unmask(0);
     var stock_y = ee.Image(0)
         .where(desf_y.eq(2), qcn.select('TOTAL'))
         .where(desf_y.eq(3).or(desf_y.eq(5)), sec_y)
-        .rename(y)
+        .rename('sec_veg_increment_' + y)
         .float();
     biomass_stock_bruto = biomass_stock_bruto.addBands(stock_y);
 });
@@ -112,8 +112,9 @@ print('⏳ Montando produto final...');
 var final_image = result.loss_fire
     .addBands(result.loss_grassland)
     .addBands(result.loss_logging)
-    .addBands(result.gain_sec_veg)
+    .addBands(result.loss_convergence_degradation)
     .addBands(result.loss_deforestation)
+    .addBands(result.gain_sec_veg)
     .addBands(result.biomass_stock)
     .updateMask(emergent_mask)
     .float();
@@ -136,8 +137,9 @@ print('📊 Bandas:');
 print('   - loss_fire_YYYY (tCO₂e/pixel)');
 print('   - loss_grassland_YYYY (tCO₂e/pixel)');
 print('   - loss_selective_logging_YYYY (tCO₂e/pixel)');
-print('   - gain_secondary_vegetation_YYYY (tCO₂e/pixel)');
+print('   - loss_convergence_degradation_YYYY (tCO₂e/pixel)');
 print('   - loss_deforestation_YYYY (tCO₂e/pixel)');
+print('   - gain_secondary_vegetation_YYYY (tCO₂e/pixel)');
 print('   - stock_YYYY (tC/ha)');
 print('');
 print('✅ Pipeline v037 concluído!');

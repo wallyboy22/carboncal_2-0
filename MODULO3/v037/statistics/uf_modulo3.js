@@ -11,7 +11,7 @@ var geometry =
 /**
  * =============================================================================
  * PROJETO: CCAL - Modulo 3 (Estatisticas por Cobertura e UF)
- * VERSAO: v036
+ * VERSAO: v037
  * SCRIPT: 05_2_statistics_modulo3.js
  * DESCRICAO: Gera tabela de area (ha) e totais em toneladas de carbono
  *            estocado e gases emitidos, cruzando classes de desmatamento
@@ -28,7 +28,7 @@ var geometry =
 
 
 // 1. PARAMETROS
-var VERSION = 'v036';
+var VERSION = 'v037';
 var FINAL_ASSET = 'projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO3-' + VERSION;
 var SCALE = 30;
 var MAX_PIX = 1e13;
@@ -43,27 +43,10 @@ var YEARS_STATS = YEARS_ALL.slice(1);
 
 // 2. DATASETS
 var final_image = ee.Image(FINAL_ASSET);
-var desf_reg = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_deforestation_secondary_vegetation_v1');
+var desf_reg_corrected = ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/' + VERSION + '/desf_reg_corrected');
 var estados = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/estados-2017')
     .map(function (f) { return f.set({ CD_GEOCUF: ee.Number.parse(f.get('CD_GEOCUF')) }); });
 var bounds = estados.geometry().bounds();
-
-// 3. CORRECAO DO DESF_REG
-var desf_corrected = ee.Image(YEARS_ALL.reduce(function (acc, year, i) {
-    var curr = desf_reg.select('classification_' + year);
-    if (i === 0) return curr.rename('classification_' + year);
-    var prev = ee.Image(acc).slice(-1);
-    return ee.Image(acc).addBands(prev.where(curr.neq(7), curr).rename('classification_' + year));
-}, null));
-
-var desf_corrected_bwd = ee.Image(YEARS_ALL.slice().reverse().reduce(function (acc, year, i) {
-    var curr = desf_corrected.select('classification_' + year);
-    if (i === 0) return curr.rename('classification_' + year);
-    var next = ee.Image(acc).slice(0, 1);
-    return ee.Image(acc).addBands(next.where(curr.neq(7), curr).rename('classification_' + year));
-}, null));
-
-var desf_reg_corrected = desf_corrected.where(desf_corrected.eq(7), desf_corrected_bwd);
 
 // 4. TERRITORIO (apenas UFs)
 var territory_img = ee.Image().paint(estados, 'CD_GEOCUF');

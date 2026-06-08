@@ -3,14 +3,14 @@
  * PROJETO: CCAL - Módulo 3 (Emissões por Mudança de Uso e Degradação)
  * VERSÃO: v037
  * SCRIPT: 02_fire_forest.js
- * DESCRIÇÃO: Motor de cálculo para degradação por fogo em formações florestais. 
- *            Implementa o modelo FATE para estimar a mortalidade de árvores e a 
- *            liberação gradual de carbono e gases de efeito estufa (CO2, CH4, N2O).
- *            Retorna 3 imagens separadas (CO2, CH4, N2O) em tCO₂e/ha.
+ * DESCRIÇÃO: Motor de cálculo para degradação por fogo em formações florestais.
+ *            Implementa o modelo FATE para estimar a mortalidade de árvores e a
+ *            liberação gradual de carbono e gases de efeito estufa.
+ *            Saídas em unidades originais: CO2 em tC/ha, demais em t/ha.
  * -----------------------------------------------------------------------------
  * INSTITUIÇÃO: IPAM Amazônia
- * EQUIPE CCAL: Ane Alencar; Bárbara Zimbres; Camila Silva; Celso Silva-Junior; 
- *              Edriano Souza; Isabel Silva; Lívia Laureto; Manuela Padilha; 
+ * EQUIPE CCAL: Ane Alencar; Bárbara Zimbres; Camila Silva; Celso Silva-Junior;
+ *              Edriano Souza; Isabel Silva; Lívia Laureto; Manuela Padilha;
  *              Paulo Moutinho; Rebecca Maranhão; Valderli Piontekowski; Wallace Silva;
  *              Jarlene Gomes; Julia Shimbo
  * CONTATO: https://ipam.org.br/contato/fale-conosco/
@@ -18,14 +18,9 @@
  * =============================================================================
  */
 
-// Constantes de conversão
-var TC_TO_TCO2 = 3.67;
-var GWP_CH4 = 28;
-var GWP_N2O = 265;
-
 /**
  * Calcula emissões por fogo em florestas (modelo FATE).
- * Retorna 3 imagens separadas: CO2, CH4, N2O (todas em tCO₂e/ha).
+ * Retorna 6 imagens separadas em unidades originais.
  *
  * @param {Object} params - Parâmetros de entrada
  * @param {ee.Image} params.annual_burned - Área queimada anual
@@ -37,7 +32,7 @@ var GWP_N2O = 265;
  * @param {ee.Image} params.forest_mask - Máscara de floresta
  * @param {ee.FeatureCollection} params.biomas - Biomas IBGE
  * @param {string[]} params.years - Lista de anos
- * @returns {Object} - { CO2: ee.Image, CH4: ee.Image, N2O: ee.Image } (tCO₂e/ha)
+ * @returns {Object} - { CO2, CO2_gross, CH4, N2O, CO, NOX } (tC/ha ou t/ha)
  */
 exports.calcForestFireEmissions = function (params) {
 
@@ -79,8 +74,11 @@ exports.calcForestFireEmissions = function (params) {
     var tsf_edit = annual_burned.multiply(0).slice(1).blend(time_since_fire);
 
     var CO2_mosaic = ee.Image().select();
+    var CO2_gross_mosaic = ee.Image().select();
     var CH4_mosaic = ee.Image().select();
     var N2O_mosaic = ee.Image().select();
+    var CO_mosaic = ee.Image().select();
+    var NOX_mosaic = ee.Image().select();
 
     Object.keys(BIOME_DICT).forEach(function (biome_str) {
         var p = BIOME_DICT[biome_str];
@@ -130,26 +128,47 @@ exports.calcForestFireEmissions = function (params) {
         var fAGNcomb_b = data.select('fAGNcomb_.*');
         var fCBalance_b = data.select('fCBalance_.*');
 
-        // CO2: tC/ha → tCO₂e/ha (× 3.67)
-        var CO2_tC = fAGNcomb_b.multiply(0.099).add(fCBalance_b).multiply(-1);
-        var CO2_CO2e = CO2_tC.multiply(TC_TO_TCO2).rename(years);
+        // CO2 balanço líquido: (comb × 0.099 + balanço) × (−1) → tC/ha
+        var CO2_y = fAGNcomb_b.multiply(0.099).add(fCBalance_b).multiply(-1)
+            .rename(years.map(function (y) { return 'CO2_tC_ha_' + y; }));
 
-        // CH4: t/ha → tCO₂e/ha (× 28)
-        var CH4_t = fAGNcomb_b.multiply(2000).multiply(6.8).divide(1e6);
-        var CH4_CO2e = CH4_t.multiply(GWP_CH4).rename(years);
+        // CO2 combustão bruta: comb × 2000 × 1580 / 1e6 → t CO2/ha
+        var CO2_gross_y = fAGNcomb_b.multiply(2000).multiply(1580).divide(1e6)
+            .rename(years.map(function (y) { return 'CO2_gross_t_ha_' + y; }));
 
-        // N2O: t/ha → tCO₂e/ha (× 265)
-        var N2O_t = fAGNcomb_b.multiply(2000).multiply(0.2).divide(1e6);
-        var N2O_CO2e = N2O_t.multiply(GWP_N2O).rename(years);
+        // CO: comb × 2000 × 104 / 1e6 → t CO/ha
+        var CO_y = fAGNcomb_b.multiply(2000).multiply(104).divide(1e6)
+            .rename(years.map(function (y) { return 'CO_t_ha_' + y; }));
 
-        CO2_mosaic = CO2_mosaic.addBands(CO2_CO2e);
-        CH4_mosaic = CH4_mosaic.addBands(CH4_CO2e);
-        N2O_mosaic = N2O_mosaic.addBands(N2O_CO2e);
+        // CH4: comb × 2000 × 6.8 / 1e6 → t CH4/ha
+        var CH4_y = fAGNcomb_b.multiply(2000).multiply(6.8).divide(1e6)
+            .rename(years.map(function (y) { return 'CH4_t_ha_' + y; }));
+
+        // N2O: comb × 2000 × 0.2 / 1e6 → t N2O/ha
+        var N2O_y = fAGNcomb_b.multiply(2000).multiply(0.2).divide(1e6)
+            .rename(years.map(function (y) { return 'N2O_t_ha_' + y; }));
+
+        // NOX: comb × 2000 × 1.6 / 1e6 → t NOX/ha
+        var NOX_y = fAGNcomb_b.multiply(2000).multiply(1.6).divide(1e6)
+            .rename(years.map(function (y) { return 'NOX_t_ha_' + y; }));
+
+        CO2_mosaic = CO2_mosaic.addBands(CO2_y);
+        CO2_gross_mosaic = CO2_gross_mosaic.addBands(CO2_gross_y);
+        CH4_mosaic = CH4_mosaic.addBands(CH4_y);
+        N2O_mosaic = N2O_mosaic.addBands(N2O_y);
+        CO_mosaic = CO_mosaic.addBands(CO_y);
+        NOX_mosaic = NOX_mosaic.addBands(NOX_y);
     });
 
+    // Aplicar máscara de floresta estável
+    var fmask = forest_mask.slice(1);
+
     return {
-        CO2: CO2_mosaic,
-        CH4: CH4_mosaic,
-        N2O: N2O_mosaic
+        CO2: CO2_mosaic.updateMask(fmask),
+        CO2_gross: CO2_gross_mosaic.updateMask(fmask),
+        CH4: CH4_mosaic.updateMask(fmask),
+        N2O: N2O_mosaic.updateMask(fmask),
+        CO: CO_mosaic.updateMask(fmask),
+        NOX: NOX_mosaic.updateMask(fmask)
     };
 };

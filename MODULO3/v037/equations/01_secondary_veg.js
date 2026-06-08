@@ -26,7 +26,7 @@
  * @param {ee.Image} params.total_carbon - Estoque total de carbono (tC/ha)
  * @param {ee.FeatureCollection} params.biomas - Biomas IBGE
  * @param {string[]} params.years - Lista de anos
- * @returns {ee.Image} - Incremento anual (tC/ha), bandas: '1985'...'2024'
+ * @returns {ee.Image} - Incremento anual (tC/ha), bandas: 'sec_veg_increment_1985'...'sec_veg_increment_2024'
  */
 exports.calcSecondaryVegIncrement = function (params) {
 
@@ -65,7 +65,7 @@ exports.calcSecondaryVegIncrement = function (params) {
         var lt20 = age_year.lt(20).and(age_year.gt(0));
         var gte20 = age_year.gte(20);
         var prev_stock = (i === 0) ? ee.Image(0) : stock_stack.slice(-1);
-        var increment_year = ee.Image(0).rename(year);
+        var increment_year = ee.Image(0).rename('sec_veg_increment_' + year);
 
         biome_list.forEach(function (b) {
             var bm = biome_images[b];
@@ -74,7 +74,7 @@ exports.calcSecondaryVegIncrement = function (params) {
             var g_lt20 = ee.Image(incr_table[b]['G'].lt20);
             var g_gte20 = ee.Image(incr_table[b]['G'].gte20);
 
-            var result_biome = prev_stock.rename(year)
+            var result_biome = prev_stock.rename('sec_veg_increment_' + year)
                 .where(gf_year.eq(2).and(lt20).and(bm), prev_stock.add(f_lt20))
                 .where(gf_year.eq(2).and(gte20).and(bm), prev_stock.add(f_gte20))
                 .where(gf_year.eq(1).and(lt20).and(bm), prev_stock.add(g_lt20))

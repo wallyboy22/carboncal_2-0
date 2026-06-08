@@ -3,14 +3,14 @@
  * PROJETO: CCAL - Módulo 3 (Emissões por Mudança de Uso e Degradação)
  * VERSÃO: v037
  * SCRIPT: 04_fire_grassland.js
- * DESCRIÇÃO: Cálculo simplificado de emissões por queima de biomassa campestre. 
- *            Estima a liberação imediata de CH4 e N2O proveniente da combustão de 
- *            gramíneas e biomassa herbácea em pastagens e campos nativos.
- *            Retorna 2 imagens separadas (CH4, N2O) em tCO₂e/ha.
+ * DESCRIÇÃO: Reprodução fiel do modelo SEEG_13 para emissões por fogo em campos.
+ *            Estima a liberação imediata de CH4, N2O, CO e NOX provenientes da
+ *            combustão de gramíneas e biomassa herbácea.
+ *            Saídas padronizadas em t/ha.
  * -----------------------------------------------------------------------------
  * INSTITUIÇÃO: IPAM Amazônia
- * EQUIPE CCAL: Ane Alencar; Bárbara Zimbres; Camila Silva; Celso Silva-Junior; 
- *              Edriano Souza; Isabel Silva; Lívia Laureto; Manuela Padilha; 
+ * EQUIPE CCAL: Ane Alencar; Bárbara Zimbres; Camila Silva; Celso Silva-Junior;
+ *              Edriano Souza; Isabel Silva; Lívia Laureto; Manuela Padilha;
  *              Paulo Moutinho; Rebecca Maranhão; Valderli Piontekowski; Wallace Silva;
  *              Jarlene Gomes; Julia Shimbo
  * CONTATO: https://ipam.org.br/contato/fale-conosco/
@@ -18,13 +18,9 @@
  * =============================================================================
  */
 
-// Constantes de conversão
-var GWP_CH4 = 28;
-var GWP_N2O = 265;
-
 /**
  * Calcula emissões por fogo em campos.
- * Retorna 2 imagens separadas: CH4, N2O (em tCO₂e/ha).
+ * Retorna 4 imagens separadas: CH4, N2O, CO, NOX (todas em t/ha).
  *
  * @param {Object} params - Parâmetros de entrada
  * @param {ee.Image} params.annual_burned - Área queimada anual
@@ -33,7 +29,7 @@ var GWP_N2O = 265;
  * @param {ee.Image} params.litter - Litter (tC/ha)
  * @param {ee.Image} params.grassland_mask - Máscara de campo
  * @param {string[]} params.years - Lista de anos
- * @returns {Object} - { CH4: ee.Image, N2O: ee.Image } (tCO₂e/ha)
+ * @returns {Object} - { CH4: ee.Image, N2O: ee.Image, CO: ee.Image, NOX: ee.Image } (t/ha)
  */
 exports.calcGrasslandFireEmissions = function (params) {
 
@@ -42,31 +38,42 @@ exports.calcGrasslandFireEmissions = function (params) {
     var grassland_mask = params.grassland_mask;
     var years = params.years;
 
-    var combf = 0.883;
+    var combf_fwd = 0.883;
+    var combf_cwd = 0.331;
 
     var CH4_mosaic = ee.Image().select();
     var N2O_mosaic = ee.Image().select();
+    var CO_mosaic = ee.Image().select();
+    var NOX_mosaic = ee.Image().select();
 
     years.forEach(function (y) {
         var fire_y = annual_burned.select('.*_' + y);
         var mask_y = grassland_mask.select('.*_' + y);
-        var comb_total = litter.add(agb).add(cdw).multiply(combf);
         var pixel_mask = fire_y.multiply(mask_y);
 
-        // CH4: t/ha → tCO₂e/ha (× 28)
-        var ch4_t = comb_total.multiply(2000).multiply(2.3).divide(1e6).multiply(pixel_mask);
-        var ch4_CO2e = ch4_t.multiply(GWP_CH4).rename(y);
+        // comb_total = litter×0.883 + (agb+cdw)×0.331  [tC/ha]
+        var comb_total = litter.multiply(combf_fwd)
+            .add(agb.add(cdw).multiply(combf_cwd));
 
-        // N2O: t/ha → tCO₂e/ha (× 265)
-        var n2o_t = comb_total.multiply(2000).multiply(0.21).divide(1e6).multiply(pixel_mask);
-        var n2o_CO2e = n2o_t.multiply(GWP_N2O).rename(y);
-
-        CH4_mosaic = CH4_mosaic.addBands(ch4_CO2e);
-        N2O_mosaic = N2O_mosaic.addBands(n2o_CO2e);
+        // CH4, N2O, CO, NOX → t/ha via IPCC (×2000×EF/1e6)
+        CH4_mosaic = CH4_mosaic.addBands(
+            comb_total.multiply(pixel_mask).multiply(2000).multiply(2.3).divide(1e6).rename('CH4_t_ha_' + y).float()
+        );
+        N2O_mosaic = N2O_mosaic.addBands(
+            comb_total.multiply(pixel_mask).multiply(2000).multiply(0.21).divide(1e6).rename('N2O_t_ha_' + y).float()
+        );
+        CO_mosaic = CO_mosaic.addBands(
+            comb_total.multiply(pixel_mask).multiply(2000).multiply(65).divide(1e6).rename('CO_t_ha_' + y).float()
+        );
+        NOX_mosaic = NOX_mosaic.addBands(
+            comb_total.multiply(pixel_mask).multiply(2000).multiply(3.9).divide(1e6).rename('NOX_t_ha_' + y).float()
+        );
     });
 
     return {
         CH4: CH4_mosaic,
-        N2O: N2O_mosaic
+        N2O: N2O_mosaic,
+        CO: CO_mosaic,
+        NOX: NOX_mosaic
     };
 };

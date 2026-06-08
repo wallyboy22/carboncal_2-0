@@ -3,14 +3,14 @@
  * PROJETO: CCAL - Módulo 3 (Emissões por Mudança de Uso e Degradação)
  * VERSÃO: v037
  * SCRIPT: 05_logging.js
- * DESCRIÇÃO: Módulo de estimativa de degradação por exploração madeireira. 
- *            Utiliza cicatrizes de corte seletivo e fatores de dano (MRV REDD+) 
+ * DESCRIÇÃO: Módulo de estimativa de degradação por exploração madeireira.
+ *            Utiliza cicatrizes de corte seletivo e fatores de dano (MRV REDD+)
  *            para quantificar a redução do estoque de carbono florestal.
- *            Retorna CO2 em tCO₂e/ha.
+ *            Saída em unidades originais: tC/ha.
  * -----------------------------------------------------------------------------
  * INSTITUIÇÃO: IPAM Amazônia
- * EQUIPE CCAL: Ane Alencar; Bárbara Zimbres; Camila Silva; Celso Silva-Junior; 
- *              Edriano Souza; Isabel Silva; Lívia Laureto; Manuela Padilha; 
+ * EQUIPE CCAL: Ane Alencar; Bárbara Zimbres; Camila Silva; Celso Silva-Junior;
+ *              Edriano Souza; Isabel Silva; Lívia Laureto; Manuela Padilha;
  *              Paulo Moutinho; Rebecca Maranhão; Valderli Piontekowski; Wallace Silva;
  *              Jarlene Gomes; Julia Shimbo
  * CONTATO: https://ipam.org.br/contato/fale-conosco/
@@ -18,20 +18,17 @@
  * =============================================================================
  */
 
-// Constante de conversão
-var TC_TO_TCO2 = 3.67;
-
 /**
  * Calcula emissões por corte seletivo.
- * Retorna CO2 em tCO₂e/ha.
+ * Retorna CO2 em tC/ha (unidade original).
  *
  * @param {Object} params - Parâmetros de entrada
  * @param {ee.Image} params.agb - AGB (tC/ha)
  * @param {ee.Image} params.forest_mask - Máscara de floresta
  * @param {ee.Image} params.amazon_mask - Máscara da Amazônia
  * @param {number} params.loss_fraction - Fração de perda (default: 0.196)
- * @param {string[]} params.years - Lista de anos
- * @returns {ee.Image} - logging_forest_CO2 (tCO₂e/ha), bandas: '2017'...'2024'
+ * @param {string[]} params.years - Lista de anos (2017-2024)
+ * @returns {ee.Image} - logging_forest_CO2 (tC/ha), bandas: 'CO2_tC_ha_2017'...'CO2_tC_ha_2024'
  */
 exports.calcLoggingEmissions = function (params) {
 
@@ -55,12 +52,13 @@ exports.calcLoggingEmissions = function (params) {
             .multiply(amazon_mask)
             .selfMask();
 
-        // tC/ha → tCO₂e/ha (× 3.67)
-        var logging_tC = agbUpdated.multiply(sl_year).multiply(loss_fraction);
-        var logging_CO2e = logging_tC.multiply(TC_TO_TCO2).rename(year).float();
+        // tC/ha (unidade original, sem conversão)
+        var logging_tC = agbUpdated.multiply(sl_year).multiply(loss_fraction)
+            .rename('CO2_tC_ha_' + year)
+            .float();
 
         agbUpdated = agbUpdated.subtract(logging_tC.unmask(0));
-        result = result.addBands(logging_CO2e);
+        result = result.addBands(logging_tC);
     });
 
     return result;

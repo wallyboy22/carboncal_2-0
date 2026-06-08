@@ -1,0 +1,125 @@
+REFERENCIAS BIBLIOGRAFICAS - CCAL Modulo 3 (v037)
+Fonte: Manual CCAL v2.0 - Outubro de 2025
+============================================================
+
+MANUAL CCAL
+-----------
+ALENCAR, A. A. C.; LAURETO, L. M. O.; PADILHA, M. C. C.; PIONTEKOWSKI, V. J.; SHIMBO, J. C.; SILVA, C. V. J.; SILVA, I. C.; SILVA-JUNIOR, C. H. L.; SILVA, W. V.; SOUZA, E. A. B.; ZIMBRES, B. Q. C.; MARANHAO, R. L. A.; MOUTINHO, P. Nota metodologica: Estimativa de emissoes de gases de efeito estufa por corte raso, fogo e corte seletivo via plataforma CCAL. Versao 2.0. Brasilia, DF: Instituto de Pesquisa Ambiental da Amazonia - IPAM, 2025.
+
+
+ARTIGOS CIENTIFICOS
+-------------------
+[1] ANDERSON, L. O.; LATORRE, M. L.; SHIMABUKURO, Y. E.; ARAI, E.; CARVALHO JUNIOR, O. A. Sensor MODIS: uma abordagem geral. Sao Jose dos Campos: INPE, 2003.
+    Link: http://mtc-m12.sid.inpe.br/col/sid.inpe.br/marciana/2003/12.11.08.55/doc/publicacao.pdf
+
+[2] BACCINI, A. et al. Estimated carbon dioxide emissions from tropical deforestation improved by carbon-density maps. Nature Climate Change, v. 2, p. 182-185, 2012.
+    DOI: https://doi.org/10.1038/NCLIMATE1354
+
+[3] COLE, M. M. The savannas: biogeography and geobotany. Londres: Academic Press, 1986. 438 p.
+
+[4] DUNCANSON, L. et al. Aboveground biomass density models for NASA's Global Ecosystem Dynamics Investigation (GEDI) lidar mission. Remote Sensing of Environment, v. 270, p. 112845, 2022.
+
+[5] GOMES, L.; MIRANDA, H. S.; SILVERIO, D. V.; BUSTAMANTE, M. M. C. Effects and behaviour of experimental fires in grasslands, savannas, and forests of the Brazilian Cerrado. Forest Ecology and Management, v. 458, p. 117804, 2020.
+    DOI: https://doi.org/10.1016/j.foreco.2019.117804
+
+[6] GOMES, L. et al. Impacts of fire frequency on net CO2 emissions in the Cerrado savanna vegetation. Fire, Basel, v. 7, n. 8, p. 280, 2024.
+    DOI: https://doi.org/10.3390/fire7080280
+
+[7] LAPOLA, D. M. et al. The drivers and impacts of Amazon forest degradation. Science, v. 379, n. 6630, eabp8622, 2023.
+    DOI: https://doi.org/10.1126/science.abp8622
+
+[8] MALHI, Y. et al. Climate change, deforestation, and the fate of the Amazon. Science, v. 319, n. 5860, p. 169-172, 2008.
+    DOI: https://doi.org/10.1126/science.1146961
+
+[9] NEPSTAD, D. et al. The end of deforestation in the Brazilian Amazon. Science, v. 326, n. 5958, p. 1350-1351, 2009.
+    DOI: https://doi.org/10.1126/science.1182108
+
+[10] OMETTO, J. P. et al. A biomass map of the Brazilian Amazon from multisource remote sensing. Scientific Data, v. 10, n. 1, p. 668, 2023.
+
+[11] OMETTO, J. P. et al. Amazon forest biomass density maps: tackling the uncertainty in carbon emission estimates. In: Uncertainties in Greenhouse Gas Inventories. Cham: Springer, 2015. p. 95-110.
+
+[12] PINTO, H. S.; ASSAD, E. D.; ZULLO JUNIOR, J. Impact of climate change on agroclimatological zones in Brazil. Climatic Change, v. 93, p. 403-417, 2009.
+    DOI: https://doi.org/10.1007/s10584-008-9513-z
+
+[13] RIBEIRO, F. J. N. et al. Above- and belowground biomass in a Brazilian Cerrado. Forest Ecology and Management, v. 262, n. 3, p. 491-499, 2011.
+    DOI: https://doi.org/10.1016/j.foreco.2011.04.006
+
+[14] SAATCHI, S. S. et al. Distribution of aboveground live biomass in the Amazon basin. Global Change Biology, v. 13, n. 4, p. 816-837, 2007.
+    DOI: https://doi.org/10.1111/j.1365-2486.2007.01323.x
+
+[15] SILVA, F. A. M.; LIMA, A. L. M.; SILVA, L. M. F. et al. Forest biomass recovery twenty-four years after conventional and reduced-impact logging in the Brazilian Amazon. Forest Ecology and Management, v. 540, p. 119572, 2023.
+    DOI: https://doi.org/10.1016/j.foreco.2023.119572
+
+
+DADOS OFICIAIS E RELATORIOS
+----------------------------
+[16] BRASIL. Ministerio da Ciencia, Tecnologia e Inovacoes - MCTI. Quarta Comunicacao Nacional do Brasil a Convencao-Quadro das Nacoes Unidas sobre Mudanca do Clima. Brasilia: MCTI, 2020.
+    Link: https://repositorio.mcti.gov.br/handle/MCTIC/4782
+
+[17] BRASIL. Ministerio do Meio Ambiente - MMA. Fitofisionomias dominantes da vegetacao brasileira - Base TNC. Brasilia: MMA, 2016.
+
+[18] BRASIL. Ministerio do Meio Ambiente - MMA. Nivel de referencia de emissoes florestais - FREL Nacional. Brasilia: MMA, 2023.
+    Link: https://redd.unfccc.int/media/brazil-national-frel_modified_v3_clean-13-mar-2024.pdf
+
+[19] BRASIL. Servico Florestal Brasileiro - SFB. Quarto Inventario Florestal Nacional: Relatorio de resultados. Brasilia: SFB, 2020.
+
+[20] BRASIL. Servico Florestal Brasileiro - SFB. Relatorio tecnico: Ajustes em areas antropizadas no Mapa de Vegetacao Brasileira. Brasilia: SFB, 2019.
+
+[21] FAO - Food and Agriculture Organization of the United Nations. Global Forest Resources Assessment 2020: Brazil - Country report. Rome: FAO, 2020.
+
+[22] IBGE - Instituto Brasileiro de Geografia e Estatistica. Mapa de vegetacao do Brasil. Rio de Janeiro: IBGE, 2017.
+
+[23] IPAM - Instituto de Pesquisa Ambiental da Amazonia. Emissao de CO2 por queimadas na Amazonia cresce 60%. 2023.
+    Link: https://ipam.org.br/emissao-de-co2-por-queimadas-na-amazonia-cresce-60/
+
+[24] IPCC - Intergovernmental Panel on Climate Change. 2006 IPCC Guidelines for National Greenhouse Gas Inventories. Hayama, Japan: IGES, 2006.
+    Link: https://www.ipcc-nggip.iges.or.jp/public/2006gl/
+
+[25] MCTI - Ministerio da Ciencia, Tecnologia e Inovacao. Terceiro Inventario Brasileiro de Emissoes e Remocoes Antropicas de Gases de Efeito Estufa: Uso da terra, mudanca do uso da terra e florestas. Brasilia: MCTI, 2015.
+
+[26] OBSERVATORIO DO CLIMA. Emissoes do Brasil tem maior queda em 15 anos. 2024.
+    Link: https://oc.eco.br/emissoes-do-brasil-tem-maior-queda-em-15-anos/
+
+[27] SEEG - Sistema de Estimativa de Emissoes de Gases de Efeito Estufa. Emissoes do Brasil em 2023. 2024.
+    Link: https://seeg.eco.br
+
+[28] SEEG. Sistema de emissoes e remocoes de gases de efeito estufa no Brasil: Nota metodologica do setor Mudancas de Uso da Terra e Florestas (MUT) 1990-2023. Versao 12. Novembro de 2024.
+    Link: https://seeg.eco.br/wp-content/uploads/2025/04/SEEG12-NM-MUT-BR.pdf
+
+[29] SEEG. Nota metodologica SEEG - Setor Mudancas de Uso da Terra e Florestas. Rio de Janeiro: Observatorio do Clima, 2024.
+    Link: https://seeg.eco.br/wp-content/uploads/2024/04/SEEG-NM-MUT.pdf
+
+
+LEGISLACAO E PROTOCOLOS
+-----------------------
+[30] CONSELHO NACIONAL DE JUSTICA. Protocolo para julgamento das acoes ambientais: Segundo escopo: Diretrizes para acoes judiciais sobre danos a flora: desmatamento e incendio florestal. Brasil: CNJ, 2024.
+
+[31] TRIBUNAL DE JUSTICA DE MINAS GERAIS - TJMG. Protocolo para julgamento de acoes ambientais: Segundo escopo: Parametros para mensuracao do impacto do dano na mudanca global do clima. Belo Horizonte: TJMG, 2024.
+    Link: https://www.tjmg.jus.br/data/files/E8/E3/2B/27/6DDD2910B01DC8292D28CCA8/PROTOCOLO_PARA_JULGAMENTO_DE_ACOES_AMBIENTAIS__SEGUNDO_ESCOPO.PDF
+
+
+DATASET ASSETS (GEE)
+--------------------
+MapBiomas LULC Col 10.1:
+  projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_coverage_v1
+
+MapBiomas Desf/Veg Sec Col 10.1:
+  projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_deforestation_secondary_vegetation_v3
+
+QCN Retificada:
+  projects/ee-ipam/assets/SEEG/SEEG13/RETIFICACAO/c_rect_col10
+
+MapBiomas Fire Col 4.1:
+  projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_annual_burned_v1
+  projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_fire_frequency_v1
+  projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_time_after_fire_v1
+
+Corte Seletivo DETER:
+  projects/ee-ipam/assets/MRV_REDD_PARA/0_Activity_Year/degradation_YYYY_sl_disordered
+  projects/ee-ipam/assets/MRV_REDD_PARA/0_Activity_Year/degradation_YYYY_sl_geometric
+
+Tabela de Incrementos:
+  projects/ee-ipam/assets/CCAL/incrementos_modulo3
+
+Biomas IBGE:
+  projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil

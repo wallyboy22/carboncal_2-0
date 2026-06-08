@@ -152,12 +152,14 @@ exports.calcForestFireEmissions = function (params) {
         var NOX_y = fAGNcomb_b.multiply(2000).multiply(1.6).divide(1e6)
             .rename(years.map(function (y) { return 'NOX_t_ha_' + y; }));
 
-        CO2_mosaic = CO2_mosaic.addBands(CO2_y);
-        CO2_gross_mosaic = CO2_gross_mosaic.addBands(CO2_gross_y);
-        CH4_mosaic = CH4_mosaic.addBands(CH4_y);
-        N2O_mosaic = N2O_mosaic.addBands(N2O_y);
-        CO_mosaic = CO_mosaic.addBands(CO_y);
-        NOX_mosaic = NOX_mosaic.addBands(NOX_y);
+        // blend em vez de addBands: cada bioma preenche apenas seus pixels,
+        // resultando em 39 bandas (nao 6x39)
+        CO2_mosaic = CO2_mosaic.blend(CO2_y);
+        CO2_gross_mosaic = CO2_gross_mosaic.blend(CO2_gross_y);
+        CH4_mosaic = CH4_mosaic.blend(CH4_y);
+        N2O_mosaic = N2O_mosaic.blend(N2O_y);
+        CO_mosaic = CO_mosaic.blend(CO_y);
+        NOX_mosaic = NOX_mosaic.blend(NOX_y);
     });
 
     // Aplicar máscara de floresta estável

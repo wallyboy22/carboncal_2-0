@@ -42,9 +42,9 @@ exports.createDegradationMask = function (params) {
 
     years.forEach(function (y) {
         // Carrega emissões do ano (unmask 0 se não existir)
-        var fire_f_y = fire_forest_CO2.select(y).unmask(0);
-        var fire_s_y = fire_savanna_CO2.select(y).unmask(0);
-        var log_y = logging_forest_CO2.select(y).unmask(0);
+        var fire_f_y = fire_forest_CO2.select('CO2_tC_ha_' + y).unmask(0);
+        var fire_s_y = fire_savanna_CO2.select('CO2_tC_ha_' + y).unmask(0);
+        var log_y = logging_forest_CO2.select('CO2_tC_ha_' + y).unmask(0);
         var veg_y = vegetation_mask.select('.*_' + y);
 
         // Apenas perdas (valores negativos = degradação)

@@ -128,7 +128,8 @@ Export.image.toAsset({
     assetId: FINAL_ASSET,
     scale: SCALE,
     maxPixels: MAX_PIX,
-    pyramidingPolicy: 'median'
+    pyramidingPolicy: 'median',
+    region:desf_reg_corrected.geometry()
 });
 
 print('📤 Export: CCAL_MODULO3-' + VERSION);

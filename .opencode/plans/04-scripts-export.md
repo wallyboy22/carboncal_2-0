@@ -20,6 +20,9 @@ STAGE 1 — Cálculos Paralelos (dependem do Stage 0)
 ├── 04_export_fire_grassland.js     ← prep + fire + qcn → emissões campo
 └── 05_export_logging.js            ← prep + DETER + qcn → corte seletivo
 
+STAGE 1.5 — Máscara de Degradação (depende de 02, 03, 05)
+└── 08_export_degradation_mask.js   ← fire_CO2 + logging_CO2 → mask binário
+
 STAGE 2 — Integração (depende do Stage 1)
 └── 06_export_mass_balance.js       ← todos os Stage 1 → balanço final
 
@@ -39,6 +42,7 @@ STAGE 3 — Produto Final (depende do Stage 2)
 | `03_export_fire_savanna` | 1 | `savanna_mask` | `01`, `02`, `04`, `05` |
 | `04_export_fire_grassland` | 1 | `grassland_mask` | `01`, `02`, `03`, `05` |
 | `05_export_logging` | 1 | `forest_mask` | `01`, `02`, `03`, `04` |
+| `08_export_degradation_mask` | 1.5 | `fire_forest_CO2`, `fire_savanna_CO2`, `logging_forest_CO2` | — |
 | `06_export_mass_balance` | 2 | `01`-`05` completos | — |
 | `07_export_final_product` | 3 | `06` completo | — |
 
@@ -99,6 +103,20 @@ STAGE 3 — Produto Final (depende do Stage 2)
 
 ---
 
+### Stage 1.5 — Máscara de Degradação (binário)
+
+| Asset | Path | Bandas | Valores |
+|-------|------|--------|---------|
+| `degradation_mask` | `.../MODULO3/v037/degradation_mask` | `1986` ... `2024` | `0` = não degradado, `1` = degradado (fogo ou corte) |
+
+**Lógica:**
+- Antes do primeiro evento de degradação → `0` (mask)
+- Depois do primeiro evento → mínimo `0` (persistente)
+- Quando não é mais veg primária → `0` (sai do cálculo)
+- `gt(0)` calcula área degradada (exclui ganhos de savana)
+
+---
+
 ### Stage 2 — Balanço (tC/ha)
 
 | Asset | Path | Bandas |
@@ -122,11 +140,13 @@ STAGE 3 — Produto Final (depende do Stage 2)
    ↓ Aguardar conclusão
 2. Rodar Stage 1 (01-05 em paralelo)
    ↓ Aguardar todos concluírem
-3. Rodar Stage 2 (06_export_mass_balance.js)
+3. Rodar Stage 1.5 (08_export_degradation_mask.js)
    ↓ Aguardar conclusão
-4. Rodar Stage 3 (07_export_final_product.js)
+4. Rodar Stage 2 (06_export_mass_balance.js)
+   ↓ Aguardar conclusão
+5. Rodar Stage 3 (07_export_final_product.js)
    ↓
-5. ✅ Produto final exportado!
+6. ✅ Produto final exportado!
 ```
 
 ---
@@ -142,6 +162,9 @@ STAGE 3 — Produto Final (depende do Stage 2)
 - [ ] `03_export_fire_savanna.js`
 - [ ] `04_export_fire_grassland.js`
 - [ ] `05_export_logging.js`
+
+### Stage 1.5
+- [ ] `08_export_degradation_mask.js`
 
 ### Stage 2
 - [ ] `06_export_mass_balance.js`
@@ -162,7 +185,8 @@ scripts/
 ├── 04_export_fire_grassland.js
 ├── 05_export_logging.js
 ├── 06_export_mass_balance.js
-└── 07_export_final_product.js
+├── 07_export_final_product.js
+└── 08_export_degradation_mask.js
 
 equations/
 ├── 00_data_prep.js
@@ -172,6 +196,7 @@ equations/
 ├── 04_fire_grassland.js
 ├── 05_logging.js
 ├── 06_mass_balance.js
+├── 08_degradation_mask.js
 └── README.md
 ```
 
@@ -188,11 +213,17 @@ equations/
 
 3. **Nomes de bandas:**
    - Assets de cobertura: `classification_YYYY`
-   - Assets de emissão/biomassa: apenas o ano (`1986`, `1987`, ...)
+   - Assets de emissão/biomassa/mask: apenas o ano (`1986`, `1987`, ...)
 
 4. **Pyramiding Policy:**
    - Cobertura: `sample`
    - Emissões/Biomassa: `median`
+   - Degradação mask: `sample`
+
+5. **Máscara de Degradação:**
+   - Binário: `0` = não degradado, `1` = degradado
+   - Persistente: uma vez degradado, continua até desmatamento
+   - `gt(0)` calcula área degradada (exclui ganhos de savana)
 
 ---
 

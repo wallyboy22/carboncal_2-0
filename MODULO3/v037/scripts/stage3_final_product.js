@@ -20,6 +20,7 @@
  */
 
 var VERSION = 'v037';
+var EXPORT_FLAG = 'WS_IPAM';
 var BASE_ASSET = 'projects/ee-ipam/assets/CCAL/MODULO3/' + VERSION + '/';
 var FINAL_ASSET = 'projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO3-' + VERSION;
 var SCALE = 30;
@@ -122,7 +123,7 @@ print('⏳ Iniciando export...');
 
 Export.image.toAsset({
     image: final_image,
-    description: 'CCAL_MODULO3_' + VERSION,
+    description: EXPORT_FLAG + '_CCAL_MODULO3_' + VERSION,
     assetId: FINAL_ASSET,
     scale: SCALE,
     maxPixels: MAX_PIX,

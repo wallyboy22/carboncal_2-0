@@ -23,6 +23,7 @@
 // =============================================================================
 
 var VERSION = 'v037';
+var EXPORT_FLAG = 'WS_IPAM';
 var BASE_ASSET = 'projects/ee-ipam/assets/CCAL/MODULO3/' + VERSION + '/';
 var SCALE = 30;
 var MAX_PIX = 1e13;
@@ -159,7 +160,7 @@ print('⏳ Iniciando exports...');
 // Biomassa
 Export.image.toAsset({
     image: sec_veg,
-    description: 'secondary_veg_increment_' + VERSION,
+    description: EXPORT_FLAG + '_secondary_veg_increment_' + VERSION,
     assetId: BASE_ASSET + 'secondary_veg_increment',
     scale: SCALE,
     maxPixels: MAX_PIX,
@@ -169,7 +170,7 @@ Export.image.toAsset({
 // Fogo Floresta (3 assets)
 Export.image.toAsset({
     image: fire_f.CO2,
-    description: 'fire_forest_CO2_' + VERSION,
+    description: EXPORT_FLAG + '_fire_forest_CO2_' + VERSION,
     assetId: BASE_ASSET + 'fire_forest_CO2',
     scale: SCALE,
     maxPixels: MAX_PIX,
@@ -178,7 +179,7 @@ Export.image.toAsset({
 
 Export.image.toAsset({
     image: fire_f.CH4,
-    description: 'fire_forest_CH4_' + VERSION,
+    description: EXPORT_FLAG + '_fire_forest_CH4_' + VERSION,
     assetId: BASE_ASSET + 'fire_forest_CH4',
     scale: SCALE,
     maxPixels: MAX_PIX,
@@ -187,7 +188,7 @@ Export.image.toAsset({
 
 Export.image.toAsset({
     image: fire_f.N2O,
-    description: 'fire_forest_N2O_' + VERSION,
+    description: EXPORT_FLAG + '_fire_forest_N2O_' + VERSION,
     assetId: BASE_ASSET + 'fire_forest_N2O',
     scale: SCALE,
     maxPixels: MAX_PIX,
@@ -197,7 +198,7 @@ Export.image.toAsset({
 // Fogo Savana (3 assets)
 Export.image.toAsset({
     image: fire_s.CO2,
-    description: 'fire_savanna_CO2_' + VERSION,
+    description: EXPORT_FLAG + '_fire_savanna_CO2_' + VERSION,
     assetId: BASE_ASSET + 'fire_savanna_CO2',
     scale: SCALE,
     maxPixels: MAX_PIX,
@@ -206,7 +207,7 @@ Export.image.toAsset({
 
 Export.image.toAsset({
     image: fire_s.CH4,
-    description: 'fire_savanna_CH4_' + VERSION,
+    description: EXPORT_FLAG + '_fire_savanna_CH4_' + VERSION,
     assetId: BASE_ASSET + 'fire_savanna_CH4',
     scale: SCALE,
     maxPixels: MAX_PIX,
@@ -215,7 +216,7 @@ Export.image.toAsset({
 
 Export.image.toAsset({
     image: fire_s.N2O,
-    description: 'fire_savanna_N2O_' + VERSION,
+    description: EXPORT_FLAG + '_fire_savanna_N2O_' + VERSION,
     assetId: BASE_ASSET + 'fire_savanna_N2O',
     scale: SCALE,
     maxPixels: MAX_PIX,
@@ -225,7 +226,7 @@ Export.image.toAsset({
 // Fogo Campo (2 assets)
 Export.image.toAsset({
     image: fire_g.CH4,
-    description: 'fire_grassland_CH4_' + VERSION,
+    description: EXPORT_FLAG + '_fire_grassland_CH4_' + VERSION,
     assetId: BASE_ASSET + 'fire_grassland_CH4',
     scale: SCALE,
     maxPixels: MAX_PIX,
@@ -234,7 +235,7 @@ Export.image.toAsset({
 
 Export.image.toAsset({
     image: fire_g.N2O,
-    description: 'fire_grassland_N2O_' + VERSION,
+    description: EXPORT_FLAG + '_fire_grassland_N2O_' + VERSION,
     assetId: BASE_ASSET + 'fire_grassland_N2O',
     scale: SCALE,
     maxPixels: MAX_PIX,
@@ -244,7 +245,7 @@ Export.image.toAsset({
 // Corte Seletivo
 Export.image.toAsset({
     image: log,
-    description: 'logging_forest_CO2_' + VERSION,
+    description: EXPORT_FLAG + '_logging_forest_CO2_' + VERSION,
     assetId: BASE_ASSET + 'logging_forest_CO2',
     scale: SCALE,
     maxPixels: MAX_PIX,
@@ -254,7 +255,7 @@ Export.image.toAsset({
 // Máscara de Degradação
 Export.image.toAsset({
     image: deg_mask,
-    description: 'degradation_mask_' + VERSION,
+    description: EXPORT_FLAG + '_degradation_mask_' + VERSION,
     assetId: BASE_ASSET + 'degradation_mask',
     scale: SCALE,
     maxPixels: MAX_PIX,

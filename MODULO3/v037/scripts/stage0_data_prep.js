@@ -23,6 +23,7 @@
 // =============================================================================
 
 var VERSION = 'v037';
+var EXPORT_FLAG = 'WS_IPAM';
 var BASE_ASSET = 'projects/ee-ipam/assets/CCAL/MODULO3/' + VERSION + '/';
 var SCALE = 30;
 var MAX_PIX = 1e13;
@@ -79,7 +80,7 @@ print('⏳ Iniciando exports...');
 // 5a. desf_reg_corrected
 Export.image.toAsset({
     image: desf_reg_corrected,
-    description: 'desf_reg_corrected_' + VERSION,
+    description: EXPORT_FLAG + '_desf_reg_corrected_' + VERSION,
     assetId: BASE_ASSET + 'desf_reg_corrected',
     scale: SCALE,
     maxPixels: MAX_PIX,
@@ -90,7 +91,7 @@ print('📤 Export: desf_reg_corrected');
 // 5b. forest_mask
 Export.image.toAsset({
     image: masks.forest_mask,
-    description: 'forest_mask_' + VERSION,
+    description: EXPORT_FLAG + '_forest_mask_' + VERSION,
     assetId: BASE_ASSET + 'forest_mask',
     scale: SCALE,
     maxPixels: MAX_PIX,
@@ -101,7 +102,7 @@ print('📤 Export: forest_mask');
 // 5c. savanna_mask
 Export.image.toAsset({
     image: masks.savanna_mask,
-    description: 'savanna_mask_' + VERSION,
+    description: EXPORT_FLAG + '_savanna_mask_' + VERSION,
     assetId: BASE_ASSET + 'savanna_mask',
     scale: SCALE,
     maxPixels: MAX_PIX,
@@ -112,7 +113,7 @@ print('📤 Export: savanna_mask');
 // 5d. grassland_mask
 Export.image.toAsset({
     image: masks.grassland_mask,
-    description: 'grassland_mask_' + VERSION,
+    description: EXPORT_FLAG + '_grassland_mask_' + VERSION,
     assetId: BASE_ASSET + 'grassland_mask',
     scale: SCALE,
     maxPixels: MAX_PIX,
@@ -123,7 +124,7 @@ print('📤 Export: grassland_mask');
 // 5e. grass_forest
 Export.image.toAsset({
     image: grass_forest,
-    description: 'grass_forest_' + VERSION,
+    description: EXPORT_FLAG + '_grass_forest_' + VERSION,
     assetId: BASE_ASSET + 'grass_forest',
     scale: SCALE,
     maxPixels: MAX_PIX,

@@ -19,6 +19,7 @@
  */
 
 var VERSION = 'v037';
+var EXPORT_FLAG = 'WS_IPAM';
 var BASE_ASSET = 'projects/ee-ipam/assets/CCAL/MODULO3/' + VERSION + '/';
 var SCALE = 30;
 var MAX_PIX = 1e13;
@@ -93,7 +94,7 @@ print('⏳ Iniciando export...');
 
 Export.image.toAsset({
     image: result.biomass_stock,
-    description: 'biomass_stock_' + VERSION,
+    description: EXPORT_FLAG + '_biomass_stock_' + VERSION,
     assetId: BASE_ASSET + 'biomass_stock',
     scale: SCALE,
     maxPixels: MAX_PIX,

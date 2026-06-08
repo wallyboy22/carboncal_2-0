@@ -74,6 +74,7 @@ exports.calcForestFireEmissions = function (params) {
     var tsf_edit = annual_burned.multiply(0).slice(1).blend(time_since_fire);
 
     var firstBiome = true;
+    var CO2_mosaic, CO2_gross_mosaic, CH4_mosaic, N2O_mosaic, CO_mosaic, NOX_mosaic;
 
     Object.keys(BIOME_DICT).forEach(function (biome_str) {
         var p = BIOME_DICT[biome_str];

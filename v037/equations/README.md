@@ -120,6 +120,22 @@ var result = prep.correctDesfReg(desf_reg, years);
 
 ---
 
+### 06 — Balanço de Massa (`06_mass_balance.js`)
+
+**Função:** Calcula balanço de massa integrando todas as emissões e remoções.
+
+| Função | Input | Output |
+|--------|-------|--------|
+| `calcMassBalance()` | desf_reg_corrected, biomass_stock_bruto, fire_*, logging_*, emergent_mask, years | { biomass_stock, loss_fire, loss_logging, loss_deforestation, gain_sec_veg, loss_grassland } |
+
+**Lógica:**
+- Atualiza estoque dinâmico: estoque_bruto - degradação_acumulada
+- Calcula desmatamento líquido evitando dupla contagem com degradação
+- Converte tC/ha → tCO₂e/pixel para bandas de perda
+- **Conversão:** tCO₂e/ha → tC/ha (÷ 3.67) para balanço de massa
+
+---
+
 ### 08 — Máscara de Degradação (`08_degradation_mask.js`)
 
 **Função:** Cria máscara binária persistente de degradação.

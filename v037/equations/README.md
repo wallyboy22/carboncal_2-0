@@ -48,7 +48,7 @@ var result = prep.correctDesfReg(desf_reg, years);
 
 | Função | Input | Output |
 |--------|-------|--------|
-| `calcSecondaryVegIncrement()` | desf_reg_corrected, grass_forest, total_carbon, biomas, years | sec_veg_increment (tC/ha/ano) |
+| `calcSecondaryVegIncrement()` | desf_reg_corrected, grass_forest, total_carbon, biomas, years | sec_veg_increment (tC/ha) |
 
 **Lógica:**
 - Taxas por bioma e tipo (F/G)
@@ -63,12 +63,13 @@ var result = prep.correctDesfReg(desf_reg, years);
 
 | Função | Input | Output |
 |--------|-------|--------|
-| `calcForestFireEmissions()` | annual_burned, fire_frequency, time_since_fire, agb, cdw, litter, forest_mask, biomas, years | CO2, CH4, N2O (tC/ha ou t/ha) |
+| `calcForestFireEmissions()` | annual_burned, fire_frequency, time_since_fire, agb, cdw, litter, forest_mask, biomas, years | { CO2, CH4, N2O } (tCO₂e/ha) |
 
 **Lógica:**
 - Emissões imediatas (não-CO₂): serrapilheira + madeira morta
 - Emissões tardias (CO₂): mortalidade de árvores com decaimento temporal
 - Parâmetros específicos por bioma
+- **Conversão:** tC → tCO₂e (× 3.67), CH₄ (× 28), N₂O (× 265)
 
 ---
 
@@ -78,12 +79,13 @@ var result = prep.correctDesfReg(desf_reg, years);
 
 | Função | Input | Output |
 |--------|-------|--------|
-| `calcSavannaFireEmissions()` | annual_burned, fire_frequency, time_since_fire, agb, cdw, litter, savanna_mask, years | CO2, CH4, N2O (tC/ha ou t/ha) |
+| `calcSavannaFireEmissions()` | annual_burned, fire_frequency, time_since_fire, agb, cdw, litter, savanna_mask, years | { CO2, CH4, N2O } (tCO₂e/ha) |
 
 **Lógica:**
 - Fatores de combustão por tipo de biomassa
 - Ajuste por recorrência de fogo (FRI)
 - 26% da AGB como combustível fino
+- **Conversão:** tC → tCO₂e (× 3.67), CH₄ (× 28), N₂O (× 265)
 
 ---
 
@@ -93,11 +95,12 @@ var result = prep.correctDesfReg(desf_reg, years);
 
 | Função | Input | Output |
 |--------|-------|--------|
-| `calcGrasslandFireEmissions()` | annual_burned, agb, cdw, litter, grassland_mask, years | CH4, N2O (t/ha) |
+| `calcGrasslandFireEmissions()` | annual_burned, agb, cdw, litter, grassland_mask, years | { CH4, N2O } (tCO₂e/ha) |
 
 **Lógica:**
 - Balanço CO₂ considerado neutro
 - Apenas emissões não-CO₂ (combustão instantânea)
+- **Conversão:** CH₄ (× 28), N₂O (× 265)
 
 ---
 
@@ -107,12 +110,29 @@ var result = prep.correctDesfReg(desf_reg, years);
 
 | Função | Input | Output |
 |--------|-------|--------|
-| `calcLoggingEmissions()` | agb, forest_mask, amazon_mask, loss_fraction, years | logging_tC_ha |
+| `calcLoggingEmissions()` | agb, forest_mask, amazon_mask, loss_fraction, years | logging_forest_CO2 (tCO₂e/ha) |
 
 **Lógica:**
 - Restrito à Amazônia
 - Dados DETER (2017-2024)
 - Fração de perda: 19.6% AGB
+- **Conversão:** tC → tCO₂e (× 3.67)
+
+---
+
+### 08 — Máscara de Degradação (`08_degradation_mask.js`)
+
+**Função:** Cria máscara binária persistente de degradação.
+
+| Função | Input | Output |
+|--------|-------|--------|
+| `createDegradationMask()` | fire_forest_CO2, fire_savanna_CO2, logging_forest_CO2, vegetation_mask, years | degradation_mask (0/1) |
+
+**Lógica:**
+- Antes do primeiro evento → 0 (mask)
+- Depois do primeiro evento → mínimo 0 (persistente)
+- Quando não é mais veg primária → 0 (sai do cálculo)
+- `gt(0)` calcula área degradada (exclui ganhos de savana)
 
 ---
 
@@ -123,15 +143,17 @@ Input (lulc, desf_reg, qcn, fire, logging)
     ↓
 [00_data_prep] → desf_reg_corrected, masks, grass_forest
     ↓
-[01_secondary_veg] → sec_veg_increment
+[01_secondary_veg] → sec_veg_increment (tC/ha)
     ↓
-[02_fire_forest] → fire_forest_emissions
+[02_fire_forest] → fire_forest_{CO2,CH4,N2O} (tCO₂e/ha)
     ↓
-[03_fire_savanna] → fire_savanna_emissions
+[03_fire_savanna] → fire_savanna_{CO2,CH4,N2O} (tCO₂e/ha)
     ↓
-[04_fire_grassland] → fire_grassland_emissions
+[04_fire_grassland] → fire_grassland_{CH4,N2O} (tCO₂e/ha)
     ↓
-[05_logging] → logging_emissions
+[05_logging] → logging_forest_CO2 (tCO₂e/ha)
+    ↓
+[08_degradation_mask] → degradation_mask (0/1)
     ↓
 [Orquestrador] → Balanço final + Export
 ```
@@ -141,7 +163,8 @@ Input (lulc, desf_reg, qcn, fire, logging)
 ## ⚠️ Notas
 
 - Todos os módulos são **funções puras** (sem efeitos colaterais)
-- Unidades de entrada/saída estão documentadas em cada módulo
+- **Unidades:** Biomassa em tC/ha, Emissões em tCO₂e/ha
+- **Nomes de bandas:** Apenas o ano (`1986`, `1987`, ...)
 - Para ajustes de parâmetros, consulte `referencias.md`
 - Para detalhes de exportação, consulte `scripts/`
 

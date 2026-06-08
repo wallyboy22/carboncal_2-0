@@ -1,21 +1,38 @@
 /**
  * =============================================================================
  * PROJETO: CCAL - Módulo 3 (Emissões por Mudança de Uso e Degradação)
- * VERSÃO: v036
+ * VERSÃO: v037
  * SCRIPT: 05_logging.js
  * DESCRIÇÃO: Módulo de estimativa de degradação por exploração madeireira. 
  *            Utiliza cicatrizes de corte seletivo e fatores de dano (MRV REDD+) 
  *            para quantificar a redução do estoque de carbono florestal.
+ *            Retorna CO2 em tCO₂e/ha.
  * -----------------------------------------------------------------------------
  * INSTITUIÇÃO: IPAM Amazônia
  * EQUIPE CCAL: Ane Alencar; Bárbara Zimbres; Camila Silva; Celso Silva-Junior; 
  *              Edriano Souza; Isabel Silva; Lívia Laureto; Manuela Padilha; 
- *              Paulo Moutinho; Rebecca Maranhão; Valderli Piontekowski; Wallace Silva
+ *              Paulo Moutinho; Rebecca Maranhão; Valderli Piontekowski; Wallace Silva;
+ *              Jarlene Gomes; Julia Shimbo
  * CONTATO: https://ipam.org.br/contato/fale-conosco/
- * ATUALIZAÇÃO: 2026-04-30
+ * ATUALIZAÇÃO: 2026-06-08
  * =============================================================================
  */
 
+// Constante de conversão
+var TC_TO_TCO2 = 3.67;
+
+/**
+ * Calcula emissões por corte seletivo.
+ * Retorna CO2 em tCO₂e/ha.
+ *
+ * @param {Object} params - Parâmetros de entrada
+ * @param {ee.Image} params.agb - AGB (tC/ha)
+ * @param {ee.Image} params.forest_mask - Máscara de floresta
+ * @param {ee.Image} params.amazon_mask - Máscara da Amazônia
+ * @param {number} params.loss_fraction - Fração de perda (default: 0.196)
+ * @param {string[]} params.years - Lista de anos
+ * @returns {ee.Image} - logging_forest_CO2 (tCO₂e/ha), bandas: '2017'...'2024'
+ */
 exports.calcLoggingEmissions = function (params) {
 
     var agb = params.agb;
@@ -36,56 +53,15 @@ exports.calcLoggingEmissions = function (params) {
             .where(geo.eq(1), 1)
             .multiply(forest_mask.select('.*_' + year))
             .multiply(amazon_mask)
-            .rename('logging_tC_ha_' + year)
             .selfMask();
 
-        var logging_carbon_year = agbUpdated.multiply(sl_year).multiply(loss_fraction)
-            .rename('logging_tC_ha_' + year)
-            .float();
+        // tC/ha → tCO₂e/ha (× 3.67)
+        var logging_tC = agbUpdated.multiply(sl_year).multiply(loss_fraction);
+        var logging_CO2e = logging_tC.multiply(TC_TO_TCO2).rename(year).float();
 
-        agbUpdated = agbUpdated.subtract(logging_carbon_year.unmask(0));
-        result = result.addBands(logging_carbon_year);
+        agbUpdated = agbUpdated.subtract(logging_tC.unmask(0));
+        result = result.addBands(logging_CO2e);
     });
 
     return result;
 };
-
-//
-/*
-// =============================================================================
-// ÁREA DE TESTE (DESCOMENTE PARA VALIDAR)
-// =============================================================================
-var qcn = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/RETIFICACAO/c_rect_col10');
-var lulc = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_coverage_v1');
-var biomas = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
-
-var forest_mask = (function() {
-    var out = lulc.multiply(0);
-    [3].forEach(function(v) {
-        out = out.where(lulc.eq(v), 1);
-    });
-    return out;
-})();
-var amazon_mask = ee.Image(0).paint(biomas.filter(ee.Filter.eq('Bioma', 'Amazônia')), 1).eq(1);
-var years = ['2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024'];
-
-var logging_result = exports.calcLoggingEmissions({
-    agb: qcn.select('AGB'),
-    forest_mask: forest_mask,
-    amazon_mask: amazon_mask,
-    loss_fraction: 0.196,
-    years: years
-});
-
-// Parâmetros de Visualização (Ref: v036/02_investigate_modulo3.js)
-var paletaMapBiomas = require('users/mapbiomas/modules:Palettes.js').get('brazil');
-
-// Camadas de Referência (Inputs)
-Map.addLayer(lulc, { bands: ['classification_2023'], min: 0, max: 75, palette: paletaMapBiomas }, 'LULC 2023', false);
-Map.addLayer(amazon_mask.updateMask(amazon_mask), { palette: ['blue'] }, 'Máscara Amazônia', false);
-Map.addLayer(forest_mask.selfMask(), { bands: ['classification_2023'], palette: ['green'] }, 'Máscara Floresta 2023', false);
-
-// Camadas de Saída
-Map.addLayer(logging_result, { bands: ['logging_tC_ha_2023'], min: 0, max: 10, palette: ['white', 'brown'] }, 'Corte Seletivo 2023 (tC/ha)');
-Map.addLayer(logging_result, { }, 'Resultado Bruto (Todas Bandas)', false);
-//*/

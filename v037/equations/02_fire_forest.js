@@ -1,21 +1,44 @@
 /**
  * =============================================================================
  * PROJETO: CCAL - Módulo 3 (Emissões por Mudança de Uso e Degradação)
- * VERSÃO: v036
+ * VERSÃO: v037
  * SCRIPT: 02_fire_forest.js
  * DESCRIÇÃO: Motor de cálculo para degradação por fogo em formações florestais. 
  *            Implementa o modelo FATE para estimar a mortalidade de árvores e a 
  *            liberação gradual de carbono e gases de efeito estufa (CO2, CH4, N2O).
+ *            Retorna 3 imagens separadas (CO2, CH4, N2O) em tCO₂e/ha.
  * -----------------------------------------------------------------------------
  * INSTITUIÇÃO: IPAM Amazônia
  * EQUIPE CCAL: Ane Alencar; Bárbara Zimbres; Camila Silva; Celso Silva-Junior; 
  *              Edriano Souza; Isabel Silva; Lívia Laureto; Manuela Padilha; 
- *              Paulo Moutinho; Rebecca Maranhão; Valderli Piontekowski; Wallace Silva
+ *              Paulo Moutinho; Rebecca Maranhão; Valderli Piontekowski; Wallace Silva;
+ *              Jarlene Gomes; Julia Shimbo
  * CONTATO: https://ipam.org.br/contato/fale-conosco/
- * ATUALIZAÇÃO: 2026-04-30
+ * ATUALIZAÇÃO: 2026-06-08
  * =============================================================================
  */
 
+// Constantes de conversão
+var TC_TO_TCO2 = 3.67;
+var GWP_CH4 = 28;
+var GWP_N2O = 265;
+
+/**
+ * Calcula emissões por fogo em florestas (modelo FATE).
+ * Retorna 3 imagens separadas: CO2, CH4, N2O (todas em tCO₂e/ha).
+ *
+ * @param {Object} params - Parâmetros de entrada
+ * @param {ee.Image} params.annual_burned - Área queimada anual
+ * @param {ee.Image} params.fire_frequency - Frequência de fogo
+ * @param {ee.Image} params.time_since_fire - Tempo desde fogo
+ * @param {ee.Image} params.agb - AGB (tC/ha)
+ * @param {ee.Image} params.cdw - CDW (tC/ha)
+ * @param {ee.Image} params.litter - Litter (tC/ha)
+ * @param {ee.Image} params.forest_mask - Máscara de floresta
+ * @param {ee.FeatureCollection} params.biomas - Biomas IBGE
+ * @param {string[]} params.years - Lista de anos
+ * @returns {Object} - { CO2: ee.Image, CH4: ee.Image, N2O: ee.Image } (tCO₂e/ha)
+ */
 exports.calcForestFireEmissions = function (params) {
 
     var annual_burned = params.annual_burned;
@@ -55,13 +78,9 @@ exports.calcForestFireEmissions = function (params) {
     var annual_fire_freq_gte2 = annual_burned.updateMask(fire_frequency.gte(2)).gte(1);
     var tsf_edit = annual_burned.multiply(0).slice(1).blend(time_since_fire);
 
-    var co2_names = years.map(function (y) { return 'CO2_tC_ha_' + y });
-    var ch4_names = years.map(function (y) { return 'CH4_t_ha_' + y });
-    var n2o_names = years.map(function (y) { return 'N2O_t_ha_' + y });
-
-    var CO2_mosaic = ee.Image.constant(ee.List.repeat(0, co2_names.length)).rename(co2_names).float();
-    var CH4_mosaic = ee.Image.constant(ee.List.repeat(0, ch4_names.length)).rename(ch4_names).float();
-    var N2O_mosaic = ee.Image.constant(ee.List.repeat(0, n2o_names.length)).rename(n2o_names).float();
+    var CO2_mosaic = ee.Image().select();
+    var CH4_mosaic = ee.Image().select();
+    var N2O_mosaic = ee.Image().select();
 
     Object.keys(BIOME_DICT).forEach(function (biome_str) {
         var p = BIOME_DICT[biome_str];
@@ -111,60 +130,26 @@ exports.calcForestFireEmissions = function (params) {
         var fAGNcomb_b = data.select('fAGNcomb_.*');
         var fCBalance_b = data.select('fCBalance_.*');
 
-        var CO2_y = fAGNcomb_b.multiply(0.099).add(fCBalance_b).multiply(-1).rename(years.map(function (y) { return 'CO2_tC_ha_' + y }));
-        var CH4_y = fAGNcomb_b.multiply(2000).multiply(6.8).divide(1e6).rename(years.map(function (y) { return 'CH4_t_ha_' + y }));
-        var N2O_y = fAGNcomb_b.multiply(2000).multiply(0.2).divide(1e6).rename(years.map(function (y) { return 'N2O_t_ha_' + y }));
+        // CO2: tC/ha → tCO₂e/ha (× 3.67)
+        var CO2_tC = fAGNcomb_b.multiply(0.099).add(fCBalance_b).multiply(-1);
+        var CO2_CO2e = CO2_tC.multiply(TC_TO_TCO2).rename(years);
 
-        CO2_mosaic = CO2_mosaic.where(biome_mask, CO2_y);
-        CH4_mosaic = CH4_mosaic.where(biome_mask, CH4_y);
-        N2O_mosaic = N2O_mosaic.where(biome_mask, N2O_y);
+        // CH4: t/ha → tCO₂e/ha (× 28)
+        var CH4_t = fAGNcomb_b.multiply(2000).multiply(6.8).divide(1e6);
+        var CH4_CO2e = CH4_t.multiply(GWP_CH4).rename(years);
+
+        // N2O: t/ha → tCO₂e/ha (× 265)
+        var N2O_t = fAGNcomb_b.multiply(2000).multiply(0.2).divide(1e6);
+        var N2O_CO2e = N2O_t.multiply(GWP_N2O).rename(years);
+
+        CO2_mosaic = CO2_mosaic.addBands(CO2_CO2e);
+        CH4_mosaic = CH4_mosaic.addBands(CH4_CO2e);
+        N2O_mosaic = N2O_mosaic.addBands(N2O_CO2e);
     });
-    return CO2_mosaic.selfMask().addBands(CH4_mosaic.selfMask()).addBands(N2O_mosaic.selfMask());
+
+    return {
+        CO2: CO2_mosaic,
+        CH4: CH4_mosaic,
+        N2O: N2O_mosaic
+    };
 };
-
-//
-/* 
-// =============================================================================
-// ÁREA DE TESTE (DESCOMENTE PARA VALIDAR)
-// =============================================================================
-var biomas = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
-var qcn = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/RETIFICACAO/c_rect_col10');
-var fire_annual = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_annual_burned_v1').select('burned_area_.*');
-var fire_freq = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_fire_frequency_v1').select('fire_frequency_1985_.*');
-var fire_tsf = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_time_after_fire_v1').select('classification_.*');
-var lulc = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_coverage_v1');
-var forest_mask = lulc.multiply(0).where(lulc.eq(3), 1);
-
-var years = [
-            '1986', '1987', '1988', '1989', '1990', '1991', '1992', '1993', '1994',
-    '1995', '1996', '1997', '1998', '1999', '2000', '2001', '2002', '2003', '2004',
-    '2005', '2006', '2007', '2008', '2009', '2010', '2011', '2012', '2013', '2014',
-    '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024'
-];
-
-var fire_emissions = exports.calcForestFireEmissions({
-    annual_burned: fire_annual,
-    fire_frequency: fire_freq,
-    time_since_fire: fire_tsf,
-    agb: qcn.select('AGB'),
-    cdw: qcn.select('CDW'),
-    litter: qcn.select('LITTER'),
-    forest_mask: forest_mask,
-    biomas: biomas,
-    years: years
-});
-
-// Parâmetros de Visualização (Ref: v036/02_investigate_modulo3.js)
-var paletaMapBiomas = require('users/mapbiomas/modules:Palettes.js').get('brazil');
-
-// Camadas de Referência (Inputs)
-Map.addLayer(lulc, { bands: ['classification_2023'], min: 0, max: 75, palette: paletaMapBiomas }, 'LULC 2023', false);
-Map.addLayer(fire_annual.selfMask(), { bands: ['burned_area_2023'], palette: ['red'] }, 'Área Queimada 2023', false);
-Map.addLayer(forest_mask.selfMask(), { bands: ['classification_2023'], palette: ['green'] }, 'Máscara Floresta 2023', false);
-
-// Camadas de Saída (Emissões)
-Map.addLayer(fire_emissions, { bands: ['CO2_tC_ha_2023'], min: 0, max: 50, palette: ['white', 'orange', 'red'] }, 'Total CO2 (tC/ha)');
-Map.addLayer(fire_emissions, { bands: ['CH4_t_ha_2023'], min: 0, max: 0.1, palette: ['white', 'purple'] }, 'Total CH4 (t/ha)');
-Map.addLayer(fire_emissions, { bands: ['N2O_t_ha_2023'], min: 0, max: 0.01, palette: ['white', 'cyan'] }, 'Total N2O (t/ha)');
-Map.addLayer(fire_emissions, { }, 'Resultado Bruto (Todas Bandas)', false);
-//*/

@@ -1,7 +1,7 @@
 /**
  * =============================================================================
  * PROJETO: CCAL - Módulo 3 (Emissões por Mudança de Uso e Degradação)
- * VERSÃO: v036
+ * VERSÃO: v037
  * SCRIPT: 01_secondary_veg.js
  * DESCRIÇÃO: Módulo de cálculo para regeneração natural. Estima o incremento anual 
  *            do estoque de carbono em áreas de vegetação secundária, utilizando 
@@ -10,12 +10,24 @@
  * INSTITUIÇÃO: IPAM Amazônia
  * EQUIPE CCAL: Ane Alencar; Bárbara Zimbres; Camila Silva; Celso Silva-Junior; 
  *              Edriano Souza; Isabel Silva; Lívia Laureto; Manuela Padilha; 
- *              Paulo Moutinho; Rebecca Maranhão; Valderli Piontekowski; Wallace Silva
+ *              Paulo Moutinho; Rebecca Maranhão; Valderli Piontekowski; Wallace Silva;
+ *              Jarlene Gomes; Julia Shimbo
  * CONTATO: https://ipam.org.br/contato/fale-conosco/
- * ATUALIZAÇÃO: 2026-04-30
+ * ATUALIZAÇÃO: 2026-06-08
  * =============================================================================
  */
 
+/**
+ * Calcula incremento anual de carbono em vegetação secundária.
+ *
+ * @param {Object} params - Parâmetros de entrada
+ * @param {ee.Image} params.desf_reg_corrected - Desf/reg corrigido
+ * @param {ee.Image} params.grass_forest - Classificação 1=Campo, 2=Floresta
+ * @param {ee.Image} params.total_carbon - Estoque total de carbono (tC/ha)
+ * @param {ee.FeatureCollection} params.biomas - Biomas IBGE
+ * @param {string[]} params.years - Lista de anos
+ * @returns {ee.Image} - Incremento anual (tC/ha), bandas: '1985'...'2024'
+ */
 exports.calcSecondaryVegIncrement = function (params) {
 
     var desf_reg = params.desf_reg_corrected;
@@ -53,7 +65,7 @@ exports.calcSecondaryVegIncrement = function (params) {
         var lt20 = age_year.lt(20).and(age_year.gt(0));
         var gte20 = age_year.gte(20);
         var prev_stock = (i === 0) ? ee.Image(0) : stock_stack.slice(-1);
-        var increment_year = ee.Image(0).rename('sec_veg_increment_' + year);
+        var increment_year = ee.Image(0).rename(year);
 
         biome_list.forEach(function (b) {
             var bm = biome_images[b];
@@ -62,7 +74,7 @@ exports.calcSecondaryVegIncrement = function (params) {
             var g_lt20 = ee.Image(incr_table[b]['G'].lt20);
             var g_gte20 = ee.Image(incr_table[b]['G'].gte20);
 
-            var result_biome = prev_stock.rename('sec_veg_increment_' + year)
+            var result_biome = prev_stock.rename(year)
                 .where(gf_year.eq(2).and(lt20).and(bm), prev_stock.add(f_lt20))
                 .where(gf_year.eq(2).and(gte20).and(bm), prev_stock.add(f_gte20))
                 .where(gf_year.eq(1).and(lt20).and(bm), prev_stock.add(g_lt20))
@@ -77,49 +89,3 @@ exports.calcSecondaryVegIncrement = function (params) {
 
     return stock_stack;
 };
-
-//
-/*
-// =============================================================================
-// ÁREA DE TESTE (DESCOMENTE PARA VALIDAR)
-// =============================================================================
-var lulc = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_coverage_v1');
-var desf_reg = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_deforestation_secondary_vegetation_v1');
-var biomas = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
-var qcn = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/RETIFICACAO/c_rect_col10');
-
-var years = [
-    '1985', '1986', '1987', '1988', '1989', '1990', '1991', '1992', '1993', '1994',
-    '1995', '1996', '1997', '1998', '1999', '2000', '2001', '2002', '2003', '2004',
-    '2005', '2006', '2007', '2008', '2009', '2010', '2011', '2012', '2013', '2014',
-    '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024'
-];
-
-var sec_veg_result = exports.calcSecondaryVegIncrement({
-    desf_reg_corrected: desf_reg,
-    grass_forest: (function() {
-        var out = lulc.multiply(0);
-        [3, 4, 11, 12, 13].forEach(function(v, i) {
-            out = out.where(lulc.eq(v), [2, 2, 1, 1, 1][i]);
-        });
-        return out;
-    })(),
-    total_carbon: qcn.select('TOTAL'),
-    biomas: biomas,
-    years: years
-});
-
-// Parâmetros de Visualização (Ref: v036/02_investigate_modulo3.js)
-var paletaMapBiomas = require('users/mapbiomas/modules:Palettes.js').get('brazil');
-var paletaTrans = ["#ffffff", '#faf5d1', '#3f7849', '#5bcf20', '#ea1c1c', '#b4f792', '#fe9934', '#303149'];
-var paletaStock = ["#440154", "#46327e", "#365c8d", "#277f8e", "#1fa187", "#4ac16d", "#a0da39", "#fde725"];
-
-// Camadas de Referência (Inputs)
-Map.addLayer(lulc, { bands: ['classification_2023'], min: 0, max: 75, palette: paletaMapBiomas }, 'LULC 2023', false);
-Map.addLayer(desf_reg, { bands: ['classification_2023'], min: 0, max: 7, palette: paletaTrans }, 'Desf/Reg 2023', false);
-Map.addLayer(qcn, { bands: ['TOTAL'], min: 0, max: 250, palette: paletaStock }, 'Carbono QCN (tC/ha)', false);
-
-// Camadas de Saída
-Map.addLayer(sec_veg_result, { bands: ['sec_veg_increment_2023'], min: 0, max: 100, palette: ['#edf8e9', '#bae4b3', '#74c476', '#31a354', '#006d2c'] }, 'Estoque Regeneração 2023 (tC/ha)');
-Map.addLayer(sec_veg_result, { }, 'Resultado Bruto (Todas Bandas)', false);
-//*/

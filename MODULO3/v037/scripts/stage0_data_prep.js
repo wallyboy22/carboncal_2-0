@@ -46,7 +46,7 @@ var desf_reg = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection
 // 3. EQUAÇÕES
 // =============================================================================
 
-var prep = require('users/workspaceipam/CCAL:MODULO3/v037/equations/00_data_prep');
+var prep = require('users/workspaceipam/CCAL:MODULO3/v037/equations/00_data_prep.js');
 
 // =============================================================================
 // 4. PREPARAÇÃO DE DADOS

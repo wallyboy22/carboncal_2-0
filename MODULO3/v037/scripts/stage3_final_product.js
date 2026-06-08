@@ -75,7 +75,7 @@ YEARS_ALL.forEach(function (y) {
 // EQUAÇÕES
 // =============================================================================
 
-var massBalance = require('users/workspaceipam/CCAL:MODULO3/v037/equations/06_mass_balance');
+var massBalance = require('users/workspaceipam/CCAL:MODULO3/v037/equations/06_mass_balance.js');
 
 // =============================================================================
 // CÁLCULO

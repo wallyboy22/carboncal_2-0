@@ -61,12 +61,12 @@ var fire_tsf = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection
 // 3. EQUAÇÕES
 // =============================================================================
 
-var secVeg = require('users/workspaceipam/CCAL:MODULO3/v037/equations/01_secondary_veg');
-var fireForest = require('users/workspaceipam/CCAL:MODULO3/v037/equations/02_fire_forest');
-var fireSavanna = require('users/workspaceipam/CCAL:MODULO3/v037/equations/03_fire_savanna');
-var fireGrassland = require('users/workspaceipam/CCAL:MODULO3/v037/equations/04_fire_grassland');
-var logging = require('users/workspaceipam/CCAL:MODULO3/v037/equations/05_logging');
-var degradationMask = require('users/workspaceipam/CCAL:MODULO3/v037/equations/08_degradation_mask');
+var secVeg = require('users/workspaceipam/CCAL:MODULO3/v037/equations/01_secondary_veg.js');
+var fireForest = require('users/workspaceipam/CCAL:MODULO3/v037/equations/02_fire_forest.js');
+var fireSavanna = require('users/workspaceipam/CCAL:MODULO3/v037/equations/03_fire_savanna.js');
+var fireGrassland = require('users/workspaceipam/CCAL:MODULO3/v037/equations/04_fire_grassland.js');
+var logging = require('users/workspaceipam/CCAL:MODULO3/v037/equations/05_logging.js');
+var degradationMask = require('users/workspaceipam/CCAL:MODULO3/v037/equations/08_degradation_mask.js');
 
 // =============================================================================
 // 4. CÁLCULOS

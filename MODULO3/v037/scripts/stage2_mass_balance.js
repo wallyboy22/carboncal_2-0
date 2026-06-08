@@ -67,7 +67,7 @@ YEARS_ALL.forEach(function (y) {
 // Máscara de área emersa
 var emergent_mask = lulc.eq(33).reduce(ee.Reducer.sum()).lt(38);
 
-var massBalance = require('users/workspaceipam/CCAL:MODULO3/v037/equations/06_mass_balance');
+var massBalance = require('users/workspaceipam/CCAL:MODULO3/v037/equations/06_mass_balance.js');
 
 print('⏳ Calculando balanço de massa...');
 

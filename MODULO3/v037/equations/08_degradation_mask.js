@@ -44,7 +44,13 @@ exports.createDegradationMask = function (params) {
         // Carrega emissões do ano (unmask 0 se não existir)
         var fire_f_y = fire_forest_CO2.select('CO2_tC_ha_' + y).unmask(0);
         var fire_s_y = fire_savanna_CO2.select('CO2_tC_ha_' + y).unmask(0);
-        var log_y = logging_forest_CO2.select('CO2_tC_ha_' + y).unmask(0);
+        // Corte seletivo so existe a partir de 2017
+        var log_y;
+        if (parseInt(y) >= 2017) {
+            log_y = logging_forest_CO2.select('CO2_tC_ha_' + y).unmask(0);
+        } else {
+            log_y = ee.Image(0);
+        }
         var veg_y = vegetation_mask.select('.*_' + y);
 
         // Apenas perdas (valores negativos = degradação)

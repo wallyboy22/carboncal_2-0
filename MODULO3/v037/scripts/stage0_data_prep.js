@@ -41,8 +41,22 @@ var YEARS_ALL = [
 
 // --- MapBiomas Col 10.1
 var lulc = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_coverage_v1');
-var desf_reg = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_deforestation_secondary_vegetation_v1');
+// adicionando as bandas de 1985 e 1986 no inicio da série da deforestation_secondary_vegetation_v3
+var desf_reg = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_deforestation_secondary_vegetation_v3');
 
+var desf_reg_new = desf_reg.select(0);
+desf_reg_new = desf_reg_new
+  .where(desf_reg_new.eq(3),1)
+  .where(desf_reg_new.eq(4),1)
+  .where(desf_reg_new.eq(5),1)
+  .where(desf_reg_new.eq(6),1);
+
+
+desf_reg_new = desf_reg_new.rename("classification_1985")
+  .addBands(desf_reg_new.rename("classification_1986"))
+  .addBands(desf_reg);
+  
+desf_reg = desf_reg_new;
 // =============================================================================
 // 3. EQUAÇÕES
 // =============================================================================

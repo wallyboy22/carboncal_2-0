@@ -63,7 +63,7 @@ exports.createDegradationMask = function (params) {
         accumulated = accumulated.add(loss_f).add(loss_s).add(loss_l);
 
         // Máscara: acumulado > 0 E ainda é vegetação primária
-        var mask_y = accumulated.gt(0).and(veg_y.eq(1)).rename(y);
+        var mask_y = accumulated.gt(0).and(veg_y.eq(1)).rename('degradation_' + y);
         mask = mask.addBands(mask_y);
     });
 

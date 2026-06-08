@@ -2,7 +2,7 @@
  * =============================================================================
  * PROJETO: CCAL - Módulo 3 (Export: Stage 3 - Produto Final)
  * VERSÃO: v037
- * SCRIPT: 07_export_final_product.js
+ * SCRIPT: stage3_final_product.js
  * STAGE: 3 (Produto Final)
  * DEPENDÊNCIAS: Stage 1 (todos os assets) + Stage 2 (biomass_stock)
  * DESCRIÇÃO: Monta e exporta o produto final CCAL_MODULO3-v037 com todas as bandas.

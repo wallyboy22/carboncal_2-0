@@ -2,7 +2,7 @@
  * =============================================================================
  * PROJETO: CCAL - Módulo 3 (Export: Preparação de Dados)
  * VERSÃO: v037
- * SCRIPT: 00_export_data_prep.js
+ * SCRIPT: stage0_data_prep.js
  * STAGE: 0 (Fundação)
  * DEPENDÊNCIAS: Nenhuma (inputs brutos)
  * DESCRIÇÃO: Corrige e prepara dados de entrada, exportando 5 assets separados

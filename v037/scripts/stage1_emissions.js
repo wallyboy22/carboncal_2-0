@@ -2,7 +2,7 @@
  * =============================================================================
  * PROJETO: CCAL - Módulo 3 (Export: Stage 1 - Cálculos de Emissão e Regeneração)
  * VERSÃO: v037
- * SCRIPT: 01_export_stage1.js
+ * SCRIPT: stage1_emissions.js
  * STAGE: 1 (Cálculos Paralelos)
  * DEPENDÊNCIAS: Stage 0 (desf_reg_corrected, forest_mask, savanna_mask, grassland_mask, grass_forest)
  * DESCRIÇÃO: Calcula e exporta todos os assets de emissão, regeneração e máscara de degradação.

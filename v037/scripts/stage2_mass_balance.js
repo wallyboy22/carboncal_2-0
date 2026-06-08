@@ -2,7 +2,7 @@
  * =============================================================================
  * PROJETO: CCAL - Módulo 3 (Export: Stage 2 - Balanço de Massa)
  * VERSÃO: v037
- * SCRIPT: 06_export_mass_balance.js
+ * SCRIPT: stage2_mass_balance.js
  * STAGE: 2 (Integração)
  * DEPENDÊNCIAS: Stage 0 (desf_reg_corrected) + Stage 1 (todos os assets)
  * DESCRIÇÃO: Calcula balanço de massa integrando emissões e remoções.

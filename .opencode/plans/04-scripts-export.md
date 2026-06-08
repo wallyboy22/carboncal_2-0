@@ -2,7 +2,8 @@
 
 > **Objetivo:** Exportar assets do Módulo 3 de forma hierárquica e modular  
 > **Versão:** v037  
-> **Criado em:** 2026-06-08
+> **Criado em:** 2026-06-08  
+> **Atualizado em:** 2026-06-08
 
 ---
 
@@ -43,32 +44,71 @@ STAGE 3 — Produto Final (depende do Stage 2)
 
 ---
 
-## 📦 Assets Gerados por Stage
+## 📦 Assets Completos
 
-### Stage 0 — Fundação
+### 📥 Inputs Externos (consultados, não gerados por nós)
+
+| Asset | Path | Bandas | Uso |
+|-------|------|--------|-----|
+| **MapBiomas LULC** | `projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_coverage_v1` | `classification_1985` ... `classification_2024` | Tipo de cobertura |
+| **MapBiomas Desf/Veg Sec** | `projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_deforestation_secondary_vegetation_v1` | `classification_1985` ... `classification_2024` | Desmatamento/regeneração |
+| **QCN Retificada** | `projects/ee-ipam/assets/SEEG/SEEG13/RETIFICACAO/c_rect_col10` | `AGB`, `BGB`, `CDW`, `LITTER`, `TOTAL` | Estoques de carbono |
+| **MapBiomas Fire (burned)** | `projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_annual_burned_v1` | `burned_area_1985` ... `burned_area_2024` | Área queimada anual |
+| **MapBiomas Fire (frequency)** | `projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_fire_frequency_v1` | `fire_frequency_1985_...` | Frequência de fogo |
+| **MapBiomas Fire (TSF)** | `projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_time_after_fire_v1` | `classification_...` | Tempo desde fogo |
+| **MapBiomas Fire (accumulated)** | `projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_accumulated_burned_v1` | `fire_accumulated_1985_...` | Acumulado queimado |
+| **Biomas IBGE** | `projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil` | FeatureCollection | Máscara de biomas |
+| **DETER Corte Seletivo** | `projects/ee-ipam/assets/MRV_REDD_PARA/0_Activity_Year/degradation_YYYY_sl_disordered` | Raster | Corte seletivo desordenado |
+| **DETER Corte Seletivo** | `projects/ee-ipam/assets/MRV_REDD_PARA/0_Activity_Year/degradation_YYYY_sl_geometric` | Raster | Corte seletivo geométrico |
+
+---
+
+### Stage 0 — Prep/Cobertura (gerados por nós)
+
+| Asset | Path | Bandas | Unidade |
+|-------|------|--------|---------|
+| `desf_reg_corrected` | `.../MODULO3/v037/desf_reg_corrected` | `classification_1985` ... `classification_2024` | classe (1-8) |
+| `forest_mask` | `.../MODULO3/v037/forest_mask` | `classification_1985` ... `classification_2024` | boolean (0/1) |
+| `savanna_mask` | `.../MODULO3/v037/savanna_mask` | `classification_1985` ... `classification_2024` | boolean (0/1) |
+| `grassland_mask` | `.../MODULO3/v037/grassland_mask` | `classification_1985` ... `classification_2024` | boolean (0/1) |
+| `grass_forest` | `.../MODULO3/v037/grass_forest` | `classification_1985` ... `classification_2024` | classe (1=Campo, 2=Floresta) |
+
+---
+
+### Stage 1 — Emissões (tCO₂e/ha) — conversão nas equações
+
 | Asset | Path | Bandas |
 |-------|------|--------|
-| `desf_reg_corrected` | `.../MODULO3/v037/desf_reg_corrected` | `classification_1985` ... `classification_2024` |
-| `forest_mask` | `.../MODULO3/v037/forest_mask` | `classification_1985` ... `classification_2024` |
-| `savanna_mask` | `.../MODULO3/v037/savanna_mask` | `classification_1985` ... `classification_2024` |
-| `grassland_mask` | `.../MODULO3/v037/grassland_mask` | `classification_1985` ... `classification_2024` |
-| `grass_forest` | `.../MODULO3/v037/grass_forest` | `classification_1985` ... `classification_2024` |
+| `fire_forest_CO2` | `.../MODULO3/v037/fire_forest_CO2` | `1986` ... `2024` |
+| `fire_forest_CH4` | `.../MODULO3/v037/fire_forest_CH4` | `1986` ... `2024` |
+| `fire_forest_N2O` | `.../MODULO3/v037/fire_forest_N2O` | `1986` ... `2024` |
+| `fire_savanna_CO2` | `.../MODULO3/v037/fire_savanna_CO2` | `1986` ... `2024` |
+| `fire_savanna_CH4` | `.../MODULO3/v037/fire_savanna_CH4` | `1986` ... `2024` |
+| `fire_savanna_N2O` | `.../MODULO3/v037/fire_savanna_N2O` | `1986` ... `2024` |
+| `fire_grassland_CH4` | `.../MODULO3/v037/fire_grassland_CH4` | `1986` ... `2024` |
+| `fire_grassland_N2O` | `.../MODULO3/v037/fire_grassland_N2O` | `1986` ... `2024` |
+| `logging_forest_CO2` | `.../MODULO3/v037/logging_forest_CO2` | `2017` ... `2024` |
 
-### Stage 1 — Cálculos
+---
+
+### Stage 1 — Biomassa (tC/ha)
+
 | Asset | Path | Bandas |
 |-------|------|--------|
-| `secondary_veg_increment` | `.../MODULO3/v037/secondary_veg_increment` | `sec_veg_increment_1985` ... `sec_veg_increment_2024` |
-| `fire_forest_emissions` | `.../MODULO3/v037/fire_forest_emissions` | `CO2_tC_ha_YYYY`, `CH4_t_ha_YYYY`, `N2O_t_ha_YYYY` |
-| `fire_savanna_emissions` | `.../MODULO3/v037/fire_savanna_emissions` | `CO2_tC_ha_YYYY`, `CH4_t_ha_YYYY`, `N2O_t_ha_YYYY` |
-| `fire_grassland_emissions` | `.../MODULO3/v037/fire_grassland_emissions` | `CH4_t_ha_YYYY`, `N2O_t_ha_YYYY` |
-| `logging_emissions` | `.../MODULO3/v037/logging_emissions` | `logging_tC_ha_2017` ... `logging_tC_ha_2024` |
+| `secondary_veg_increment` | `.../MODULO3/v037/secondary_veg_increment` | `1985` ... `2024` |
 
-### Stage 2 — Integração
+---
+
+### Stage 2 — Balanço (tC/ha)
+
 | Asset | Path | Bandas |
 |-------|------|--------|
-| `mass_balance` | `.../MODULO3/v037/mass_balance` | Bandas consolidadas de degradação |
+| `biomass_stock` | `.../MODULO3/v037/biomass_stock` | `1985` ... `2024` |
 
-### Stage 3 — Produto Final
+---
+
+### Stage 3 — Produto Final (tCO₂e/pixel)
+
 | Asset | Path | Bandas |
 |-------|------|--------|
 | `CCAL_MODULO3-v037` | `.../MODELOS/CCAL_MODULO3-v037` | `loss_fire_YYYY`, `loss_logging_YYYY`, `loss_deforestation_YYYY`, `gain_secondary_vegetation_YYYY`, `loss_grassland_YYYY`, `stock_YYYY` |
@@ -94,7 +134,7 @@ STAGE 3 — Produto Final (depende do Stage 2)
 ## 📝 Checklist de Execução
 
 ### Stage 0
-- [ ] `00_export_data_prep.js` → 5 assets prep
+- [x] `00_export_data_prep.js` → 5 assets prep
 
 ### Stage 1
 - [ ] `01_export_secondary_veg.js`
@@ -134,6 +174,25 @@ equations/
 ├── 06_mass_balance.js
 └── README.md
 ```
+
+---
+
+## ⚠️ Notas Importantes
+
+1. **Unidades:**
+   - Biomassa: tC/ha (carbono)
+   - Emissões: tCO₂e/ha (CO₂ equivalente)
+   - Produto final: tCO₂e/pixel (total por pixel)
+
+2. **Conversão para tCO₂e:** Acontece nas equações (02, 03, 04, 05), não no mass_balance.
+
+3. **Nomes de bandas:**
+   - Assets de cobertura: `classification_YYYY`
+   - Assets de emissão/biomassa: apenas o ano (`1986`, `1987`, ...)
+
+4. **Pyramiding Policy:**
+   - Cobertura: `sample`
+   - Emissões/Biomassa: `median`
 
 ---
 

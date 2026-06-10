@@ -166,6 +166,8 @@ final_image = final_image
     .float()
     .updateMask(desf_reg_corrected.select(0).gt(0));
 
+
+Map.addLayer(final_image,{},'final_image');
 print('✅ Produto final montado!');
 print('⏳ Iniciando export...');
 

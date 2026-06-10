@@ -153,15 +153,15 @@ emissions.forEach(function(list){
       image = image.slice(slice);
     }
     
-    // Map.addLayer(image,{},name);
-    // print(name,image);
+    Map.addLayer(image,{},name);
+    print(name,image);
     final_image = final_image.addBands(image);
   
 });
 
 final_image = final_image
-    .addBands(result.gain_sec_veg)
-    .addBands(result.biomass_stock)
+    .addBands(result.gain_sec_veg.selfMask())
+    .addBands(result.biomass_stock.selfMask())
     .updateMask(emergent_mask)
     .float()
     .updateMask(desf_reg_corrected.select(0).gt(0));

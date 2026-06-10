@@ -110,7 +110,7 @@ print('✅ Cálculo concluído!');
 print('⏳ Montando produto final...');
 
 
-desf_reg_corrected
+
 
 var loss_fire = result.loss_fire
 var loss_grassland = result.loss_grassland
@@ -122,12 +122,20 @@ var loss_deforestation = result.loss_deforestation
 
 
 var emissions = [ 
-  loss_grassland, loss_logging,  loss_convergence_degradation, loss_deforestation
+  ['loss_grassland',loss_grassland],
+  ['loss_logging',loss_logging,31],  
+  ['loss_convergence_degradation',loss_convergence_degradation], 
+  ['loss_deforestation',loss_deforestation]
 ];
 
+print('desf_reg_corrected',desf_reg_corrected);
+
 var final_image = ee.Image().select();
-emissions.forEach(function(image){
+emissions.forEach(function(list){
   
+  var name = list[0];
+  var image = list[1];
+  var slice = list[2];
 
   image = ee.Image(image.slice(1).bandNames().iterate(function(current,previous){
     var bandname = ee.String(current);
@@ -140,9 +148,13 @@ emissions.forEach(function(image){
     
     return iterate.addBands(newImage);
   },image.select(0).gt(0).selfMask()));
+    image = image.updateMask(desf_reg_corrected.slice(1).eq(2));
+    if(slice){
+      image = image.slice(slice);
+    }
     
-    image = image.updateMask(image.eq(2));
-    
+    // Map.addLayer(image,{},name);
+    // print(name,image);
     final_image = final_image.addBands(image);
   
 });
@@ -151,7 +163,8 @@ final_image = final_image
     .addBands(result.gain_sec_veg)
     .addBands(result.biomass_stock)
     .updateMask(emergent_mask)
-    .float();
+    .float()
+    .updateMask(desf_reg_corrected.select(0).gt(0));
 
 print('✅ Produto final montado!');
 print('⏳ Iniciando export...');

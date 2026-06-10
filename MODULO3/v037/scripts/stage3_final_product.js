@@ -109,11 +109,45 @@ print('✅ Cálculo concluído!');
 
 print('⏳ Montando produto final...');
 
-var final_image = result.loss_fire
-    .addBands(result.loss_grassland)
-    .addBands(result.loss_logging)
-    .addBands(result.loss_convergence_degradation)
-    .addBands(result.loss_deforestation)
+
+desf_reg_corrected
+
+var loss_fire = result.loss_fire
+var loss_grassland = result.loss_grassland
+var loss_logging = result.loss_logging
+var loss_convergence_degradation = result.loss_convergence_degradation
+var loss_deforestation = result.loss_deforestation
+
+
+
+
+var emissions = [ 
+  loss_grassland, loss_logging,  loss_convergence_degradation, loss_deforestation
+];
+
+var final_image = ee.Image().select();
+emissions.forEach(function(image){
+  
+
+  image = ee.Image(image.slice(1).bandNames().iterate(function(current,previous){
+    var bandname = ee.String(current);
+    var iterate = ee.Image(previous);
+    var newImage = iterate
+      .slice(-1)
+      .rename(bandname)
+      .multiply(0)
+      .blend(image.select(bandname).gt(0).selfMask());
+    
+    return iterate.addBands(newImage);
+  },image.select(0).gt(0).selfMask()));
+    
+    image = image.updateMask(image.eq(2));
+    
+    final_image = final_image.addBands(image);
+  
+});
+
+final_image = final_image
     .addBands(result.gain_sec_veg)
     .addBands(result.biomass_stock)
     .updateMask(emergent_mask)
@@ -129,7 +163,8 @@ Export.image.toAsset({
     scale: SCALE,
     maxPixels: MAX_PIX,
     pyramidingPolicy: 'median',
-    region:desf_reg_corrected.geometry()
+    region:desf_reg_corrected.geometry(),
+    overwrite:true
 });
 
 print('📤 Export: CCAL_MODULO3-' + VERSION);

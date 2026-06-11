@@ -122,7 +122,8 @@ var loss_deforestation = result.loss_deforestation
 
 
 var emissions = [ 
-  ['loss_grassland',loss_grassland],
+  ['loss_fire',loss_fire],
+  ['loss_grassland',loss_grassland,31],
   ['loss_logging',loss_logging,31],  
   ['loss_convergence_degradation',loss_convergence_degradation], 
   ['loss_deforestation',loss_deforestation]
@@ -136,6 +137,9 @@ emissions.forEach(function(list){
   var name = list[0];
   var image = list[1];
   var slice = list[2];
+  
+  Map.addLayer(image,{},name + ' original');
+
 
   image = ee.Image(image.slice(1).bandNames().iterate(function(current,previous){
     var bandname = ee.String(current);
@@ -144,16 +148,16 @@ emissions.forEach(function(list){
       .slice(-1)
       .rename(bandname)
       .multiply(0)
-      .blend(image.select(bandname).gt(0).selfMask());
+      .blend(image.select(bandname).selfMask());
     
     return iterate.addBands(newImage);
-  },image.select(0).gt(0).selfMask()));
+  },image.select(0).selfMask()));
     image = image.updateMask(desf_reg_corrected.slice(1).eq(2));
     if(slice){
       image = image.slice(slice);
     }
     
-    Map.addLayer(image,{},name);
+    Map.addLayer(image,{},name + ' corrigido');
     print(name,image);
     final_image = final_image.addBands(image);
   
@@ -168,7 +172,7 @@ final_image = final_image
 
 
 Map.addLayer(final_image,{},'final_image');
-print('✅ Produto final montado!');
+print('Produto final montado!',final_image)
 print('⏳ Iniciando export...');
 
 Export.image.toAsset({

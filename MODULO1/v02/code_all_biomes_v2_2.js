@@ -451,84 +451,100 @@ processSimpleBiome('Caatinga',       'caa');
 processSimpleBiome('Mata Atlântica', 'ma');
 
 /*
-// ============================================================
-//  MOSAIC — rodar APENAS após todos os exports de bioma concluírem
-//  (inalterado em relação à v2.1.2)
-// ============================================================
+// ===================================================================
+// CCAL MÓDULO 1 — Consolidar biomes_v2 em imagem única do Brasil
+// Saída: ccal_02_brazil_modulo_1_frell_v2 (multibanda)
+// ===================================================================
 
-var EMISSION_TYPES = [
-  'emission_fire_co2', 'emission_fire_ch4', 'emission_fire_n2o',
-  'emission_sl_co2',
-  'emission_def_co2',  'emission_def_ch4',  'emission_def_n2o'
-];
+var BIOMES_IC   = 'projects/ee-ipam/assets/CCAL/MODULO1/biomes_v2';
+var OUTPUT_ASSET = 'projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_1_frell_v2';
 
-var BIOME_PREFIXES = ['amz', 'cerr', 'pan', 'pam', 'caa', 'ma'];
+var START_YEAR = 2017, END_YEAR = 2024;   // emissões
+var STOCK_START = 2016, STOCK_END = 2024; // estoque (inclui ano base 2016)
 
-var biomeIC = ee.ImageCollection(EXPORT_ASSET_ROOT);
+var SPATIAL_SCALE = 30;
+var EXPORT_CRS    = 'EPSG:4674';
 
-function mosaicEmissions() {
-  for (var ei = 0; ei < EMISSION_TYPES.length; ei++) {
-    var emType = EMISSION_TYPES[ei];
-    for (var yi = START_YEAR; yi <= END_YEAR; yi++) {
-      var year = yi;
-      var biomeImages = ee.ImageCollection(
-        BIOME_PREFIXES.map(function(pfx) {
-          return biomeIC
-            .filter(ee.Filter.eq('description', pfx + '_' + emType + '_' + year))
-            .first()
-            .unmask(0);
-        })
-      );
-      var brazilMosaic = biomeImages
-        .sum()
-        .rename('emission_tCO2e_pixel')
-        .set('system:time_start', ee.Date.fromYMD(year, 1, 1).millis())
-        .set('year', year)
-        .set('emission_type', emType);
-      var desc = 'brazil_' + emType + '_' + year;
-      Export.image.toAsset({
-        image: brazilMosaic,
-        description: desc,
-        assetId: EXPORT_MOSAIC_ROOT + '/' + desc,
-        region: brazilRegion,
-        scale: SPATIAL_SCALE,
-        maxPixels: 1e13,
-        pyramidingPolicy: { '.default': 'mean' }
-      });
-    }
-  }
-}
+var ic = ee.ImageCollection(BIOMES_IC);
+var biomesBound = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
+var brazilRegion = biomesBound.geometry().bounds();
 
-function mosaicStocks() {
-  for (var yi = START_YEAR - 1; yi <= END_YEAR; yi++) {
-    var year = yi;
-    var stockImages = ee.ImageCollection(
-      BIOME_PREFIXES.map(function(pfx) {
-        return biomeIC
-          .filter(ee.Filter.eq('description', pfx + '_stock_carbon_' + year))
-          .first()
-          .select(['total'])
-          .unmask(0);
-      })
-    );
-    var brazilStock = stockImages
-      .sum()
-      .rename('total_tC_ha')
-      .set('system:time_start', ee.Date.fromYMD(year, 1, 1).millis())
-      .set('year', year);
-    var desc = 'brazil_stock_carbon_' + year;
-    Export.image.toAsset({
-      image: brazilStock,
-      description: desc,
-      assetId: EXPORT_MOSAIC_ROOT + '/' + desc,
-      region: brazilRegion,
-      scale: SPATIAL_SCALE,
-      maxPixels: 1e13,
-      pyramidingPolicy: { '.default': 'mean' }
+var BIOME_PREFIXES = ['amz','cerr','pan','pam','caa','ma'];
+var GASES          = ['co2','ch4','n2o'];
+
+// ---- helper: soma de um tipo de distúrbio (todos gases, todos biomas) em um ano ----
+function sumDisturbance(disturb, year) {
+  var imgs = [];
+  BIOME_PREFIXES.forEach(function(pfx){
+    GASES.forEach(function(gas){
+      var id = pfx + '_emission_' + disturb + '_' + gas + '_' + year;
+      // pega a imagem se existir na coleção; senão, zero
+      var img = ic.filter(ee.Filter.eq('system:index', id)).first();
+      img = ee.Image(ee.Algorithms.If(img, ee.Image(img).select('emission_tCO2e_pixel'), ee.Image(0)));
+      imgs.push(img.unmask(0));
     });
-  }
+  });
+  return ee.ImageCollection(imgs).sum();
 }
 
-mosaicEmissions();
-mosaicStocks();
+// ---- helper: soma do estoque (banda total) de todos os biomas em um ano ----
+function sumStock(year) {
+  var imgs = [];
+  BIOME_PREFIXES.forEach(function(pfx){
+    var id  = pfx + '_stock_carbon_' + year;
+    var img = ic.filter(ee.Filter.eq('system:index', id)).first();
+    img = ee.Image(ee.Algorithms.If(img, ee.Image(img).select('total'), ee.Image(0)));
+    imgs.push(img.unmask(0));
+  });
+  return ee.ImageCollection(imgs).sum();
+}
+
+// ===================================================================
+// Monta a imagem multibanda
+// ===================================================================
+var final_image = ee.Image().select();
+
+for (var year = START_YEAR; year <= END_YEAR; year++){
+  var defAll  = sumDisturbance('def',  year).rename('loss_deforestation_'      + year);
+  var fireAll = sumDisturbance('fire', year).rename('loss_fire_'               + year);
+  var slAll   = sumDisturbance('sl',   year).rename('loss_selective_logging_'  + year);
+
+  // convergência da degradação = fogo + corte seletivo
+  var convDeg = fireAll.add(slAll).rename('loss_convergence_degradation_' + year);
+
+  final_image = final_image
+    .addBands(defAll)
+    .addBands(fireAll)
+    .addBands(slAll)
+    .addBands(convDeg);
+}
+
+// estoque (2016..2024)
+for (var sy = STOCK_START; sy <= STOCK_END; sy++){
+  var stockAll = sumStock(sy).rename('stock_' + sy);
+  final_image = final_image.addBands(stockAll);
+}
+
+final_image = final_image.float();
+
+print('Bandas finais:', final_image.bandNames());
+print('Nº de bandas:', final_image.bandNames().size());
+
+Map.centerObject(biomesBound, 4);
+Map.addLayer(final_image.select('loss_deforestation_2022').selfMask(),
+  {min:0, max:10, palette:['ffffcc','fd8d3c','bd0026']}, 'def 2022 (check)');
+
+// ===================================================================
+// Exportar para Asset
+// ===================================================================
+Export.image.toAsset({
+  image: final_image,
+  description: 'ccal_02_brazil_modulo_1_frell_v2',
+  assetId: OUTPUT_ASSET,
+  region: brazilRegion,
+  scale: SPATIAL_SCALE,
+  crs: EXPORT_CRS,
+  maxPixels: 1e13,
+  pyramidingPolicy: { '.default': 'mean' }
+});
 */

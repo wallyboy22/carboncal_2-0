@@ -1,16 +1,15 @@
 // ===================================================================
-// CCAL_02 FRELL v2 — degradação ativa + estoque "total" + export nacional
+// CCAL_02 FRELL v2 — degradação ativa + estoque "total" (stock) + export nacional
 // ===================================================================
 
 var assetId = 'projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_1_frell_v2';
 var image   = ee.Image(assetId);
 
-// Confira o padrão das bandas de estoque (esperado: stock_total_<ano>)
 print('Bandas do asset:', image.bandNames());
 
-// Pool de estoque considerado
-var STOCK_POOL  = 'total';
-var stockBands  = image.select('stock_' + STOCK_POOL + '.*');   // só o estoque "total"
+// Estoque "total" = bandas stock_<ano> (2016..2024). 2016 é o ano base.
+var stockBands     = image.select('stock.*');         // 9 bandas: 2016..2024
+var stockForMask   = stockBands.slice(1);             // 8 bandas: 2017..2024 (alinha c/ emissões)
 
 // --- 1. Convergência fogo + corte seletivo (degradação) ---
 var loss_convergence_degradation = image.select('loss_fire.*').selfMask()
@@ -24,7 +23,6 @@ var loss_convergence_degradation = image.select('loss_fire.*').selfMask()
       }));
 
 // --- 2. Processamento intermediário: intervalo ativo de degradação ---
-//     (mantida a lógica original: fundo-zero acumulado + valor real selfMask)
 var emissions = [
   'loss_fire',
   'loss_selective_logging',
@@ -50,15 +48,15 @@ emissions.forEach(function(emission){
     return iterate.addBands(newImage);
   }, img.select(0).selfMask()));
 
-  // máscara pelo estoque "total" (anos 2..n), alinhada banda a banda
-  img = img.updateMask(stockBands.slice(1).gt(0));
+  // máscara pelo estoque (anos 2017..2024), alinhada banda a banda
+  img = img.updateMask(stockForMask.gt(0));
 
   Map.addLayer(img, {}, name);
   print(name, img);
   final_image = final_image.addBands(img);
 });
 
-// --- 3. Anexa o estoque "total" mascarado ---
+// --- 3. Anexa o estoque (stock_2016..2024) mascarado ---
 final_image = final_image
   .addBands(stockBands.selfMask())
   .float();
@@ -66,7 +64,7 @@ final_image = final_image
 Map.addLayer(final_image, {}, 'final_image');
 
 // --- 4. Projeção do ASSET ORIGINAL + região nacional (limite Brasil) ---
-var proj   = image.select(0).projection();   // projeção nativa do asset
+var proj   = image.select(0).projection();
 var scale  = proj.nominalScale();
 
 var region = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017')
@@ -84,6 +82,6 @@ Export.image.toAsset({
   assetId: 'projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_1_frell_v2_2',
   region: region,
   crs: proj.crs(),
-  crsTransform: ee.List(proj.getInfo().transform), // mantém o grid de pixels original
+  crsTransform: ee.List(proj.getInfo().transform),
   maxPixels: 1e13
 });

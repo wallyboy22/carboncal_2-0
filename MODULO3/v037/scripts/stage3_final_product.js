@@ -116,7 +116,6 @@ var loss_fire = result.loss_fire
 var loss_grassland = result.loss_grassland
 var loss_logging = result.loss_logging
 var loss_convergence_degradation = result.loss_convergence_degradation
-var loss_deforestation = result.loss_deforestation
 
 
 
@@ -125,8 +124,7 @@ var emissions = [
   ['loss_fire',loss_fire],
   ['loss_grassland',loss_grassland,31],
   ['loss_logging',loss_logging,31],  
-  ['loss_convergence_degradation',loss_convergence_degradation], 
-  ['loss_deforestation',loss_deforestation]
+  ['loss_convergence_degradation',loss_convergence_degradation],
 ];
 
 print('desf_reg_corrected',desf_reg_corrected);
@@ -164,6 +162,7 @@ emissions.forEach(function(list){
 });
 
 final_image = final_image
+    .addBands(result.loss_deforestation.selfMask())
     .addBands(result.gain_sec_veg.selfMask())
     .addBands(result.biomass_stock.selfMask())
     .updateMask(emergent_mask)

@@ -121,8 +121,8 @@ var loss_convergence_degradation = result.loss_convergence_degradation
 
 
 var emissions = [ 
-  ['loss_fire',loss_fire],
   ['loss_grassland',loss_grassland],
+  ['loss_fire',loss_fire],
   ['loss_logging',loss_logging,31],  
   ['loss_convergence_degradation',loss_convergence_degradation,31],
 ];

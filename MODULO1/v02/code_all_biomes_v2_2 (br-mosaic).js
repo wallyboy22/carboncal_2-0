@@ -24,7 +24,7 @@ var SPATIAL_SCALE = 30;
 var EXPORT_CRS    = 'EPSG:4674';
 
 var ic           = ee.ImageCollection(BIOMES_IC);
-var biomesBound  = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
+var biomesBound  = ee.FeatureCollection('users/celsojunior/lm_bioma_250_cf');
 var brazilRegion = biomesBound.geometry().bounds();
 
 var BIOME_PREFIXES = ['amz', 'cerr', 'pan', 'pam', 'caa', 'ma'];

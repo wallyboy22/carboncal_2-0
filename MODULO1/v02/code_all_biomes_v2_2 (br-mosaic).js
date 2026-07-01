@@ -42,14 +42,14 @@ function sumEmission(disturb, year){
     });
   });
   return ic.filter(ee.Filter.inList('system:index', ids))
-           .map(function(img){ return img.select('emission_tCO2e_pixel').unmask(0); })
+           .map(function(img){ return img.select('emission_tCO2e_pixel').unmask(0, false); })
            .sum();
 }
 
 function sumStock(year){
   var ids = BIOME_PREFIXES.map(function(pfx){ return pfx + '_stock_carbon_' + year; });
   return ic.filter(ee.Filter.inList('system:index', ids))
-           .map(function(img){ return img.select('total').unmask(0); })
+           .map(function(img){ return img.select('total').unmask(0, false); })
            .sum();
 }
 
@@ -143,6 +143,29 @@ Map.addLayer(
   {min: 0, max: 200, palette: ['ffffff', '41ab5d', '005a32']},
   'stock_2024 (tC/ha)', false
 );
+
+// ===================================================================
+// DIAGNÓSTICO (opcional) — confere a contribuição por bioma no def/2024
+//   Se algum bioma "sumir", olhe aqui: quantas imagens casaram e como
+//   cada bioma renderiza isoladamente.
+// ===================================================================
+var CHECK_YEAR = 2024;
+var idsDef = [];
+BIOME_PREFIXES.forEach(function(pfx){
+  GASES.forEach(function(gas){ idsDef.push(pfx + '_emission_def_' + gas + '_' + CHECK_YEAR); });
+});
+var colDef = ic.filter(ee.Filter.inList('system:index', idsDef));
+print('def/' + CHECK_YEAR + ' — imagens casadas:', colDef.size());
+print('def/' + CHECK_YEAR + ' — system:index:', colDef.aggregate_array('system:index'));
+
+var palBiome = {min: 0, max: 500, palette: ['ffffcc', 'fd8d3c', 'bd0026']};
+BIOME_PREFIXES.forEach(function(pfx){
+  var ids = GASES.map(function(gas){ return pfx + '_emission_def_' + gas + '_' + CHECK_YEAR; });
+  var b = ic.filter(ee.Filter.inList('system:index', ids))
+            .map(function(img){ return img.select('emission_tCO2e_pixel').unmask(0, false); })
+            .sum().selfMask();
+  Map.addLayer(b, palBiome, 'DIAG def ' + pfx + ' ' + CHECK_YEAR, false);
+});
 
 // ===================================================================
 // 4) EXPORTAR a imagem final mascarada

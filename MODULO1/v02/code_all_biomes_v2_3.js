@@ -19,13 +19,13 @@
 // ============================================================
 
 // ====================================================================
-//  CONFIGURATION 
+//  CONFIGURATION
 // ====================================================================
 
 var START_YEAR         = 2017;
 var END_YEAR           = 2024;
-var EXPORT_ASSET_ROOT  = 'projects/ee-ipam/assets/CCAL/MODULO1/biomes_v3';
-var EXPORT_MOSAIC_ROOT = 'projects/ee-ipam/assets/CCAL/MODULO1/brazil_v3';
+var EXPORT_ASSET_ROOT  = 'projects/ee-ipam/assets/CCAL/MODULO1/biomes_v4';
+var EXPORT_MOSAIC_ROOT = 'projects/ee-ipam/assets/CCAL/MODULO1/brazil_v4';
 
 var PRODES_START       = 2016;
 var PRODES_END         = 2024;

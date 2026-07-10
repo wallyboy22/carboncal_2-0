@@ -81,7 +81,7 @@ var vegetationMask = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/UKPact_MRV/
                        .remap([1, 2], [1, 1], 0);
 
 var carbonStock = ee.ImageCollection('projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1');
-var biomesBound = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
+var biomesBound = ee.FeatureCollection('users/celsojunior/lm_bioma_250_cf');
 var brazilRegion = biomesBound.geometry().bounds();
 
 // ── Floresta remanescente em 2016 ────────────────────────

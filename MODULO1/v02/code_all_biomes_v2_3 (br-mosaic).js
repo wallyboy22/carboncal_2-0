@@ -15,8 +15,8 @@
 // Celso H. L. Silva Junior — IPAM / CCAL
 // ===================================================================
 
-var BIOMES_IC    = 'projects/ee-ipam/assets/CCAL/MODULO1/biomes_v3';
-var OUTPUT_ASSET = 'projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_1_frell_v3';
+var BIOMES_IC    = 'projects/ee-ipam/assets/CCAL/MODULO1/biomes_v4';
+var OUTPUT_ASSET = 'projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_1_frell_v4';
 
 var START_YEAR  = 2017, END_YEAR  = 2024;   // emissões
 var STOCK_START = 2016, STOCK_END = 2024;   // estoque (inclui ano base)

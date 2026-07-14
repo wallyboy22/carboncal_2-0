@@ -172,7 +172,7 @@ BIOME_PREFIXES.forEach(function(pfx){
 // ===================================================================
 Export.image.toAsset({
   image: final_image,
-  description: 'ccal_02_brazil_modulo_1_frell_v3',
+  description: 'ccal_02_brazil_modulo_1_frell_v4',
   assetId: OUTPUT_ASSET,
   region: brazilRegion,
   scale: SPATIAL_SCALE,

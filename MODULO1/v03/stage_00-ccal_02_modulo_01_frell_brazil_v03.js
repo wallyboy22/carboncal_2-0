@@ -283,14 +283,12 @@ function processAmazon() {
   var slLayer0 = slList.get(0);
 
   // ── ee.List.iterate() ─────────────────────────────────────
-  var first = ee.Image.constant(0).rename('_')
-    .addBands(agb0.rename('agb'))
+  var first = ee.Image(agb0.rename('agb'))
     .addBands(bgb0.rename('bgb'))
     .addBands(dw0.rename('dw'))
     .addBands(litter0.rename('litter'))
     .addBands(ee.Image(slLayer0).rename('slLayer'))
-    .addBands(agb0.add(bgb0).add(dw0).add(litter0).rename('stock_' + (START_YEAR - 1)))
-    .slice(1);
+    .addBands(agb0.add(bgb0).add(dw0).add(litter0).rename('stock_' + (START_YEAR - 1)));
 
   var sequence = ee.List.sequence(START_YEAR, END_YEAR);
 
@@ -428,13 +426,11 @@ function processCerrado() {
   exportStockImage(agb0, bgb0, dw0, litter0, prefix, START_YEAR - 1, biome_mask, biome_bounds);
 
   // ── ee.List.iterate() ─────────────────────────────────────
-  var first = ee.Image.constant(0).rename('_')
-    .addBands(agb0.rename('agb'))
+  var first = ee.Image(agb0.rename('agb'))
     .addBands(bgb0.rename('bgb'))
     .addBands(dw0.rename('dw'))
     .addBands(litter0.rename('litter'))
-    .addBands(agb0.add(bgb0).add(dw0).add(litter0).rename('stock_' + (START_YEAR - 1)))
-    .slice(1);
+    .addBands(agb0.add(bgb0).add(dw0).add(litter0).rename('stock_' + (START_YEAR - 1)));
 
   var sequence = ee.List.sequence(START_YEAR, END_YEAR);
 
@@ -523,10 +519,8 @@ function processSimpleBiome(biomeName, prefix) {
   exportStockImageSimple(totalCarbon, prefix, START_YEAR - 1, biome_mask, biome_bounds);
 
   // ── ee.List.iterate() ─────────────────────────────────────
-  var first = ee.Image.constant(0).rename('_')
-    .addBands(totalCarbon.rename('total'))
-    .addBands(totalCarbon.rename('stock_' + (START_YEAR - 1)))
-    .slice(1);
+  var first = ee.Image(totalCarbon.rename('total'))
+    .addBands(totalCarbon.rename('stock_' + (START_YEAR - 1)));
 
   var sequence = ee.List.sequence(START_YEAR, END_YEAR);
 

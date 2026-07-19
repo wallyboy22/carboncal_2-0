@@ -40,6 +40,13 @@ var DEFAULT_TRANSFORM = [0.00026949458523585647, 0, -180, 0, -0.0002694945852358
 
 var pixelAreaHa = ee.Image.pixelArea().multiply(0.0001);
 
+var spatial_ref = ee.FeatureCollection('projects/ee-ipam/assets/ORIGINAIS/IBGE/limite_biomas_IBGE_2026');
+var bounds = spatial_ref 
+  .geometry()
+  .bounds();
+var mask = ee.Image().paint(spatial_ref).eq(0);
+
+
 // ====================================================================
 // 2. MAPEAMENTO — quais biomas exportam cada tipo de emissão
 // ====================================================================
@@ -64,14 +71,32 @@ function loadEmissionBand(type, year) {
   var sum = ee.Image(0);
   biomes.forEach(function(pfx) {
     var assetId = STAGE_00_ROOT + '/' + pfx + '_' + type + '_' + year;
-    sum = sum.add(ee.Image(assetId).select(0).unmask(0));
+    // print(type,pfx);
+    // print("assetId",assetId);
+    var img = ee.Image(assetId);
+    if (type === 'stock_carbon'){
+      // os estoques da Amazonia e do Cerrado, possuem 5 bandas com os compartimentos, os outros biomas só possuem 1
+      // o if é para selecionar a banda com o mesmo compartimento de entrada. 
+      // ATENÇÂO: perguntar para o Celso se a camada de estoque de carbono é mesmo o TOTAL ou a AGB
+      img = img.select('total');
+    }
+
+    // print("img",img);
+    sum = sum.where(img.multiply(0).eq(0),img);
+    // print("sum",sum);
+
   });
+  // print('return',sum);
+
   return sum;
 }
 
 function buildAggregatedBand(types, year, bandName) {
   var sum = ee.Image(0);
-  types.forEach(function(t) { sum = sum.add(loadEmissionBand(t, year)); });
+  types.forEach(function(t) {
+    var img = loadEmissionBand(t, year);
+    sum = sum.unmask().add(img.unmask()); 
+  });
   return sum.rename(bandName + year);
 }
 
@@ -80,13 +105,14 @@ function buildAggregatedBand(types, year, bandName) {
 // ====================================================================
 
 var rawImage = ee.Image(loadEmissionBand('stock_carbon', 2016).rename('stock_2016'));
-
+print('rawImage',rawImage);
 // --- Fire (CO2 + CH4 + N2O) ---
 var fireTypes = ['emission_fire_co2', 'emission_fire_ch4', 'emission_fire_n2o'];
 YEARS.forEach(function(y) {
   var band = buildAggregatedBand(fireTypes, y, 'loss_fire_');
   rawImage = rawImage.addBands(band);
 });
+
 
 // --- Selective Logging ---
 YEARS.forEach(function(y) {
@@ -224,6 +250,8 @@ landCover = landCover.byte();
 // 8. SAÍDAS EM DENSIDADE (t/ha) — valleys não-spill, sem máscara
 // ====================================================================
 
+rawImage = rawImage.updateMask(mask);
+
 var fireDensity  = rawImage.select('loss_fire_.*').divide(pixelAreaHa).float();
 var slDensity    = rawImage.select('loss_selective_logging_.*').divide(pixelAreaHa).float();
 var convDensity  = rawImage.select('loss_convergence_degradation_.*').divide(pixelAreaHa).float();
@@ -237,7 +265,7 @@ var stockDensity = rawImage.select('stock_.*').float();
 function doExport(image, bounds, description, assetId, extra) {
   extra = extra || {};
   Export.image.toAsset({
-    image: image,
+    image: image.updateMask(mask),
     description: description,
     assetId: assetId,
     crs: extra.crs || DEFAULT_CRS,
@@ -250,23 +278,18 @@ function doExport(image, bounds, description, assetId, extra) {
     overwrite: true
   });
 }
-
-var bounds = ee.FeatureCollection('projects/ee-ipam/assets/ORIGINAIS/IBGE/limite_biomas_IBGE_2026')
-  .geometry()
-  .bounds();
-
 // 1–5: Densidade
-doExport(fireDensity,  bounds,  'WS_CCAL_modulo1-loss_fire_t_ha',                BASE_OUT + '/loss_fire_t_ha',                {});
-doExport(slDensity,    bounds,  'WS_CCAL_modulo1-loss_selective_logging_t_ha',   BASE_OUT + '/loss_selective_logging_t_ha',   {});
-doExport(convDensity,  bounds,  'WS_CCAL_modulo1-loss_convergence_degradation_t_ha', BASE_OUT + '/loss_convergence_degradation_t_ha', {});
-doExport(defDensity,   bounds,  'WS_CCAL_modulo1-loss_deforestation_t_ha',       BASE_OUT + '/loss_deforestation_t_ha',       {});
-doExport(stockDensity, bounds,  'WS_CCAL_modulo1-stock_tC_ha',                   BASE_OUT + '/stock_tC_ha',                   {});
+doExport(fireDensity,  bounds, 'WS_CCAL_modulo1-loss_fire_t_ha',                BASE_OUT + '/loss_fire_t_ha',                {});
+doExport(slDensity,    bounds, 'WS_CCAL_modulo1-loss_selective_logging_t_ha',   BASE_OUT + '/loss_selective_logging_t_ha',   {});
+doExport(convDensity,  bounds, 'WS_CCAL_modulo1-loss_convergence_degradation_t_ha', BASE_OUT + '/loss_convergence_degradation_t_ha', {});
+doExport(defDensity,   bounds, 'WS_CCAL_modulo1-loss_deforestation_t_ha',       BASE_OUT + '/loss_deforestation_t_ha',       {});
+doExport(stockDensity, bounds, 'WS_CCAL_modulo1-stock_tC_ha',                   BASE_OUT + '/stock_tC_ha',                   {});
 
 // 6: Land Cover
-doExport(landCover, bounds,  'WS_CCAL_modulo1-land_cover_masks', BASE_OUT + '/land_cover_masks', { pyramiding: 'mode' });
+doExport(landCover, bounds, 'WS_CCAL_modulo1-land_cover_masks', BASE_OUT + '/land_cover_masks', { pyramiding: 'mode' });
 
 // 7: Produto final consolidado
-doExport(finalImage, bounds,  'WS_CCAL_modulo1-ccal_02_brazil_modulo_1_frell_v3', FINAL_ASSET_ID, {});
+doExport(finalImage, bounds, 'WS_CCAL_modulo1-ccal_02_brazil_modulo_1_frell_v3', FINAL_ASSET_ID, {});
 
 // ====================================================================
 // 10. MAPA DE VERIFICAÇÃO

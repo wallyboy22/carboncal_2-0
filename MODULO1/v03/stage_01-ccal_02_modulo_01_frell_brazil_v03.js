@@ -1,5 +1,5 @@
 /**** Start of imports. If edited, may not auto-convert in the playground. ****/
-var geometry =
+var geometry = 
     /* color: #d63000 */
     /* shown: false */
     ee.Geometry.Polygon(
@@ -234,7 +234,7 @@ var stockDensity = rawImage.select('stock_.*').float();
 // 9. EXPORTS
 // ====================================================================
 
-function doExport(image, description, assetId, extra) {
+function doExport(image, bounds, description, assetId, extra) {
   extra = extra || {};
   Export.image.toAsset({
     image: image,
@@ -242,7 +242,8 @@ function doExport(image, description, assetId, extra) {
     assetId: assetId,
     crs: extra.crs || DEFAULT_CRS,
     crsTransform: extra.crsTransform || DEFAULT_TRANSFORM,
-    region: image.geometry().bounds(),
+    // region: image.geometry().bounds(),
+    region: bounds,
     scale: SCALE,
     maxPixels: MAX_PIX,
     pyramidingPolicy: { '.default': extra.pyramiding || 'mean' },
@@ -250,18 +251,22 @@ function doExport(image, description, assetId, extra) {
   });
 }
 
+var bounds = ee.FeatureCollection('projects/ee-ipam/assets/ORIGINAIS/IBGE/limite_biomas_IBGE_2026')
+  .geometry()
+  .bounds();
+
 // 1–5: Densidade
-doExport(fireDensity,  'WS_CCAL_M1V03-loss_fire_t_ha',                BASE_OUT + '/loss_fire_t_ha',                {});
-doExport(slDensity,    'WS_CCAL_M1V03-loss_selective_logging_t_ha',   BASE_OUT + '/loss_selective_logging_t_ha',   {});
-doExport(convDensity,  'WS_CCAL_M1V03-loss_convergence_degradation_t_ha', BASE_OUT + '/loss_convergence_degradation_t_ha', {});
-doExport(defDensity,   'WS_CCAL_M1V03-loss_deforestation_t_ha',       BASE_OUT + '/loss_deforestation_t_ha',       {});
-doExport(stockDensity, 'WS_CCAL_M1V03-stock_tC_ha',                   BASE_OUT + '/stock_tC_ha',                   {});
+doExport(fireDensity,  bounds,  'WS_CCAL_modulo1-loss_fire_t_ha',                BASE_OUT + '/loss_fire_t_ha',                {});
+doExport(slDensity,    bounds,  'WS_CCAL_modulo1-loss_selective_logging_t_ha',   BASE_OUT + '/loss_selective_logging_t_ha',   {});
+doExport(convDensity,  bounds,  'WS_CCAL_modulo1-loss_convergence_degradation_t_ha', BASE_OUT + '/loss_convergence_degradation_t_ha', {});
+doExport(defDensity,   bounds,  'WS_CCAL_modulo1-loss_deforestation_t_ha',       BASE_OUT + '/loss_deforestation_t_ha',       {});
+doExport(stockDensity, bounds,  'WS_CCAL_modulo1-stock_tC_ha',                   BASE_OUT + '/stock_tC_ha',                   {});
 
 // 6: Land Cover
-doExport(landCover, 'WS_CCAL_M1V03-land_cover_masks', BASE_OUT + '/land_cover_masks', { pyramiding: 'mode' });
+doExport(landCover, bounds,  'WS_CCAL_modulo1-land_cover_masks', BASE_OUT + '/land_cover_masks', { pyramiding: 'mode' });
 
 // 7: Produto final consolidado
-doExport(finalImage, 'WS_CCAL_M1V03-ccal_02_brazil_modulo_1_frell_v3', FINAL_ASSET_ID, {});
+doExport(finalImage, bounds,  'WS_CCAL_modulo1-ccal_02_brazil_modulo_1_frell_v3', FINAL_ASSET_ID, {});
 
 // ====================================================================
 // 10. MAPA DE VERIFICAÇÃO

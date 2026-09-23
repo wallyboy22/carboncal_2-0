@@ -21,17 +21,19 @@ var geometry =
 //_______________________________________________________________________________
 
 // --- --- --- ASSETS
-var annual_fire = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_annual_burned_v1').selfMask(),
-    accumulated_burned = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection4_1/mapbiomas_fire_collection41_accumulated_burned_v1').slice(0,40).selfMask(),
+var annual_fire = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection5_1/mapbiomas_fire_collection51_annual_burned_v1').selfMask(),
+    accumulated_burned = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collection5_1/mapbiomas_fire_collection51_accumulated_burned_v1').slice(0,40).selfMask(),
     
     // Mascara de florestas estaveis
-    mask_stable = ee.Image("projects/ee-ipam/assets/SEEG/SEEG13/13_3_Stable_cover/SEEG_c13_2024"),
+    mask_stable = ee.ImageCollection('projects/ee-ipam/assets/SEEG/SEEG14/14_2_Stabilized_cover_v6').toBands(),
     mask_stable = mask_stable.multiply(0)
       .where(mask_stable.eq(11),1)
       .where(mask_stable.eq(12),1)
-      .where(mask_stable.eq(50),1),
+      .where(mask_stable.eq(50),1)
+      .where(mask_stable.eq(77),1)
+      .where(mask_stable.eq(7),1),
       
-    qcn = ee.Image('projects/ee-ipam/assets/SEEG/SEEG13/RETIFICACAO/c_rect_col10'),
+    qcn = ee.Image('projects/ee-ipam/assets/SEEG/SEEG14/RETIFICACAO/c_rect_col11'),
 
     fwd = qcn.select('LITTER'),
     cwd = qcn.select('CDW'),
@@ -40,7 +42,7 @@ var annual_fire = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collect
     
     agb_plus_cwd = agb.add(cwd),
          
-    biomas = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
+    biomas = ee.FeatureCollection('projects/ee-ipam/assets/IBGE/limite_biomas_IBGE_2026');
     
 Map.addLayer(annual_fire,{},'annual_fire');
 // Map.addLayer(qcn,{},'qcn')
@@ -100,12 +102,12 @@ var biome_dict = {
 };
 
 var list_biomes = [
-  // 'amazonia',
-  // 'caatinga',
+  'amazonia',
+  'caatinga',
   'cerrado',
-  // 'mata_atlantica',
-  // 'pampa',
-  // 'pantanal',
+  'mata_atlantica',
+  'pampa',
+  'pantanal',
 ];
 
 
@@ -178,7 +180,7 @@ list_biomes.forEach(function(biome){
       
       var version = 'grassland_SEEG13';
       var description = biome+'-'+name + '-' + version;
-      var address = 'projects/ee-ipam/assets/SEEG/SEEG13/FOGO/CAMPO/';
+      var address = 'projects/ee-ipam/assets/SEEG/SEEG14/FOGO/CAMPO/';
       
       var newProps = {
         date_create:ee.Date(Date.now()).format('y-M-d'),
@@ -237,7 +239,7 @@ list_biomes.forEach(function(biome){
       Export.table.toDrive({
         collection:table,
         description:description,
-        folder:'SEEG13',
+        folder:'SEEG14-campo',
         fileNamePrefix:description,
         fileFormat:'csv',
         // selectors:,

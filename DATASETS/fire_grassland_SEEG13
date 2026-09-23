@@ -27,11 +27,11 @@ var annual_fire = ee.Image('projects/mapbiomas-public/assets/brazil/fire/collect
     // Mascara de florestas estaveis
     mask_stable = ee.ImageCollection('projects/ee-ipam/assets/SEEG/SEEG14/14_2_Stabilized_cover_v6').toBands(),
     mask_stable = mask_stable.multiply(0)
-      .where(mask_stable.eq(11),1)
-      .where(mask_stable.eq(12),1)
-      .where(mask_stable.eq(50),1)
-      .where(mask_stable.eq(77),1)
-      .where(mask_stable.eq(7),1),
+      .where(mask_stable.eq(11),1) //campo alagado
+      .where(mask_stable.eq(12),1) //campo
+      .where(mask_stable.eq(50),1) //restinga herbácea
+      .where(mask_stable.eq(77),1) //veg herbácea e arbustiva
+      .where(mask_stable.eq(7),1), //savana alagada
       
     qcn = ee.Image('projects/ee-ipam/assets/SEEG/SEEG14/RETIFICACAO/c_rect_col11'),
 

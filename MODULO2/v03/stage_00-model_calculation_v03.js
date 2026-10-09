@@ -1,5 +1,5 @@
 // CCAL Módulo 2 v03 — calcula as séries florestal e savânica 2016–2024.
-// Fonte metodológica: MODULO2/v01; entradas QCN SEEG14, fogo C5.1 e PRODES 2024.
+// Método/base de carbono da MODULO2/v01; atualiza dados de fogo para C5.1 e PRODES até 2024.
 // Exporta assets anuais em MODULO2/v03/model_assets para a síntese v03.
 
 var VERSION = 'v03';
@@ -14,7 +14,7 @@ var aoi = ee.Geometry.Polygon(
     [-32.94121996838384, -34.61869995524019],
     [-32.94121996838384, 10.634746454667736]]], null, false);
 
-var qcn = ee.Image('projects/ee-ipam/assets/SEEG/SEEG14/RETIFICACAO/c_rect_col11');
+var qcn = ee.ImageCollection('projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1').mosaic();
 var biomes = ee.FeatureCollection('projects/ee-ipam/assets/IBGE/limite_biomas_IBGE_2026');
 // Usa a extensão do FeatureCollection atualizado como região dos exports.
 aoi = biomes.geometry().bounds();
@@ -76,10 +76,21 @@ function exportRaw(image, name, year) {
   });
 }
 
-function getDeterLogging(year, mask) {
-  var dis = ee.Image(deterRoot + 'DeterAnoProdes_' + year + '_cs_disordered').unmask(0);
-  var geo = ee.Image(deterRoot + 'DeterAnoProdes_' + year + '_cs_geometric').unmask(0);
-  return dis.max(geo).multiply(mask).unmask(0);
+function getDeterLogging(year, vegetationMask) {
+  var dis = ee.Image(deterRoot + 'DeterAnoProdes_' + year + '_cs_disordered')
+    .multiply(vegetationMask).clip(aoi);
+  var geo = ee.Image(deterRoot + 'DeterAnoProdes_' + year + '_cs_geometric')
+    .multiply(vegetationMask).clip(aoi);
+  return ee.Image(0).clip(aoi).blend(dis).blend(geo);
+}
+
+function makeLoggingLayers(vegetationMask) {
+  var layers = [];
+  for (var year = START_YEAR; year <= END_YEAR; year++) {
+    layers.push(getDeterLogging(year, vegetationMask));
+  }
+  layers.push(ee.Image(0).clip(aoi));
+  return layers;
 }
 
 function loggingFraction(intensity) {
@@ -87,34 +98,39 @@ function loggingFraction(intensity) {
     [0,0.29,0.27,0.26,0.22,0.22,0.22,0.22,0.22,0.22,0.22], 0);
 }
 
-function makeCompartments(mask, isForest) {
-  var agb = qcn.select('AGB').multiply(mask);
-  var bgb = qcn.select('BGB').multiply(mask);
-  var dw = qcn.select('CDW').multiply(mask);
-  var litter = qcn.select('LITTER').multiply(mask);
-  if (isForest) {
-    agb = agb.blend(ee.Image(ebaRoot + 'EBA_AB_30m').updateMask(ee.Image(ebaRoot + 'EBA_AB_30m').gte(0))).multiply(mask);
-    bgb = bgb.blend(ee.Image(ebaRoot + 'EBA_BB_30m').updateMask(ee.Image(ebaRoot + 'EBA_BB_30m').gte(0))).multiply(mask);
-    dw = dw.blend(ee.Image(ebaRoot + 'EBA_DW_30m').updateMask(ee.Image(ebaRoot + 'EBA_DW_30m').gte(0))).multiply(mask);
-    litter = litter.blend(ee.Image(ebaRoot + 'EBA_LI_30m').updateMask(ee.Image(ebaRoot + 'EBA_LI_30m').gte(0))).multiply(mask);
-  }
+function makeCompartments(mask) {
+  // Mantém o blend QCN + EBA da v01 nos ramos florestal e savânico.
+  var agb = qcn.select('cagb')
+    .blend(ee.Image(ebaRoot + 'EBA_AB_30m').updateMask(ee.Image(ebaRoot + 'EBA_AB_30m').gte(0)))
+    .multiply(mask);
+  var bgb = qcn.select('cbgb')
+    .blend(ee.Image(ebaRoot + 'EBA_BB_30m').updateMask(ee.Image(ebaRoot + 'EBA_BB_30m').gte(0)))
+    .multiply(mask);
+  var dw = qcn.select('cdw')
+    .blend(ee.Image(ebaRoot + 'EBA_DW_30m').updateMask(ee.Image(ebaRoot + 'EBA_DW_30m').gte(0)))
+    .multiply(mask);
+  var litter = qcn.select('clitter')
+    .blend(ee.Image(ebaRoot + 'EBA_LI_30m').updateMask(ee.Image(ebaRoot + 'EBA_LI_30m').gte(0)))
+    .multiply(mask);
   return {agb: agb, bgb: bgb, dw: dw, litter: litter};
 }
 
 function runBiome(mask, prefix, isForest) {
-  var c = makeCompartments(mask, isForest);
+  var c = makeCompartments(mask);
   var agb = c.agb;
   var bgb = c.bgb;
   var dw = c.dw;
   var litter = c.litter;
+  var vegetationClass = pret.eq(isForest ? 1 : 2);
+  var loggingLayers = makeLoggingLayers(vegetationClass);
+  var loggingLayer = loggingLayers[0];
   var agb26 = agb.multiply(0.26);
   exportRaw(agb.add(bgb).add(dw).add(litter), prefix + '_stock', 2016);
 
   for (var year = START_YEAR; year <= END_YEAR; year++) {
     var fire = fireAnnual.select('burned_area_' + year).gt(0).multiply(mask).unmask(0);
     var def = prodesDeforestation.eq(year).and(mask);
-    var loggingClass = getDeterLogging(year, mask);
-    var slFraction = loggingFraction(loggingClass);
+    var slFraction = loggingFraction(loggingLayer);
     var slCO2 = agb.multiply(slFraction);
 
     if (isForest) {
@@ -165,6 +181,8 @@ function runBiome(mask, prefix, isForest) {
 
     exportRaw(slCO2.multiply(pixelAreaHa).multiply(44 / 12), prefix + '_sl_co2_loss_other', year);
     agb = agb.subtract(slCO2);
+    var loggingNext = loggingLayers[year - START_YEAR + 1];
+    loggingLayer = loggingLayer.add(loggingNext).multiply(loggingNext).clip(aoi);
     var carbonTotal = agb.add(bgb).add(dw).add(litter);
     var defCO2 = carbonTotal.multiply(def).multiply(pixelAreaHa).multiply(44 / 12);
     var defCH4 = agb.add(dw).add(litter).multiply(def).multiply(1 / 0.47).multiply(0.368)

@@ -6,7 +6,7 @@ exports.PRODES_START = 2016;
 exports.PRODES_END = 2024;
 
 exports.INPUTS = {
-  qcn: 'projects/ee-ipam/assets/SEEG/SEEG14/RETIFICACAO/c_rect_col11',
+  qcn: 'projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1',
   biomes: 'projects/ee-ipam/assets/IBGE/limite_biomas_IBGE_2026',
   vegetation: 'projects/ee-ipam/assets/CCAL/DATASETS/UKPact_MRV/brazil_pret_vegetation_qcn_v2',
   prodesLarge: 'users/celsojunior/prodes_brasil_2024_v20260407',

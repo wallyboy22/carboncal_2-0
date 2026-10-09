@@ -6,7 +6,7 @@ exports.STOCK_START_YEAR = 2016;
 exports.STOCK_END_YEAR = 2024;
 
 exports.INPUTS = {
-  qcn: 'projects/ee-ipam/assets/SEEG/SEEG14/RETIFICACAO/c_rect_col11',
+  qcn: 'projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1',
   biomes: 'projects/ee-ipam/assets/IBGE/limite_biomas_IBGE_2026',
   fireAnnual: 'projects/mapbiomas-public/assets/brazil/fire/collection5_1/mapbiomas_fire_collection51_annual_burned_v1',
   fireFrequency: 'projects/mapbiomas-public/assets/brazil/fire/collection5_1/mapbiomas_fire_collection51_fire_frequency_v1',

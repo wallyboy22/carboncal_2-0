@@ -1,9 +1,9 @@
-// Módulo 1 FREL v04 — cálculo anual 2017–2024 com QCN SEEG14/Col. 11.
+// Módulo 1 FREL v04 — cálculo anual 2017–2024 com QCN original + EBA da v03.
 // Mantém EBA, PRODES, DETER, fatores e compartimentalização da v03.
 var VERSION = 'v04';
 var START_YEAR = 2017, END_YEAR = 2024, SCALE = 30, MAX_PIX = 1e13;
 var BIOME_OUT = 'projects/ee-ipam/assets/CCAL/MODULO1/' + VERSION;
-var QCN = ee.Image('projects/ee-ipam/assets/SEEG/SEEG14/RETIFICACAO/c_rect_col11');
+var QCN = ee.ImageCollection('projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1').mosaic();
 var PRODES_BIG = ee.Image('users/celsojunior/prodes_brasil_2024_v20260407').unmask(0);
 var PRODES_SMALL_RAW = ee.Image('projects/ee-celsojunior/assets/yearly_deforestation_smaller_than_625ha_biome');
 var MANAGED = ee.Image('projects/ee-ipam/assets/Managed_Land_Brazil').unmask(0);
@@ -21,8 +21,8 @@ for (var pc=16; pc<=24; pc++) prodesYear = prodesYear.where(prodesCodes.eq(pc),2
 var forest2016 = PRET.eq(1).and(prodesCodes.gte(2).and(prodesCodes.lte(16)).not())
   .and(NON_VEGETATION.not());
 var carbon = {
-  agb: QCN.select('AGB'), bgb: QCN.select('BGB'),
-  dw: QCN.select('CDW'), litter: QCN.select('LITTER')
+  agb: QCN.select('cagb'), bgb: QCN.select('cbgb'),
+  dw: QCN.select('cdw'), litter: QCN.select('clitter')
 };
 var eba = {
   agb: ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/FREL/EBA_AB_30m'),
@@ -56,10 +56,23 @@ function exportStock(parts, prefix, year, mask, bounds) {
     scale:SCALE,maxPixels:MAX_PIX,pyramidingPolicy:{'.default':'mean'},overwrite:true});
 }
 
+function makeLoggingLayers() {
+  var layers = [];
+  for (var loggingYear = START_YEAR; loggingYear <= END_YEAR; loggingYear++) {
+    var disordered = ee.Image(DET_ROOT + 'DeterAnoProdes_' + loggingYear + '_cs_disordered')
+      .multiply(PRET);
+    layers.push(ee.Image(0).blend(disordered));
+  }
+  layers.push(ee.Image(0));
+  return layers;
+}
+
 function processBiome(name) {
   var fc=BIOMES.filter(ee.Filter.eq('Bioma',name));
   var mask=ee.Image().paint(fc).eq(0), bounds=fc.geometry().bounds(), prefix=PREFIX[name];
   var state={};
+  var loggingLayers = name === 'Amazônia' ? makeLoggingLayers() : [];
+  var loggingLayer = name === 'Amazônia' ? loggingLayers[0] : null;
   Object.keys(carbon).forEach(function(k){
     var source=carbon[k];
     if(name==='Amazônia') source=source.blend(eba[k].updateMask(eba[k].gte(0)));
@@ -81,11 +94,12 @@ function processBiome(name) {
       state.agb=state.agb.subtract(state.agb.multiply(fire).multiply(0.368));
       state.dw=state.dw.subtract(state.dw.multiply(fire).multiply(0.368));
       state.litter=state.litter.subtract(state.litter.multiply(fire).multiply(0.368));
-      var sl=ee.Image(DET_ROOT+'DeterAnoProdes_'+year+'_cs_disordered').unmask(0).multiply(forest);
-      var slFrac=sl.remap([0,1,2,3,4,5,6,7,8,9,10],[0,0.29,0.27,0.26,0.22,0.22,0.22,0.22,0.22,0.22,0.22]);
+      var slFrac=loggingLayer.remap([0,1,2,3,4,5,6,7,8,9,10],[0,0.29,0.27,0.26,0.22,0.22,0.22,0.22,0.22,0.22,0.22]);
       var slLoss=state.agb.multiply(slFrac);
       exportEmission(slLoss.multiply(C_TO_CO2),prefix,'emission_sl_co2',year,mask,bounds);
       state.agb=state.agb.subtract(slLoss);
+      var slNext=loggingLayers[year-START_YEAR+1];
+      loggingLayer=loggingLayer.add(slNext).multiply(slNext).multiply(PRET);
     }
     var defMask=prodesYear.eq(year).and(forest2016);
     var total=state.agb.add(state.bgb).add(state.dw).add(state.litter);

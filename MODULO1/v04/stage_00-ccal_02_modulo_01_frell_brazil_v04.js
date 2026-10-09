@@ -2,7 +2,7 @@
 // Mantém EBA, PRODES, DETER, fatores e compartimentalização da v03.
 var VERSION = 'v04';
 var START_YEAR = 2017, END_YEAR = 2024, SCALE = 30, MAX_PIX = 1e13;
-var BIOME_OUT = 'projects/ee-ipam/assets/CCAL/MODULO1/biomes_v6';
+var BIOME_OUT = 'projects/ee-ipam/assets/CCAL/MODULO1/' + VERSION;
 var QCN = ee.Image('projects/ee-ipam/assets/SEEG/SEEG14/RETIFICACAO/c_rect_col11');
 var PRODES_BIG = ee.Image('users/celsojunior/prodes_brasil_2024_v20260407').unmask(0);
 var PRODES_SMALL_RAW = ee.Image('projects/ee-celsojunior/assets/yearly_deforestation_smaller_than_625ha_biome');

@@ -1,12 +1,12 @@
 // =============================================================================
-// CCAL Módulo 4 — v04 (Stage 01: consolidated product & land cover)
+// CCAL Módulo 4 — v02 (Stage 01: consolidated product & land cover)
 // Brazil — all biomes | 1986–2024
 // =============================================================================
 
-var VERSION = 'v04';
-var STAGE_00_COLLECTION = 'projects/ee-ipam/assets/CCAL/MODULO4/v04/emissions_removals_v04';
-var FINAL_OUT = 'projects/ee-ipam/assets/CCAL/MODULO4/v04';
-var FINAL_ASSET_ID = FINAL_OUT + '/CCAL_MODULO4-' + VERSION;
+var VERSION = 'v02';
+var STAGE_00_COLLECTION = 'projects/ee-ipam/assets/CCAL/MODULO4/v02/emissions_removals_v02';
+var FINAL_OUT = 'projects/ee-ipam/assets/CCAL/MODULO4/v02';
+var FINAL_ASSET_ID = FINAL_OUT + '/CCAL_MODULO4-v02';
 var LANDCOVER_ASSET_ID = FINAL_OUT + '/land_cover_masks';
 var YEARS = [];
 for (var year = 1986; year <= 2024; year++) YEARS.push(year);

@@ -1,5 +1,5 @@
-/** Configuração de fontes e destinos do CCAL Módulo 4 v04. */
-exports.VERSION = 'v04';
+/** Configuração de fontes e destinos do CCAL Módulo 4 v02. */
+exports.VERSION = 'v02';
 exports.START_YEAR = 1986;
 exports.END_YEAR = 2024;
 
@@ -19,9 +19,9 @@ exports.INPUTS = {
 };
 
 exports.OUTPUTS = {
-  annual: 'projects/ee-ipam/assets/CCAL/MODULO4/v04/emissions_removals_v04',
-  final: 'projects/ee-ipam/assets/CCAL/MODULO4/v04/CCAL_MODULO4-v04',
-  landCover: 'projects/ee-ipam/assets/CCAL/MODULO4/v04/land_cover_masks'
+  annual: 'projects/ee-ipam/assets/CCAL/MODULO4/v02/emissions_removals_v02',
+  final: 'projects/ee-ipam/assets/CCAL/MODULO4/v02/CCAL_MODULO4-v02',
+  landCover: 'projects/ee-ipam/assets/CCAL/MODULO4/v02/land_cover_masks'
 };
 
 exports.CONVERGENCE = {

@@ -1,19 +1,19 @@
 ---
 tags:
   - modulo4
-  - v04
+  - v02
   - ccal
   - convergencia
 created: 2026-10-09
 ---
 
-# CCAL — Módulo 4 (Dano Climático) — v04
+# CCAL — Módulo 4 (Dano Climático) — v02
 
 Versão derivada do método M4 v01 para 1986–2024. Mantém as fórmulas e os canais de emissão individuais de borda, logging e fogo; atualiza fontes com versões mais recentes quando há substituto compatível. v01 permanece preservada.
 
 ## Fontes
 
-| Entrada | Asset v04 | Nota |
+| Entrada | Asset v02 | Nota |
 |---|---|---|
 | Limite Brasil | `projects/ee-ipam/assets/IBGE/limite_biomas_IBGE_2026` | Substitui o limite pessoal antigo |
 | QCN AGB | `projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1` (`cagb`) | Mantém a linhagem QCN original do M4 |
@@ -45,14 +45,14 @@ O Stage 01 aplica spill e máscara de estoque às bandas de componentes e de com
 
 ## Outputs
 
-- Stage 00 anual: `projects/ee-ipam/assets/CCAL/MODULO4/v04/emissions_removals_v04/{year}`
-- Produto consolidado: `projects/ee-ipam/assets/CCAL/MODULO4/v04/CCAL_MODULO4-v04`
-- Land cover: `projects/ee-ipam/assets/CCAL/MODULO4/v04/land_cover_masks`
+- Stage 00 anual: `projects/ee-ipam/assets/CCAL/MODULO4/v02/emissions_removals_v02/{year}`
+- Produto consolidado: `projects/ee-ipam/assets/CCAL/MODULO4/v02/CCAL_MODULO4-v02`
+- Land cover: `projects/ee-ipam/assets/CCAL/MODULO4/v02/land_cover_masks`
 
 Scripts:
 
-- `stage_00-ccal_04_emissions_removals_v04.js`
-- `stage_01-ccal_04_final_product_v04.js`
-- `assets_v04.js`
+- `stage_00-ccal_04_emissions_removals_v02.js`
+- `stage_01-ccal_04_final_product_v02.js`
+- `assets_v02.js`
 
 Os componentes de emissão seguem as equações, fatores e ordem de processamento da v01. As bandas novas registram apenas interseções e não substituem os componentes originais.

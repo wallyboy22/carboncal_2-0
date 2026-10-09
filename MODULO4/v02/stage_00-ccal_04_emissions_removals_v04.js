@@ -1,16 +1,16 @@
 // =============================================================================
-// CCAL Módulo 4 — v04 (Stage 00: time series emissions & removals)
+// CCAL Módulo 4 — v02 (Stage 00: time series emissions & removals)
 // Brazil — all biomes | 1986–2024
 // Método v01; atualiza fontes compatíveis e separa convergências exclusivas.
 // =============================================================================
 
-var VERSION = 'v04';
+var VERSION = 'v02';
 var START_YEAR = 1986;
 var END_YEAR = 2024;
-var EXPORT_COLLECTION = 'projects/ee-ipam/assets/CCAL/MODULO4/v04/emissions_removals_v04';
+var EXPORT_COLLECTION = 'projects/ee-ipam/assets/CCAL/MODULO4/v02/emissions_removals_v02';
 var DEFAULT_CRS = 'EPSG:4326';
 var DEFAULT_TRANSFORM = [0.00026949458523585647, 0, -180, 0, -0.00026949458523585647, 90];
-var FLAG = 'WS_CCAL_modulo4-v04-';
+var FLAG = 'WS_CCAL_modulo4-v02-';
 
 var brazil = ee.FeatureCollection('projects/ee-ipam/assets/IBGE/limite_biomas_IBGE_2026');
 var brazilForests = ee.Image(

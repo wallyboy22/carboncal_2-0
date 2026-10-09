@@ -64,9 +64,11 @@ EMISSION_YEARS.forEach(function (year) {
 
 var rawConvergence = ee.Image().select();
 EMISSION_YEARS.forEach(function (year) {
+  var fireYear = rawFire.select('loss_fire_' + year);
+  var loggingYear = rawLogging.select('loss_selective_logging_' + year);
+  var bothProcesses = fireYear.gt(0).and(loggingYear.gt(0));
   rawConvergence = rawConvergence.addBands(
-    rawFire.select('loss_fire_' + year)
-      .add(rawLogging.select('loss_selective_logging_' + year))
+    fireYear.add(loggingYear).updateMask(bothProcesses)
       .rename('loss_convergence_degradation_' + year));
 });
 
@@ -99,8 +101,8 @@ EMISSION_YEARS.forEach(function (year) {
   var previousStock = rawStock.select('stock_' + (year - 1));
   var currentStock = rawStock.select('stock_' + year);
   var defYear = previousStock.gt(0).and(currentStock.eq(0));
-  var degradationYear = finalDegradation.select(
-    'loss_convergence_degradation_' + year).gt(0);
+  var degradationYear = rawFire.select('loss_fire_' + year).gt(0)
+    .or(rawLogging.select('loss_selective_logging_' + year).gt(0));
   wasDeforested = wasDeforested.or(defYear);
   wasDegraded = wasDegraded.or(degradationYear);
   var anthropic = forestRef.eq(0).or(wasDeforested.and(defYear.not()));

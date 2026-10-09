@@ -19,6 +19,10 @@ Versão configurada para reexecutar a cadeia de origem e consolidar emissões 20
 - Limites IBGE 2026: `projects/ee-ipam/assets/IBGE/limite_biomas_IBGE_2026`.
 - EBA (`EBA_AB_30m`, `EBA_BB_30m`, `EBA_DW_30m`, `EBA_LI_30m`), vegetação pretérita, Managed Land, PRODES e DETER: mantidos da cadeia v01, com as versões de dados apontadas na configuração v03.
 
+## Convergência fogo + logging
+
+`loss_convergence_degradation_YYYY` soma fogo e logging somente onde ambos têm emissão positiva no mesmo pixel/ano. A máscara de land cover degradado continua sendo a união de fogo ou logging; convergência não substitui os canais individuais nem entra novamente no balanço líquido.
+
 ## Assets de saída v03
 
 - Intermediários anuais: `projects/ee-ipam/assets/CCAL/MODULO2/v03/model_assets/`

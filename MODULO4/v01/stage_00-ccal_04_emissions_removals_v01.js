@@ -128,6 +128,7 @@ for (var year = START_YEAR; year <= END_YEAR; year++) {
 
   // Fire
   var AGC_pre_fire  = AGC_edge;
+  // var AGC_pre_fire  = AGC_post_logging // aplicar para uma v02
   var AGC_post_fire = postFireAGC(AGC_pre_fire);
   var E_fire = AGC_pre_fire.subtract(AGC_post_fire)
                            .multiply(44.0 / 12.0)

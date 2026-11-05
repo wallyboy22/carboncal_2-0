@@ -5,7 +5,7 @@ de submeter. Por padrão é dry-run; use --submit para criar tarefas.
 """
 import argparse
 import ee
-from . import auth, modulo1, modulo3, modulo4
+from . import auth, modulo1, modulo2, modulo3, modulo4
 
 ROOT = 'projects/ee-ipam/assets/CCAL'
 TASK_PREFIX = 'WS_IPAM_CCAL-'
@@ -156,11 +156,33 @@ def m3_operations(submit):
     return out, results
 
 
+def m2_operations(submit, end_year=2024):
+    """Consolidado v04 calculado em memória; intermediários não são versionados."""
+    out = ROOT + '/MODULO2/v04'
+    ensure_folder(out, submit)
+    stage = modulo2.stage01(end_year=end_year,
+                            inputs=modulo2.stage00(end_year=end_year))
+    results = [('export', f'{out}/CCAL_MODULO2-v04', 'CCAL_M2_v04_final')]
+    if submit:
+        results[-1] = export_image(stage['final'], f'{out}/CCAL_MODULO2-v04',
+                                   'CCAL_M2_v04_final', 'median', submit)
+    for name, image in stage['densities'].items():
+        results.append(('export', f'{out}/{name}', 'CCAL_M2_v04_' + name))
+        if submit:
+            results[-1] = export_image(image, f'{out}/{name}', 'CCAL_M2_v04_' + name,
+                                       'mode' if name == 'land_cover_masks' else 'mean', submit)
+    results.append(('export', f'{out}/land_cover_masks', 'CCAL_M2_v04_land_cover_masks'))
+    if submit:
+        results[-1] = export_image(stage['land_cover_masks'], f'{out}/land_cover_masks',
+                                   'CCAL_M2_v04_land_cover_masks', 'mode', submit)
+    return out, results
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--project', required=True)
     parser.add_argument('--account-profile', default='workspace2')
-    parser.add_argument('--modules', nargs='+', choices=['m1', 'm3', 'm4'], required=True)
+    parser.add_argument('--modules', nargs='+', choices=['m1', 'm2', 'm3', 'm4'], required=True)
     parser.add_argument('--submit', action='store_true')
     args = parser.parse_args()
     ee.Initialize(credentials=auth.load(args.account_profile), project=args.project)
@@ -173,6 +195,10 @@ def main():
     if 'm3' in args.modules:
         print('\nM3 v039: cópia dos intermediários v038 + produto final corrigido')
         out, results = m3_operations(args.submit)
+        all_results += results
+    if 'm2' in args.modules:
+        print('\nM2 v04: consolidado calculado em memória (sem intermediários versionados)')
+        out, results = m2_operations(args.submit)
         all_results += results
     if 'm1' in args.modules:
         print('\nM1 v05: cálculo integral em Python + consolidação')

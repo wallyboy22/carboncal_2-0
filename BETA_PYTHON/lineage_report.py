@@ -49,7 +49,7 @@ def main():
     parser.add_argument('--account-profile', default='workspace2')
     parser.add_argument('--candidates', nargs='*', default=None)
     parser.add_argument('--points', type=int, default=60)
-    parser.add_argument('--scale', type=float, default=1000)
+    parser.add_argument('--scale', type=float, default=30)
     args = parser.parse_args()
     ee.Initialize(credentials=auth.load(args.account_profile), project=args.project)
 

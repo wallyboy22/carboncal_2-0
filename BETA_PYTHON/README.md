@@ -122,11 +122,13 @@ Operações realizadas em 2026-11-05, com 19 tarefas submetidas no total:
 | M4 v03 | cópia dos 39 anuais + 11 exports | consolidado, land cover, densidades |
 | M3 v039 | cópia de 24 intermediários + 1 export | produto final corrigido |
 | M1 v05 | 7 exports integrais em Python | final, densidades, estoque, land cover |
+| M2 v04 | 7 exports calculados em memória | consolidado, densidades, estoque, land cover |
 
-O M4 v03 ficou inicialmente com `emissions_removals_v03` como `FOLDER`; a
-migração para `IMAGE_COLLECTION` está preparada em `migrate_collection.py` e só
+O M2 v04 foi exportado depois de gerar o `cs_geometric` 2024; os intermediários
+de `model_assets` **não** foram versionados nesta rodada (podem ser gerados sob
+demanda). O M4 v03 ficou inicialmente com `emissions_removals_v03` como `FOLDER`;
+a migração para `IMAGE_COLLECTION` está preparada em `migrate_collection.py` e só
 deve rodar após as tarefas do M4 concluírem, pois elas leem esses anuais.
-M2 ainda não foi exportado: dependia do `cs_geometric` 2024.
 
 ## Corte seletivo a partir do DETER
 
@@ -175,6 +177,18 @@ Sem `--submit` é dry-run. A comparação é uma **evidência de continuidade**,
 prova de correção científica: uma versão nova pode diferir legitimamente da
 anterior. Por isso o limite é escolhido por caso e a decisão de promover
 continua sendo revisão humana.
+
+`record_lineage.py` grava a linhagem confirmada como propriedades `ccal:*` no
+asset público e acrescenta uma linha em
+`MATERIAL_COMPLEMENTAR/ASSET_VAULT/lineage_map.csv`, para que a relação
+versão de trabalho ↔ versão pública não dependa da memória da conversa:
+
+```powershell
+..\venv\Scripts\python.exe -m BETA_PYTHON.record_lineage --project mapbiomas-brazil --account-profile workspace2 `
+  --public-asset projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_3_qcn_mapbiomas_v4 `
+  --source-asset projects/ee-ipam/assets/CCAL/MODULO3/v038/CCAL_MODULO3-v038 `
+  --source-version "M3 v038" --equal-fraction 1.0 --points 509050 --scale 30 --submit
+```
 
 ## Antes de qualquer produto completo
 

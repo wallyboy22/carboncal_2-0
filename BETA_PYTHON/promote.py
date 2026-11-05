@@ -28,7 +28,7 @@ def main():
     parser.add_argument('--min-equal', type=float, default=0.99,
                         help='fração mínima de valores iguais para prosseguir quando --compare-with é usado')
     parser.add_argument('--points', type=int, default=80)
-    parser.add_argument('--scale', type=float, default=1000)
+    parser.add_argument('--scale', type=float, default=30)
     parser.add_argument('--submit', action='store_true')
     args = parser.parse_args()
     ee.Initialize(credentials=auth.load(args.account_profile), project=args.project)

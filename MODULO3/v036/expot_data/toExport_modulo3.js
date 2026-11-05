@@ -32,7 +32,7 @@ var geometry =
 // 1. PARÂMETROS E ATIVOS
 var VERSION = 'v036';
 var BASE_ASSET = 'projects/ee-ipam/assets/CCAL/MODULO3/' + VERSION + '/';
-var FINAL_ASSET = 'projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO3-' + VERSION;
+var FINAL_ASSET = 'projects/ee-ipam/assets/CCAL/MODULO3/' + VERSION + '/CCAL_MODULO3-' + VERSION;
 var SCALE = 30;
 var MAX_PIX = 1e13;
 

@@ -176,7 +176,7 @@ var SEEG = {
 // CCAL — MÓDULOS
 // -----------------------------------------------------------------------------
 
-var CCAL_MODELOS = 'projects/ee-ipam/assets/CCAL/MODELOS/';
+var CCAL_ROOT = 'projects/ee-ipam/assets/CCAL/';
 
 var CCAL = {
   M1: {
@@ -203,7 +203,7 @@ var CCAL = {
     label: 'Módulo 2 (v02) — síntese',
     years: yearsRange(2017, 2023),
     load: function () {
-      var src = ee.Image(CCAL_MODELOS + 'CCAL_MODULO2-v02');
+      var src = ee.Image(CCAL_ROOT + 'MODULO2/v02/CCAL_MODULO2-v02');
       return ee.Image().select()
         .addBands(renamePrefix(src, 'loss_fire_', 'lf'))
         .addBands(renamePrefix(src, 'loss_selective_logging_', 'sl'))
@@ -223,7 +223,7 @@ var CCAL = {
     label: 'Módulo 3 (v037) — balanço de massa',
     years: yearsRange(1985, 2024),
     load: function () {
-      var src = ee.Image(CCAL_MODELOS + 'CCAL_MODULO3-v037');
+      var src = ee.Image(CCAL_ROOT + 'MODULO3/v037/CCAL_MODULO3-v037');
       return ee.Image().select()
         .addBands(renamePrefix(src, 'loss_fire_', 'lf'))
         .addBands(renamePrefix(src, 'loss_grassland_', 'lg'))
@@ -247,7 +247,7 @@ var CCAL = {
     label: 'Módulo 4 (v01) — balanço de massa + borda + secundária',
     years: yearsRange(1986, 2024),
     load: function () {
-      var src = ee.Image(CCAL_MODELOS + 'CCAL_MODULO4-v01');
+      var src = ee.Image(CCAL_ROOT + 'MODULO4/v01/CCAL_MODULO4-v01');
       return ee.Image().select()
         .addBands(renamePrefix(src, 'loss_edge_', 'edge'))
         .addBands(renamePrefix(src, 'loss_fire_', 'lf'))

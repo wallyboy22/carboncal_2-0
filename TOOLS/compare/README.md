@@ -41,7 +41,7 @@ O botão **Inverter Matriz** transpõe linhas/colunas.
 
 > ⚠️ v06 depende dos exports do pipeline v06 estarem prontos nos assets.
 
-### CCAL (`projects/ee-ipam/assets/CCAL/MODELOS/` e `.../public/ccal_02/`)
+### CCAL (`projects/ee-ipam/assets/CCAL/MODULO*/` e `.../public/ccal_02/`)
 
 | Módulo | Asset final | Variáveis | Período | Unidades nativas |
 |---|---|---|---|---|

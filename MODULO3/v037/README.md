@@ -134,7 +134,7 @@ O estoque emitido pela degradação é descontado **antes** de qualquer evento d
 
 ## Saídas — Produto Final
 
-**Asset:** `projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO3-v037`  
+**Asset:** `projects/ee-ipam/assets/CCAL/MODULO3/v037/CCAL_MODULO3-v037`
 **Resolução:** 30m, float32, pyramidingPolicy: median
 
 | Banda | Unidade | Descrição |

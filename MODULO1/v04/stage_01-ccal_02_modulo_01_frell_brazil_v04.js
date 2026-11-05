@@ -1,8 +1,8 @@
 // CCAL Módulo 1 v04 — mosaico, spill, land cover e produto consolidado.
 var VERSION='v04';
-var SRC='projects/ee-ipam/assets/CCAL/MODULO1/biomes_v6';
+var SRC='projects/ee-ipam/assets/CCAL/MODULO1/v04';
 var OUT='projects/ee-ipam/assets/CCAL/MODULO1/v04';
-var FINAL='projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_1_frell_v4';
+var FINAL=OUT+'/ccal_02_brazil_modulo_1_frell_v4';
 var PREFIXES=['amz','cerr','pan','pam','caa','ma'];
 var YEARS=[], STOCK_YEARS=[];
 for(var y=2017;y<=2024;y++)YEARS.push(y);

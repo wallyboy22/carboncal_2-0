@@ -22,6 +22,6 @@ exports.INPUTS = {
 exports.OUTPUTS = {
   raw: 'projects/ee-ipam/assets/CCAL/MODULO2/v03/model_assets',
   diagnostics: 'projects/ee-ipam/assets/CCAL/MODULO2/v03',
-  final: 'projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO2-v03',
+  final: 'projects/ee-ipam/assets/CCAL/MODULO2/v03/CCAL_MODULO2-v03',
   landCover: 'projects/ee-ipam/assets/CCAL/MODULO2/v03/land_cover_masks'
 };

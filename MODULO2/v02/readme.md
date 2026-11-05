@@ -62,7 +62,7 @@ Mesma lógica do M1 stage01 / M3 stage3 / M4 stage01:
 
 ### Produto consolidado
 
-**Asset:** `projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO2-v02`  
+**Asset:** `projects/ee-ipam/assets/CCAL/MODULO2/v02/CCAL_MODULO2-v02` (cópia do produto legado; série até 2023)
 **Resolução:** 30 m, float32, `pyramiding: median`
 
 Bandas: `loss_fire_YYYY`, `loss_selective_logging_YYYY`, `loss_convergence_degradation_YYYY`, `loss_deforestation_YYYY` (2017–2023, tCO₂e/pixel) e `stock_YYYY` (2016–2023, tC/ha).

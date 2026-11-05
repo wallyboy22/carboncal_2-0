@@ -16,7 +16,7 @@ exports.INPUTS = {
 };
 
 exports.OUTPUTS = {
-  biomes: 'projects/ee-ipam/assets/CCAL/MODULO1/biomes_v6',
+  biomes: 'projects/ee-ipam/assets/CCAL/MODULO1/v04',
   version: 'projects/ee-ipam/assets/CCAL/MODULO1/v04',
-  final: 'projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_1_frell_v4'
+  final: 'projects/ee-ipam/assets/CCAL/MODULO1/v04/ccal_02_brazil_modulo_1_frell_v4'
 };

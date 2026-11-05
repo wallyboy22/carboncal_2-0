@@ -135,7 +135,7 @@ degTypes.forEach(function (type) {
 });
 exportAsset(rawStock.float(), 'stock_tC_ha', FINAL_OUT + '/stock_tC_ha');
 exportAsset(landCover, 'land_cover_masks', LANDCOVER_ASSET_ID, 'mode');
-exportAsset(finalImage, 'ccal_brazil_modulo_4_v04', FINAL_ASSET_ID, 'median');
+exportAsset(finalImage, 'ccal_brazil_modulo_4_v02', FINAL_ASSET_ID, 'median');
 
-print('CCAL Módulo 4 v04 Stage 01 configured:', FINAL_ASSET_ID);
+print('CCAL Módulo 4 v02 Stage 01 configured:', FINAL_ASSET_ID);
 print('Convergence bands:', degTypes.slice(3));

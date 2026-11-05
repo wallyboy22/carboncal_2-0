@@ -109,7 +109,7 @@ Map.addLayer(biomass_stock, { bands: [TARGET_YEAR], min: 0, max: 250, palette: p
 
 print('📊 Carregando produto final...');
 
-var final_product = ee.Image('projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO3-' + VERSION);
+var final_product = ee.Image('projects/ee-ipam/assets/CCAL/MODULO3/' + VERSION + '/CCAL_MODULO3-' + VERSION);
 
 Map.addLayer(final_product, { bands: ['loss_fire_' + TARGET_YEAR], min: 0, max: 10000, palette: paletaEmissions }, 'loss_fire ' + TARGET_YEAR, false);
 Map.addLayer(final_product, { bands: ['loss_deforestation_' + TARGET_YEAR], min: 0, max: 50000, palette: paletaEmissions }, 'loss_deforestation ' + TARGET_YEAR, false);

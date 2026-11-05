@@ -18,15 +18,19 @@ Nova pasta de versão, derivada da v03, configurada para a janela 2017–2024 e 
 
 ## Assets de saída v04
 
-- Emissões por bioma: `projects/ee-ipam/assets/CCAL/MODULO1/biomes_v6/`
+- Emissões por bioma: `projects/ee-ipam/assets/CCAL/MODULO1/v04/`
 - Produto nacional: `projects/ee-ipam/assets/CCAL/MODULO1/v04/`
-- Produto final: `projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_1_frell_v4`
+- Produto final: `projects/ee-ipam/assets/CCAL/MODULO1/v04/ccal_02_brazil_modulo_1_frell_v4` (cópia do produto público existente).
+
+O nome do asset público também aparece como destino em um script histórico de
+`MODULO1/v02`; a cópia preserva esse produto, mas não comprova que ele foi
+calculado com o código v04 atual. Confirme a procedência antes de utilizá-lo.
 
 ## Scripts e execução
 
-- `stage_00-ccal_02_modulo_01_frell_brazil_v04.js`: cálculo anual e exports por bioma para `biomes_v6/`.
+- `stage_00-ccal_02_modulo_01_frell_brazil_v04.js`: cálculo anual e exports por bioma para `MODULO1/v04/`.
 - `stage_01-ccal_02_modulo_01_frell_brazil_v04.js`: mosaico, spill, land cover, densidades e produto final.
 
 Executar Stage 00 primeiro e aguardar seus exports; depois executar Stage 01. A QCN mantém as bandas minúsculas usadas pela v03. O Stage 00 mantém fatores, parametrizações FREL e a combinação QCN + EBA da v03; troca somente as fontes de dados definidas para esta versão, incluindo o limite IBGE 2026.
 
-Se ainda não existirem no Earth Engine, criar as pastas `CCAL/MODULO1/biomes_v6` e `CCAL/MODULO1/v04` antes dos exports.
+A pasta `CCAL/MODULO1/v04` já existe. Verifique os assets existentes antes de submeter novos exports.

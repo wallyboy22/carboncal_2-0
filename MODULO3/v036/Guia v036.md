@@ -193,7 +193,7 @@ Para cada ano:
 
 ### Produto Final
 
-**Asset:** `projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO3-v036`
+**Asset:** `projects/ee-ipam/assets/CCAL/MODULO3/v036/CCAL_MODULO3-v036`
 
 | Banda | Unidade | Anos |
 |-------|---------|------|

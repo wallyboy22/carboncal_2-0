@@ -5,7 +5,7 @@
 var VERSION = 'v03';
 var SRC = 'projects/ee-ipam/assets/CCAL/MODULO2/' + VERSION + '/model_assets';
 var OUT = 'projects/ee-ipam/assets/CCAL/MODULO2/' + VERSION;
-var FINAL_ASSET = 'projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO2-' + VERSION;
+var FINAL_ASSET = OUT + '/CCAL_MODULO2-' + VERSION;
 var EMISSION_YEARS = [];
 var STOCK_YEARS = [];
 for (var y = 2017; y <= 2024; y++) EMISSION_YEARS.push(y);

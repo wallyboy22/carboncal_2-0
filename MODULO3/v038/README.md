@@ -39,7 +39,7 @@ O início de 1985–1986 no raster de desmatamento/regeneração é preenchido r
 ## Assets de saída
 
 - Intermediários: `projects/ee-ipam/assets/CCAL/MODULO3/v038/`
-- Produto final: `projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO3-v038`
+- Produto final: `projects/ee-ipam/assets/CCAL/MODULO3/v038/CCAL_MODULO3-v038`
 
 Os scripts de pipeline e equações específicos desta versão ficam nas pastas `scripts/` e `equations/`. As equações inalteradas de regeneração, fogo florestal, fogo em campos e máscara de degradação são importadas de `v037`; as entradas e equações atualizadas ficam nesta pasta.
 

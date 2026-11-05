@@ -11,14 +11,14 @@
 // degradação e o desmatamento), como M1 stage01 / M3 stage3 / M4 stage01.
 //
 // Exports:
-//   1. CCAL_MODELOS/CCAL_MODULO2-v02        (consolidado, float32, median)
+//   1. MODULO2/v02/CCAL_MODULO2-v02        (consolidado, float32, median)
 //   2. CCAL/MODULO2/v02/land_cover_masks    (classe 0–4, separado, mode)
 //   3. CCAL/MODULO2/v02/{loss_*_t_ha, stock_tC_ha} (densidades)
 // =============================================================================
 
 var VERSION = 'v02';
 var SRC = 'projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1';
-var FINAL_ASSET_ID = 'projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO2-' + VERSION;
+var FINAL_ASSET_ID = 'projects/ee-ipam/assets/CCAL/MODULO2/' + VERSION + '/CCAL_MODULO2-' + VERSION;
 var V02_ROOT = 'projects/ee-ipam/assets/CCAL/MODULO2/' + VERSION;
 var LANDCOVER_ASSET_ID = V02_ROOT + '/land_cover_masks';
 

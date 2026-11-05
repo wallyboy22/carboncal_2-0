@@ -110,7 +110,7 @@ Bandas por ano (float32, `pyramiding: mean`):
 
 ### Stage 01 — Produto consolidado
 
-**Asset:** `projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO4-v01`
+**Asset:** `projects/ee-ipam/assets/CCAL/MODULO4/v01/CCAL_MODULO4-v01`
 **Resolução:** 30 m, float32, `pyramiding: median`
 
 Bandas: `loss_edge/selective_logging/fire/convergence_degradation_YYYY` (com correção de spill + stock mask), `loss_deforestation_YYYY`, `loss_deforestation_secondary_YYYY`, `gain_secondary_vegetation_YYYY`, `net_balance_YYYY`, `stock_YYYY`.

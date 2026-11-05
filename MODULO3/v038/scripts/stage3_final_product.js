@@ -1,7 +1,7 @@
 /** Stage 3 — monta e exporta o produto final CCAL_MODULO3-v038. */
 var VERSION = 'v038';
 var BASE_ASSET = 'projects/ee-ipam/assets/CCAL/MODULO3/' + VERSION + '/';
-var FINAL_ASSET = 'projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO3-' + VERSION;
+var FINAL_ASSET = BASE_ASSET + 'CCAL_MODULO3-' + VERSION;
 var YEARS_ALL = [];
 for (var y = 1985; y <= 2024; y++) YEARS_ALL.push(String(y));
 var YEARS_FIRE = YEARS_ALL.slice(1);

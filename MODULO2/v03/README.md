@@ -26,7 +26,7 @@ Versão configurada para reexecutar a cadeia de origem e consolidar emissões 20
 ## Assets de saída v03
 
 - Intermediários anuais: `projects/ee-ipam/assets/CCAL/MODULO2/v03/model_assets/`
-- Produto consolidado: `projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO2-v03`
+- Produto consolidado: `projects/ee-ipam/assets/CCAL/MODULO2/v03/CCAL_MODULO2-v03` (destino configurado; existência não confirmada)
 - Land cover: `projects/ee-ipam/assets/CCAL/MODULO2/v03/land_cover_masks`
 
 ## Dependência

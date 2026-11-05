@@ -138,7 +138,7 @@ A classe 7 (Outra Transição) no dado `desf_reg` é corrigida:
 
 ## Saídas — Produto Final (`CCAL_MODULO3-v036`)
 
-Asset: `projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO3-v036`  
+Asset: `projects/ee-ipam/assets/CCAL/MODULO3/v036/CCAL_MODULO3-v036`
 Resolução: 30m, float32, pyramidingPolicy: median
 
 | Banda | Unidade | Descrição |
@@ -194,7 +194,7 @@ graph TD
     G --> H(Monta produto final)
     
     H --> I[Export: CCAL/MODULO3/v036/ intermediários]
-    H --> J[Export: CCAL/MODELOS/CCAL_MODULO3-v036 produto final]
+    H --> J[Export: CCAL/MODULO3/v036/CCAL_MODULO3-v036 produto final]
 ```
 
 

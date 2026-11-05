@@ -3,7 +3,7 @@
 // Brazil — all biomes | 1986–2024
 // Applies degradation spill correction (active interval between first deg & defor)
 // Exports:
-//   1. CCAL_MODELOS/CCAL_MODULO4-v01 (Consolidated multi-band image)
+//   1. MODULO4/v01/CCAL_MODULO4-v01 (Consolidated multi-band image)
 //   2. CCAL/MODULO4/v01/land_cover_masks (Land cover 0-4 per year)
 // =============================================================================
 

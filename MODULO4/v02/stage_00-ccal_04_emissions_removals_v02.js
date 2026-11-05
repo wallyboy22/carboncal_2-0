@@ -259,4 +259,4 @@ function CR_A(age) {
   return QCN.multiply(inner.max(0).pow(CR_EXP));
 }
 
-print('CCAL Módulo 4 v04 Stage 00 configured. Submit exports (1986–2024).');
+print('CCAL Módulo 4 v02 Stage 00 configured. Submit exports (1986–2024).');

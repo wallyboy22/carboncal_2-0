@@ -50,6 +50,14 @@ def main():
     cover_names = stage["densities"]["land_cover_masks"].bandNames().getInfo()
     assert cover_names == [f"land_cover_{y}" for y in range(2016, 2025)], cover_names
     print("M1 Stage 01: 41 expected final band names; pixels not yet validated")
+    m1 = modulo1.build_stage00(2017)
+    m2 = modulo2.stage00(2017)
+    m3 = modulo3.stage01(1988)
+    m4 = modulo4.stage00(1986)
+    assert len(m1) == 26 and len(m2) == 20 and len(m3) == 19
+    assert len(m4[1986].bandNames().getInfo()) == 39
+    assert len(modulo4.stage01(years=range(1986, 2025))['final'].bandNames().getInfo()) == 507
+    print('Stage construction: M1=26, M2=20, M3=19 images; M4=39 annual/507 final bands')
     if errors:
         raise SystemExit(1)
 

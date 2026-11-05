@@ -7,34 +7,116 @@ SOURCE = "projects/ee-ipam/assets/CCAL/MODULO1/v04"
 BIOMES = "projects/ee-ipam/assets/IBGE/limite_biomas_IBGE_2026"
 
 
-def load(kind, year, prefix, source=SOURCE):
-    im = ee.Image(f"{source}/{prefix}_{kind}_{year}")
+def build_stage00(end_year=2024):
+    """Reproduz M1 v04 Stage 00 em imagens por bioma/ano; não exporta."""
+    if not 2017 <= end_year <= 2024:
+        raise ValueError('end_year deve estar entre 2017 e 2024')
+    qcn = ee.ImageCollection('projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1').mosaic()
+    large = ee.Image('users/celsojunior/prodes_brasil_2024_v20260407').unmask(0)
+    small_raw = ee.Image('projects/ee-celsojunior/assets/yearly_deforestation_smaller_than_625ha_biome')
+    small = small_raw.multiply(0)
+    for original, target in zip([1,2,3,4,5,6,7,8,9], [16,23,24,20,19,18,22,17,21]):
+        small = small.where(small_raw.eq(original), target)
+    codes = large.blend(small)
+    mapped = codes.multiply(0)
+    for code in range(16, 25):
+        mapped = mapped.where(codes.eq(code), 2000 + code)
+    managed = ee.Image('projects/ee-ipam/assets/Managed_Land_Brazil').unmask(0)
+    pret = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/UKPact_MRV/brazil_pret_vegetation_qcn_v2').unmask(0).remap([1,2],[1,1],0)
+    raw = ee.Image('projects/ee-ipam/assets/REDD/prodes_brasil_2023').unmask(0)
+    forest = pret.eq(1).And(codes.gte(2).And(codes.lte(16)).Not()).And(raw.eq(91).Or(raw.eq(101)).Not())
+    biomes = ee.FeatureCollection(BIOMES)
+    area = ee.Image.pixelArea().multiply(0.0001)
+    eba_root = 'projects/ee-ipam/assets/CCAL/DATASETS/FREL/EBA_'
+    deter = 'projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL/DeterAnoProdes_'
+    configs = [('Amazônia','amz',1.009),('Cerrado','cerr',0.995),('Pantanal','pan',1.002),
+               ('Pampa','pam',0.966),('Caatinga','caa',1.019),('Mata Atlântica','ma',1.000)]
+    output = {}
+    for name, prefix, factor in configs:
+        fc = biomes.filter(ee.Filter.eq('Bioma', name))
+        mask = ee.Image().paint(fc).eq(0)
+        state = {}
+        for component, src, aux in [('agb','cagb','AB'),('bgb','cbgb','BB'),('dw','cdw','DW'),('litter','clitter','LI')]:
+            source = qcn.select(src)
+            if name == 'Amazônia':
+                supplement = ee.Image(eba_root + aux + '_30m')
+                source = source.blend(supplement.updateMask(supplement.gte(0)))
+            state[component] = source.multiply(forest)
+        layers = []
+        if name == 'Amazônia':
+            for y in range(2017, 2025):
+                dis = ee.Image(deter + str(y) + '_cs_disordered').multiply(pret)
+                layers.append(ee.Image(0).blend(dis))
+            layers.append(ee.Image(0))
+            logging = layers[0]
+        def stock(year):
+            return stack([state[c].rename(c) for c in ('agb','bgb','dw','litter')] +
+                         [sum_images([state[c] for c in ('agb','bgb','dw','litter')]).rename('total')]).updateMask(mask).float()
+        output[f'{prefix}_stock_carbon_2016'] = stock(2016)
+        for year in range(2017, end_year + 1):
+            def save(kind, im):
+                output[f'{prefix}_{kind}_{year}'] = im.multiply(area).multiply(factor).rename('emission_tCO2e_pixel').updateMask(mask).float()
+            if name == 'Amazônia':
+                fire = ee.Image(deter + str(year) + '_fire').unmask(0).multiply(managed).multiply(ee.Image(1))
+                above = state['agb'].add(state['dw']).add(state['litter'])
+                save('emission_fire_co2', above.multiply(fire).multiply(0.368).multiply(44/12))
+                save('emission_fire_ch4', above.multiply(fire).multiply(1/0.47).multiply(0.368).multiply(6.8).multiply(0.001).multiply(28))
+                save('emission_fire_n2o', above.multiply(fire).multiply(1/0.47).multiply(0.368).multiply(0.2).multiply(0.001).multiply(265))
+                for component in ('agb','dw','litter'):
+                    state[component] = state[component].subtract(state[component].multiply(fire).multiply(0.368))
+                fraction = logging.remap(list(range(11)), [0,0.29,0.27,0.26,0.22,0.22,0.22,0.22,0.22,0.22,0.22])
+                loss = state['agb'].multiply(fraction)
+                save('emission_sl_co2', loss.multiply(44/12))
+                state['agb'] = state['agb'].subtract(loss)
+                nxt = layers[year - 2017 + 1]
+                logging = logging.add(nxt).multiply(nxt).multiply(pret)
+            cut = mapped.eq(year).And(forest)
+            total = sum_images([state[c] for c in ('agb','bgb','dw','litter')])
+            co2 = total.multiply(cut).multiply(44/12)
+            base = state['agb'].add(state['dw']).add(state['litter']).multiply(cut).multiply(1/0.47).multiply(0.379 if name == 'Cerrado' else 0.368)
+            ch4 = base.multiply(6.8).multiply(0.001).multiply(28)
+            n2o = base.multiply(0.2).multiply(0.001).multiply(265)
+            post = {'amz':0.042, 'cerr':0.088}.get(prefix, 0)
+            save('emission_def_co2', co2.multiply(1+post).add(ch4.add(n2o).multiply(post)))
+            if name in ('Amazônia', 'Cerrado'):
+                save('emission_def_ch4', ch4)
+                save('emission_def_n2o', n2o)
+            state = {key: value.multiply(cut.Not()) for key, value in state.items()}
+            output[f'{prefix}_stock_carbon_{year}'] = stock(year)
+    return output
+
+
+def load(kind, year, prefix, source=SOURCE, inputs=None):
+    key = f'{prefix}_{kind}_{year}'
+    im = ee.Image(inputs[key]) if inputs is not None else ee.Image(f"{source}/{key}")
     return im.select("total") if kind == "stock_carbon" else im.select([0])
 
 
-def mosaic(kind, year, prefixes, bounds, source=SOURCE, same_footprint=False):
+def mosaic(kind, year, prefixes, bounds, source=SOURCE, same_footprint=False, inputs=None):
     """Paridade com Stage 01 local corrigido; True reproduz footprint anterior."""
     result = ee.Image(0)
     for prefix in prefixes:
-        result = result.add(load(kind, year, prefix, source).unmask(0, same_footprint))
+        result = result.add(load(kind, year, prefix, source, inputs).unmask(0, same_footprint))
     return result.clip(bounds)
 
 
-def build_stage01(source=SOURCE, start=2017, end=2024):
+def build_stage01(source=SOURCE, start=2017, end=2024, inputs=None):
     """Equivalente estrutural do Stage 01; destinos e exports não são gerados."""
     bounds = ee.FeatureCollection(BIOMES).geometry().bounds()
     years = list(range(start, end + 1))
-    stocks = [mosaic("stock_carbon", start - 1, PREFIXES, bounds, source).rename(f"stock_{start - 1}")]
+    def mos(kind, year, prefixes):
+        return mosaic(kind, year, prefixes, bounds, source, inputs=inputs)
+    stocks = [mos("stock_carbon", start - 1, PREFIXES).rename(f"stock_{start - 1}")]
     fires, logs, defs, convs = [], [], [], []
     for y in years:
-        fire = sum_images([mosaic("emission_fire_" + gas, y, ["amz"], bounds, source)
+        fire = sum_images([mos("emission_fire_" + gas, y, ["amz"])
                            for gas in ("co2", "ch4", "n2o")]).rename(f"loss_fire_{y}")
-        log = mosaic("emission_sl_co2", y, ["amz"], bounds, source).rename(f"loss_selective_logging_{y}")
-        de = sum_images([mosaic("emission_def_co2", y, PREFIXES, bounds, source),
-                         mosaic("emission_def_ch4", y, ["amz", "cerr"], bounds, source),
-                         mosaic("emission_def_n2o", y, ["amz", "cerr"], bounds, source)])
+        log = mos("emission_sl_co2", y, ["amz"]).rename(f"loss_selective_logging_{y}")
+        de = sum_images([mos("emission_def_co2", y, PREFIXES),
+                         mos("emission_def_ch4", y, ["amz", "cerr"]),
+                         mos("emission_def_n2o", y, ["amz", "cerr"])])
         fires.append(fire); logs.append(log); defs.append(de.rename(f"loss_deforestation_{y}"))
-        stocks.append(mosaic("stock_carbon", y, PREFIXES, bounds, source).rename(f"stock_{y}"))
+        stocks.append(mos("stock_carbon", y, PREFIXES).rename(f"stock_{y}"))
         convs.append(convergence_pair(fire, log).rename(f"loss_convergence_degradation_{y}"))
     masked = []
     for group in (fires, logs, convs):

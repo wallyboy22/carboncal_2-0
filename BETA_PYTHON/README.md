@@ -148,6 +148,34 @@ As grades diferem por período: 2017–2023 em ~30 m e 2024 em ~10 m, sempre
 EPSG:4674. A exportação usa a extensão dos alertas como região para não alocar
 a caixa amazônica inteira. Detalhes em `../DATASETS/PRODES_DETER_INVESTIGACAO.md`.
 
+## Linhagem pública e promoção
+
+`lineage.py` compara dois assets por bandas e pixels (amostra pontos com
+máscara válida comum, compara valor por banda). `lineage_report.py` percorre
+`public/ccal_02`, pré-filtra candidatos pelo número de bandas e indica a versão
+de trabalho mais provável:
+
+```powershell
+..\venv\Scripts\python.exe -m BETA_PYTHON.lineage_report --project mapbiomas-brazil --account-profile workspace2
+```
+
+`promote.py` é a etapa final: copia um asset aprovado para `public/ccal_02`,
+recusando destino existente e, opcionalmente, exigindo igualdade mínima com a
+versão pública anterior antes da cópia.
+
+```powershell
+..\venv\Scripts\python.exe -m BETA_PYTHON.promote --project mapbiomas-brazil --account-profile workspace2 `
+  --source projects/ee-ipam/assets/CCAL/MODULO4/v03/CCAL_MODULO4-v03 `
+  --destination projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_4_qcn_mapbiomas_borda_v2 `
+  --compare-with projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_4_qcn_mapbiomas_borda_v1 `
+  --min-equal 0.90
+```
+
+Sem `--submit` é dry-run. A comparação é uma **evidência de continuidade**, não
+prova de correção científica: uma versão nova pode diferir legitimamente da
+anterior. Por isso o limite é escolhido por caso e a decisão de promover
+continua sendo revisão humana.
+
 ## Antes de qualquer produto completo
 
 Comparar todos os stages, valores e máscaras com o JS e dados reais por

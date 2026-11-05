@@ -43,6 +43,9 @@ Cada conjunto também possui `mask_convergence_<combinação>_YYYY` no Stage 00.
 
 O Stage 01 aplica spill e máscara de estoque às bandas de componentes e de combinações. A classe de land cover “degradada” continua baseada na ocorrência de **qualquer** uma das três degradações, não na convergência, para preservar os pixels com evento isolado.
 
+O ano de desmatamento primário é excluído da máscara de degradação ativa no
+Stage 01. Essa alteração no código local não modifica os assets já exportados.
+
 ## Outputs
 
 - Stage 00 anual: `projects/ee-ipam/assets/CCAL/MODULO4/v02/emissions_removals_v02/{year}`

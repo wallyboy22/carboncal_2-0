@@ -166,7 +166,9 @@ function runBiome(mask, prefix, isForest) {
         .multiply(0.2).multiply(0.001)
         .add(agb26.multiply(fire).multiply(0.873).multiply(1 / 0.47).multiply(0.2).multiply(0.001))
         .add(dw.multiply(fire).multiply(0.459).multiply(1 / 0.47).multiply(0.2).multiply(0.001));
-      var lateCO2 = agb.multiply(fire).multiply(fireFactor).multiply(44 / 12);
+      // fireFactor describes the change in AGB: positive increases stock.
+      // Emissions have the opposite sign: removals negative, losses positive.
+      var lateCO2 = agb.multiply(fire).multiply(fireFactor).multiply(-44 / 12);
       exportRaw(combustionCO2.multiply(pixelAreaHa),
         prefix + '_fire_co2_loss_comb', year);
       exportRaw(combustionCH4.multiply(pixelAreaHa).multiply(28),

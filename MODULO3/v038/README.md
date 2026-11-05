@@ -51,3 +51,8 @@ Os scripts de pipeline e equações específicos desta versão ficam nas pastas 
 4. `scripts/stage3_final_product.js`
 
 Os exports apontam somente para os assets v038. A execução dos exports deve ser submetida no Earth Engine Code Editor depois de confirmar as tarefas e permissões do projeto.
+
+O Stage 3 local foi ajustado para alinhar a máscara de estoque a 1986–2024 e
+mascarar a degradação no ano de desmatamento (transições 4 e 6). Os assets
+existentes não foram recalculados. A convenção de sinal entre a resposta de
+savana ao fogo e o balanço de massa ainda requer investigação independente.

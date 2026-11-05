@@ -48,7 +48,13 @@ function applySpill(image) {
   }, image.select(0).selfMask()));
 }
 
-var stockMask = result.biomass_stock.select('stock_.*').slice(1).gt(0);
+// biomass_stock already contains YEARS_FIRE (1986–2024); do not drop 1986.
+// A deforestation year is never part of the active degradation interval.
+var fireYearTransitions = desfReg.select(YEARS_FIRE.map(function (year) {
+  return 'classification_' + year;
+}));
+var stockMask = result.biomass_stock.select('stock_.*').gt(0)
+  .and(fireYearTransitions.neq(4)).and(fireYearTransitions.neq(6));
 var fire = applySpill(result.loss_fire).updateMask(stockMask);
 var logging = applySpill(result.loss_logging).updateMask(stockMask);
 var convergence = applySpill(result.loss_convergence_degradation).updateMask(stockMask);

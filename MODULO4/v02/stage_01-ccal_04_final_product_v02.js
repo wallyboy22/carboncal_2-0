@@ -38,6 +38,7 @@ var rawFire = buildStack('loss_fire');
 var rawEdgeMask = buildStack('mask_edge');
 var rawLoggingMask = buildStack('mask_logging');
 var rawFireMask = buildStack('mask_fire');
+var rawDeforMask = buildStack('mask_defor');
 
 // Convergence is diagnostics for overlap; component losses remain the balance inputs.
 var degTypes = [
@@ -61,7 +62,9 @@ degTypes.forEach(function (type) {
       .blend(annualStack.select(bandName).selfMask());
     return prev.addBands(next);
   }, annualStack.select(0).selfMask()));
-  finalDegradation = finalDegradation.addBands(spilled.updateMask(rawAgc0.gt(0)));
+  // The primary deforestation year is outside the active degradation interval.
+  finalDegradation = finalDegradation.addBands(
+    spilled.updateMask(rawAgc0.gt(0).and(rawDeforMask.not())));
 });
 
 var finalImage = ee.Image().select();

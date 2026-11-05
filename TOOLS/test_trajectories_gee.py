@@ -74,17 +74,39 @@ def main():
         f, log = image(fire), image(logging)
         expressions[f"pair_{i}"] = scalar(f.add(log).updateMask(f.gt(0).And(log.gt(0))))
         expected[f"pair_{i}"] = SENTINEL if wanted is None else wanted
-    for i, (result, wanted) in enumerate(zip(spill([0, 4, 0, 3, 0], [1, 1, 1, 1, 0]),
-                                               [None, 4, 0, 3, None])):
+    # Stock becomes zero in the deforestation year: that year is masked.
+    for i, (result, wanted) in enumerate(zip(spill([0, 4, 0, 3, 0, 0], [1, 1, 1, 1, 0, 0]),
+                                               [None, 4, 0, 3, None, None])):
         expressions[f"active_{i}"] = scalar(result)
         expected[f"active_{i}"] = SENTINEL if wanted is None else wanted
+    # Explicit deforestation masking, even if a stock/AGC input is positive.
+    for i, (stock, deforested, wanted) in enumerate([(1, 0, 2), (1, 1, None),
+                                                      (0, 0, None)]):
+        valid = image(stock).gt(0).And(image(deforested).Not())
+        expressions[f"explicit_deforestation_{i}"] = scalar(image(2).updateMask(valid))
+        expected[f"explicit_deforestation_{i}"] = SENTINEL if wanted is None else wanted
+    # M2: positive AGB change is removal; negative AGB change is emission.
+    for i, (factor, stock_delta, emission) in enumerate([
+            (0.021, 2.1, -2.1 * 44 / 12),
+            (-0.004, -0.4, 0.4 * 44 / 12),
+            (-0.02, -2.0, 2.0 * 44 / 12),
+            (0, 0, 0)]):
+        delta = ee.Image.constant(100).multiply(factor)
+        for label, result, wanted in [
+                ('delta_stock', delta, stock_delta),
+                ('signed_emission', delta.multiply(-44 / 12), emission),
+                ('loss', delta.multiply(-44 / 12).max(0), max(emission, 0)),
+                ('gain', delta.multiply(-44 / 12).min(0), min(emission, 0))]:
+            key = f'savanna_{i}_{label}'
+            expressions[key] = scalar(result)
+            expected[key] = wanted
     actual = ee.Dictionary(expressions).getInfo()
     errors = [(key, value, actual.get(key)) for key, value in expected.items()
               if actual.get(key) is None or not math.isclose(actual[key], value, abs_tol=1e-8)]
     for key, wanted, got in errors:
         print(f"FAIL {key}: expected={wanted} actual={got}")
     print(f"Testes EE: {len(expected) - len(errors)}/{len(expected)} verificações aprovadas")
-    print("Limites: expressões isoladas; política de dado ausente e ano do desmatamento permanecem pendentes.")
+    print("Limites: expressões isoladas; política de dado ausente e convergência com remoção permanecem pendentes.")
     if errors:
         raise SystemExit(1)
 

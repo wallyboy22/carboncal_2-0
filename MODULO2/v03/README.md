@@ -23,6 +23,23 @@ Versão configurada para reexecutar a cadeia de origem e consolidar emissões 20
 
 `loss_convergence_degradation_YYYY` soma fogo e logging somente onde ambos têm emissão positiva no mesmo pixel/ano. A máscara de land cover degradado continua sendo a união de fogo ou logging; convergência não substitui os canais individuais nem entra novamente no balanço líquido.
 
+## Resposta de savana e sinais
+
+O fator de resposta ao fogo altera a biomassa da savana: um fator positivo
+representa aumento de estoque e é exportado como emissão negativa (remoção);
+um fator negativo representa redução de estoque e emissão positiva. Essa
+resposta não é incremento de vegetação secundária. A síntese soma a parcela
+assinada aos demais componentes de fogo e preserva valores negativos. A regra
+de convergência ainda exige perda líquida de fogo positiva; o tratamento de
+fogo com remoção líquida na convergência requer decisão metodológica. A classe
+de land cover usa fluxo líquido de fogo diferente de zero ou logging positivo;
+se parcelas se cancelarem exatamente, isso não prova que não houve fogo.
+
+Os intermediários `savanas_fire_co2_{gain,loss}_late_*` existentes foram
+gerados antes da correção do sinal e não devem ser interpretados como saídas
+do código corrigido. Recalcular e validar os dois conjuntos antes da síntese;
+nenhum asset foi substituído por esta alteração.
+
 ## Assets de saída v03
 
 - Intermediários anuais: `projects/ee-ipam/assets/CCAL/MODULO2/v03/model_assets/`

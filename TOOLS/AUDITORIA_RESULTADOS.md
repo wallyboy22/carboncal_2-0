@@ -7,9 +7,9 @@ python TOOLS/test_trajectories_gee.py --project PROJETO_GEE
 ```
 
 O teste reproduz expressões isoladas dos stages para combinações exclusivas,
-interseção fogo/logging e spill. Ele não importa os scripts JavaScript nem
-valida assets publicados; não resolve a política de dados faltantes ou a
-inclusão do ano de desmatamento na máscara ativa.
+interseção fogo/logging, spill e sinais da resposta savânica do M2. Ele não importa os scripts JavaScript nem
+valida assets publicados; não resolve a política de dados faltantes. O ano do
+desmatamento deve permanecer mascarado na degradação ativa.
 
 Em uma consulta adicional aos assets anuais do M4 v02, foram comparadas em
 30 m a máscara exportada de convergência e a união das interseções dos

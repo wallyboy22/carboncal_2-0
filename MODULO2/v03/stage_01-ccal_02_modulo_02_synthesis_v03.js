@@ -101,7 +101,8 @@ EMISSION_YEARS.forEach(function (year) {
   var previousStock = rawStock.select('stock_' + (year - 1));
   var currentStock = rawStock.select('stock_' + year);
   var defYear = previousStock.gt(0).and(currentStock.eq(0));
-  var degradationYear = rawFire.select('loss_fire_' + year).gt(0)
+  // Signed savanna response can be a net removal; retain it as a fire event.
+  var degradationYear = rawFire.select('loss_fire_' + year).neq(0)
     .or(rawLogging.select('loss_selective_logging_' + year).gt(0));
   wasDeforested = wasDeforested.or(defYear);
   wasDegraded = wasDegraded.or(degradationYear);

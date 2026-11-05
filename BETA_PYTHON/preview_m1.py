@@ -1,6 +1,7 @@
 """Export opcional de um recorte diagnóstico do mosaico M1 para v05 beta."""
 import argparse
 import ee
+from . import auth
 from .modulo1 import preview_stock
 
 PARENT = "projects/ee-ipam/assets/CCAL/MODULO1"
@@ -26,11 +27,15 @@ def main():
     parser.add_argument("--project", required=True)
     parser.add_argument("--bounds", type=float, nargs=4, required=True, metavar=("WEST", "SOUTH", "EAST", "NORTH"))
     parser.add_argument("--submit", action="store_true", help="Cria pasta v05 se necessário e submete a tarefa")
+    parser.add_argument("--account-profile", help="perfil de credencial isolada (ex.: workspace2)")
     args = parser.parse_args()
     w, s, e, n = args.bounds
     if not (-74.96 <= w < e <= -32.9 and -34.62 <= s < n <= 10.7 and e-w <= 0.2 and n-s <= 0.2):
         parser.error("bounds must be a Brazilian extent at most 0.2 degrees wide and high")
-    ee.Initialize(project=args.project)
+    if args.account_profile:
+        ee.Initialize(credentials=auth.load(args.account_profile), project=args.project)
+    else:
+        ee.Initialize(project=args.project)
     region = ee.Geometry.Rectangle(args.bounds, None, False)
     im = preview_stock().clip(region)
     print("Asset de diagnóstico parcial:", ASSET)

@@ -34,6 +34,25 @@ os pixels exportados estejam corretos. `preview_m1` consulta um recorte pequeno
 dos assets v04. O preenchimento dos biomas por zero e a soma de eventuais
 sobreposições são hipóteses do Stage 01 atual, não uma regra já validada.
 
+## Contas e credenciais isoladas
+
+A autenticação geral do Earth Engine (sua conta) permanece a padrão; nenhum
+comando destes betas a substitui. Para a conta de exportação, crie um perfil
+separado, que abre o navegador e grava o token fora do repositório em
+`%APPDATA%/CCAL/credentials/<perfil>.json`:
+
+```powershell
+..\venv\Scripts\python.exe -m BETA_PYTHON.auth --login workspace2
+..\venv\Scripts\python.exe -m BETA_PYTHON.auth --whoami workspace2 --project mapbiomas-brazil
+```
+
+Depois, use `--account-profile workspace2` em `inspect` ou `preview_m1`. O
+programa chama `ee.Initialize(credentials=..., project=...)` apenas naquele
+processo. Os perfis conhecidos ficam em `BETA_PYTHON/auth.py`; o e-mail
+esperado é comparado quando o token o retorna. `--login` se recusa a
+sobrescrever uma credencial existente: remova o arquivo manualmente para
+reautenticar. Nunca versione ou compartilhe esse arquivo.
+
 ## Inspecionar com reduceRegion
 
 `inspect` calcula uma banda e retorna mínimo, máximo, média, soma dos valores
@@ -78,23 +97,56 @@ um fim antes de 2024 pode alterar anos anteriores em comparação com o JS compl
   pixels do recorte. Isso evidencia sensibilidade à grade, não prova paridade
   em todas as regiões nem determina que a grade alternativa esteja errada.
 
-## Destino beta e exportação explícita
+## Exportações de versões seguintes
 
-O único export implementado é **um recorte diagnóstico**, não um produto
-nacional, em `projects/ee-ipam/assets/CCAL/MODULO1/v05/beta_diagnostico_mosaico_2024_recorte`.
-Ele contém `stock_tC_ha` e `biome_valid_count`, derivadas dos assets v04.
-O comando acima é somente leitura; para submeter uma única tarefa no destino
-fixo, acrescente `--submit`. O programa cria a pasta `v05` se necessário e se
-recusa a sobrescrever o asset. Limita o retângulo a 0,2° por lado. Confirme
-que projeto, destino e região são adequados antes de usar esse parâmetro.
+`export_beta.py` encadeia os stages Python e exporta para pastas de versão nova,
+com a credencial isolada e cobrança explícita do projeto:
 
-Uma execução em 2026-11-05 usou o recorte `[-60.1, -3.1, -60, -3]`; tarefa
-`ZXZMPGYO6RYWXUULFF6SM7IY` concluída e metadados verificados. Os nomes v04/v039/v03 para versões futuras dos demais
-módulos ainda não foram reservados e nenhum produto deles foi exportado.
+```powershell
+..\venv\Scripts\python.exe -m BETA_PYTHON.export_beta --project mapbiomas-brazil --account-profile workspace2 --modules m4 m3 m1
+```
 
-O comparador M4 verificou valores e máscaras das cinco bandas no recorte
-`[-54.105,-3.3,-54.095,-3.29]`, ano 2024, 30 m: 1.369 pixels, 700 eventos
-e zero divergências nesse recorte. Isso não valida outros locais, anos ou stages.
+Sem `--submit` é dry-run. O programa:
+
+- usa `workspace2` por padrão, mas aceita outra `--account-profile`;
+- recusa sobrescrever asset existente;
+- cria `FOLDER` ou `IMAGE_COLLECTION` somente quando necessário e **valida o
+  tipo do pai** antes de exportar — `PRODES_ANO_CIVIL`, por exemplo, é
+  `IMAGE_COLLECTION` e não aceita subpastas;
+- prefixa toda descrição de tarefa com `WS_IPAM_CCAL-`.
+
+Operações realizadas em 2026-11-05, com 19 tarefas submetidas no total:
+
+| Versão | Operação | Conteúdo |
+|---|---|---|
+| M4 v03 | cópia dos 39 anuais + 11 exports | consolidado, land cover, densidades |
+| M3 v039 | cópia de 24 intermediários + 1 export | produto final corrigido |
+| M1 v05 | 7 exports integrais em Python | final, densidades, estoque, land cover |
+
+O M4 v03 ficou inicialmente com `emissions_removals_v03` como `FOLDER`; a
+migração para `IMAGE_COLLECTION` está preparada em `migrate_collection.py` e só
+deve rodar após as tarefas do M4 concluírem, pois elas leem esses anuais.
+M2 ainda não foi exportado: dependia do `cs_geometric` 2024.
+
+## Corte seletivo a partir do DETER
+
+`deter_cs.py` reconstrói os rasters binários de corte seletivo em ano civil.
+A receita foi validada contra 2023 e contra o `cs_disordered` 2024 existente:
+
+| Comparação | Recall | Precisão |
+|---|---:|---:|
+| 2023 `cs_geometric` ← `CS_GEOMETRICO` | 0,919 | 0,996 |
+| 2023 `cs_disordered` ← `CS_DESORDENADO` | 0,907 | 0,994 |
+| 2024 `cs_disordered` ← `CS_DESORDENADO` | 0,918 | 0,999 |
+
+```powershell
+..\venv\Scripts\python.exe -m BETA_PYTHON.deter_cs --project mapbiomas-brazil --account-profile workspace2 --year 2023 --validate
+..\venv\Scripts\python.exe -m BETA_PYTHON.deter_cs --project mapbiomas-brazil --account-profile workspace2 --year 2024 --kind geometric --submit
+```
+
+As grades diferem por período: 2017–2023 em ~30 m e 2024 em ~10 m, sempre
+EPSG:4674. A exportação usa a extensão dos alertas como região para não alocar
+a caixa amazônica inteira. Detalhes em `../DATASETS/PRODES_DETER_INVESTIGACAO.md`.
 
 ## Antes de qualquer produto completo
 

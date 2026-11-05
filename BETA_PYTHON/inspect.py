@@ -2,7 +2,7 @@
 import argparse
 import json
 import ee
-from . import modulo1, modulo2, modulo3, modulo4
+from . import auth, modulo1, modulo2, modulo3, modulo4
 
 
 def main():
@@ -22,11 +22,15 @@ def main():
     parser.add_argument('--reference-asset', help='asset existente para comparar valores e máscaras')
     parser.add_argument('--reference-band', help='banda de referência; por padrão usa --band')
     parser.add_argument('--tolerance', type=float, default=1e-5, help='tolerância absoluta por pixel na comparação')
+    parser.add_argument('--account-profile', help='perfil de credencial isolada (ex.: workspace2); não altera a autenticação geral')
     args = parser.parse_args()
     west, south, east, north = args.bounds
     if not (-180 <= west < east <= 180 and -90 <= south < north <= 90 and (args.scale is None or args.scale > 0) and args.max_pixels > 0 and args.tolerance >= 0):
         parser.error('bounds, scale ou max-pixels inválidos')
-    ee.Initialize(project=args.project)
+    if args.account_profile:
+        ee.Initialize(credentials=auth.load(args.account_profile), project=args.project)
+    else:
+        ee.Initialize(project=args.project)
     if args.stage == 'm1-stage00':
         stage = modulo1.build_stage00(end_year=args.year)
     elif args.stage == 'm1-stage01':

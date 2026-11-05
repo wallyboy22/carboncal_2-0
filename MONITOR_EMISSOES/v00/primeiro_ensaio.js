@@ -8,9 +8,12 @@ var biomas_bounds = biomas.geometry().bounds();
 
 print('historical_carbon',historical_carbon);
 
+// OBS: O fator de combustão (cf) utilizado de maneira padronizada para Agricultura
+// é o fator utilizado para algodão no terceiro inventario (0.9). O mesmo utilizado pelo IMAFLORA
+
 var fatoresEmissaoPorBioma = {
   "Amazônia": {
-    "Agricultura": { "cf": 0.866, "c_pool": "AGB", "c_mean": 9.909136 },
+    "Agricultura": { "cf": 0.9, "c_pool": "AGB", "c_mean": 9.909136 },
     "Pastagem": { "cf": 0.866, "c_pool": "AGB", "c_mean": 9.909136 },
     "Formação Campestre": { "cf": 0.866, "c_pool": "AGB+DW+LI", "c_mean": 11.87611 },
     "Campo Alagado e Área Pantanosa": { "cf": 0.866, "c_pool": "AGB+DW+LI", "c_mean": 11.87611 },
@@ -18,7 +21,7 @@ var fatoresEmissaoPorBioma = {
     "Formação Florestal": { "cf": 0.663, "c_pool": "DW+LI", "c_mean": 14.555805 }
   },
   "Cerrado": {
-    "Agricultura": { "cf": 0.607, "c_pool": "AGB", "c_mean": 9.444437 },
+    "Agricultura": { "cf": 0.9, "c_pool": "AGB", "c_mean": 9.444437 },
     "Pastagem": { "cf": 0.607, "c_pool": "AGB", "c_mean": 9.444437 },
     "Formação Campestre": { "cf": 0.607, "c_pool": "AGB+DW+LI", "c_mean": 11.814823 },
     "Campo Alagado e Área Pantanosa": { "cf": 0.607, "c_pool": "AGB+DW+LI", "c_mean": 11.814823 },
@@ -26,7 +29,7 @@ var fatoresEmissaoPorBioma = {
     "Formação Florestal": { "cf": 0.656, "c_pool": "DW+LI", "c_mean": 12.530418 }
   },
   "Mata Atlântica": {
-    "Agricultura": { "cf": 0.769, "c_pool": "AGB", "c_mean": 7.960108 },
+    "Agricultura": { "cf": 0.9, "c_pool": "AGB", "c_mean": 7.960108 },
     "Pastagem": { "cf": 0.769, "c_pool": "AGB", "c_mean": 7.960108 },
     "Formação Campestre": { "cf": 0.769, "c_pool": "AGB+DW+LI", "c_mean": 25.037944 },
     "Campo Alagado e Área Pantanosa": { "cf": 0.769, "c_pool": "AGB+DW+LI", "c_mean": 25.037944 },
@@ -34,7 +37,7 @@ var fatoresEmissaoPorBioma = {
     "Formação Florestal": { "cf": 0.663, "c_pool": "DW+LI", "c_mean": 11.409046 }
   },
   "Pantanal": {
-    "Agricultura": { "cf": 0.6925, "c_pool": "AGB", "c_mean": 9.938581 },
+    "Agricultura": { "cf": 0.9, "c_pool": "AGB", "c_mean": 9.938581 },
     "Pastagem": { "cf": 0.6925, "c_pool": "AGB", "c_mean": 9.938581 },
     "Formação Campestre": { "cf": 0.6925, "c_pool": "AGB+DW+LI", "c_mean": 12.371491 },
     "Campo Alagado e Área Pantanosa": { "cf": 0.6925, "c_pool": "AGB+DW+LI", "c_mean": 12.371491 },
@@ -42,7 +45,7 @@ var fatoresEmissaoPorBioma = {
     "Formação Florestal": { "cf": 0.656, "c_pool": "DW+LI", "c_mean": 16.180421 }
   },
   "Caatinga": {
-    "Agricultura": { "cf": 0.649, "c_pool": "AGB", "c_mean": 9.049347 },
+    "Agricultura": { "cf": 0.9, "c_pool": "AGB", "c_mean": 9.049347 },
     "Pastagem": { "cf": 0.649, "c_pool": "AGB", "c_mean": 9.049347 },
     "Formação Campestre": { "cf": 0.649, "c_pool": "AGB+DW+LI", "c_mean": 11.561256 },
     "Campo Alagado e Área Pantanosa": { "cf": 0.649, "c_pool": "AGB+DW+LI", "c_mean": 11.561256 },
@@ -50,7 +53,7 @@ var fatoresEmissaoPorBioma = {
     "Formação Florestal": { "cf": 0.85075, "c_pool": "DW+LI", "c_mean": 10.723852 }
   },
   "Pampa": {
-    "Agricultura": { "cf": 0.944, "c_pool": "AGB", "c_mean": 11.1815 },
+    "Agricultura": { "cf": 0.9, "c_pool": "AGB", "c_mean": 11.1815 },
     "Pastagem": { "cf": 0.944, "c_pool": "AGB", "c_mean": 11.1815 },
     "Formação Campestre": { "cf": 0.944, "c_pool": "AGB+DW+LI", "c_mean": 15.788241 },
     "Campo Alagado e Área Pantanosa": { "cf": 0.944, "c_pool": "AGB+DW+LI", "c_mean": 15.788241 },
@@ -66,7 +69,7 @@ var fatoresPorGas = {
     "Formação Campestre": 1613,
     "Campo Alagado e Área Pantanosa": 1613,
     "Pastagem": 1613,
-    "Agricultura": 1613
+    "Agricultura": 1515
   },
   "CH4": {
     "Formação Florestal": 6.8,
@@ -74,7 +77,7 @@ var fatoresPorGas = {
     "Formação Campestre": 2.3,
     "Campo Alagado e Área Pantanosa": 2.3,
     "Pastagem": 2.3,
-    "Agricultura": 2.3
+    "Agricultura": 2.7
   },
   "N2O": {
     "Formação Florestal": 0.2,
@@ -82,7 +85,7 @@ var fatoresPorGas = {
     "Formação Campestre": 0.2,
     "Campo Alagado e Área Pantanosa": 0.2,
     "Pastagem": 0.2,
-    "Agricultura": 0.2
+    "Agricultura": 0.07 // OBS: Fatores de agricultura vieram do IPCC (Tabela 2.5)
   }
 };
 
@@ -139,7 +142,7 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
           .addBands(ee.Image(0).rename('CDW'))
           .addBands(ee.Image(0).rename('LITTER'))
       
-        var carbon = antropic_list[coverage_str] === -1 ? historical_carbon : mean_carbon
+        var carbon = antropic_list.indexOf(coverage_str) === -1 ? historical_carbon : mean_carbon
       
         var calculate = carbon.expression({
           expression:c_pool, 
@@ -185,21 +188,21 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
     
 
 
-    Export.image.toAsset({
-      image:img,
-      description:description,
-      assetId:assetId,
-      pyramidingPolicy:'median',
-      // dimensions:,
-      region:biomas_bounds,
-      scale:30,
-      // crs:,
-      // crsTransform:,
-      maxPixels:1e13,
-      // shardSize:,
-      // priority:,
-      // overwrite:true
-    })
+    // Export.image.toAsset({
+    //   image:img,
+    //   description:'WS_IPAM_SEEG-'+description,
+    //   assetId:assetId,
+    //   pyramidingPolicy:'median',
+    //   // dimensions:,
+    //   region:biomas_bounds,
+    //   scale:30,
+    //   // crs:,
+    //   // crsTransform:,
+    //   maxPixels:1e13,
+    //   // shardSize:,
+    //   // priority:,
+    //   // overwrite:true
+    // })
 
   });
   

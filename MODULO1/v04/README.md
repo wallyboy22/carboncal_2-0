@@ -34,3 +34,14 @@ calculado com o código v04 atual. Confirme a procedência antes de utilizá-lo.
 Executar Stage 00 primeiro e aguardar seus exports; depois executar Stage 01. A QCN mantém as bandas minúsculas usadas pela v03. O Stage 00 mantém fatores, parametrizações FREL e a combinação QCN + EBA da v03; troca somente as fontes de dados definidas para esta versão, incluindo o limite IBGE 2026.
 
 A pasta `CCAL/MODULO1/v04` já existe. Verifique os assets existentes antes de submeter novos exports.
+
+### Validação pendente antes de reexportar
+
+O mosaico do Stage 01 foi ajustado para preencher fora dos footprints antes de
+somar. Amostras grosseiras com um único bioma válido preservaram seus valores;
+houve sobreposição em amostras a 10 km, mas nenhuma em 3.000 pontos aleatórios
+consultados a 30 m para cada um dos anos 2016 e 2024. É necessário verificar
+as fronteiras na grade nativa de forma dirigida e definir a regra de soma ou
+prioridade antes de promover saídas. O preenchimento com zero não distingue,
+por si só, ausência de cobertura de lacuna de dados dentro do domínio.
+O asset existente não foi recalculado com esse ajuste.

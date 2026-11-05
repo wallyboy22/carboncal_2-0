@@ -1,5 +1,22 @@
 # Diagnóstico exploratório de resultados
 
+Testes sintéticos em Earth Engine (sem exportar):
+
+```shell
+python TOOLS/test_trajectories_gee.py --project PROJETO_GEE
+```
+
+O teste reproduz expressões isoladas dos stages para combinações exclusivas,
+interseção fogo/logging e spill. Ele não importa os scripts JavaScript nem
+valida assets publicados; não resolve a política de dados faltantes ou a
+inclusão do ano de desmatamento na máscara ativa.
+
+Em uma consulta adicional aos assets anuais do M4 v02, foram comparadas em
+30 m a máscara exportada de convergência e a união das interseções dos
+componentes positivos: 2.000 pontos aleatórios por ano em 2000, 2010 e 2024,
+sem divergências. Houve apenas 2, 3 e 4 eventos esperados nas respectivas
+amostras; isso não constitui validação exaustiva nem testa o Stage 01.
+
 Para inventariar recursivamente os outputs em `MODULO1`–`MODULO4`, consulte
 metadados de todas as imagens e opcionalmente amostre imagens inicial e final
 de cada família anual e cada imagem não anual:

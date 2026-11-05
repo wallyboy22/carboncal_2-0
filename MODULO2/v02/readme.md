@@ -38,7 +38,7 @@ Lê os assets de `projects/ee-ipam/assets/CCAL/MODELOS/CCAL_MODULO_2_V1`:
 | `stock_YYYY` (2016–2023) | `florestas_stock` + `savanas_stock` | tC/ha (densidade) |
 | `loss_fire_YYYY` | florestas fire (comb CO₂+CH₄+N₂O) + savanas fire (comb CO₂+CH₄+N₂O + tardia loss − tardia gain) | tCO₂e/pixel |
 | `loss_selective_logging_YYYY` | `florestas_sl_co2` + `savanas_sl_co2` | tCO₂e/pixel |
-| `loss_convergence_degradation_YYYY` | `loss_fire` + `loss_selective_logging` | tCO₂e/pixel |
+| `loss_convergence_degradation_YYYY` | Soma de `loss_fire` e `loss_selective_logging`, somente onde ambos são positivos no mesmo ano | tCO₂e/pixel |
 | `loss_deforestation_YYYY` | florestas def (CO₂+CH₄+N₂O) + savanas def (CO₂+CH₄+N₂O) | tCO₂e/pixel |
 
 > ⚠️ **Ganho tardio de savana**: `savanas_fire_co2_gain_late` é **negativo**; somado ao fogo, reduz a perda líquida (mesmo tratamento do script `v01/biomass`).
@@ -63,6 +63,11 @@ Mesma lógica do M1 stage01 / M3 stage3 / M4 stage01:
 ### Produto consolidado
 
 **Asset:** `projects/ee-ipam/assets/CCAL/MODULO2/v02/CCAL_MODULO2-v02` (cópia do produto legado; série até 2023)
+
+O código de síntese foi ajustado para exigir a interseção de perdas positivas
+na convergência. O asset copiado é anterior a essa correção e não foi reexportado;
+não presumir que já satisfaça a regra. A classe de land cover degradado continua
+representando fogo **ou** corte seletivo.
 **Resolução:** 30 m, float32, `pyramiding: median`
 
 Bandas: `loss_fire_YYYY`, `loss_selective_logging_YYYY`, `loss_convergence_degradation_YYYY`, `loss_deforestation_YYYY` (2017–2023, tCO₂e/pixel) e `stock_YYYY` (2016–2023, tC/ha).

@@ -19,8 +19,11 @@ function load(type,year,prefix){
 }
 function mosaic(type,year,prefixes){
   var sum=ee.Image(0);
-  prefixes.forEach(function(prefix){sum=sum.add(load(type,year,prefix).unmask(0));});
-  return sum;
+  // Biome assets have disjoint footprints. Fill outside each footprint before
+  // adding, otherwise the sum is restricted to their footprint intersection.
+  // A missing/inaccessible asset still fails; this does not substitute data.
+  prefixes.forEach(function(prefix){sum=sum.add(load(type,year,prefix).unmask(0,false));});
+  return sum.clip(BOUNDS);
 }
 function exportAsset(image,name,asset,pyramiding){
   Export.image.toAsset({image:image.float(),description:'WS_CCAL_M1V04-'+name,

@@ -89,7 +89,9 @@ EMISSION_YEARS.forEach(function(y) {
 // --- Convergência de degradação (fogo + corte seletivo; M2 não tem borda) ---
 var rawConv = ee.Image().select();
 EMISSION_YEARS.forEach(function(y) {
-  var c = rawFire.select('loss_fire_' + y).add(rawSl.select('loss_selective_logging_' + y));
+  var fire = rawFire.select('loss_fire_' + y);
+  var logging = rawSl.select('loss_selective_logging_' + y);
+  var c = fire.add(logging).updateMask(fire.gt(0).and(logging.gt(0)));
   rawConv = rawConv.addBands(c.rename('loss_convergence_degradation_' + y));
 });
 
@@ -176,7 +178,9 @@ EMISSION_YEARS.forEach(function(yr) {
   var prev = yr - 1;
   var isPrimary = rawStock.select('stock_' + yr).gt(0);
   var defY = rawStock.select('stock_' + prev).gt(0).and(rawStock.select('stock_' + yr).eq(0));
-  var degY = finalDegradation.select('loss_convergence_degradation_' + yr).gt(0);
+  // Degraded land cover is any process, not their intersection.
+  var degY = rawFire.select('loss_fire_' + yr).gt(0)
+    .or(rawSl.select('loss_selective_logging_' + yr).gt(0));
 
   wasDefed = wasDefed.or(defY);
   wasDegraded = wasDegraded.or(degY);

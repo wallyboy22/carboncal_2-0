@@ -1,5 +1,17 @@
 # Diagnóstico exploratório de resultados
 
+Para inventariar recursivamente os outputs em `MODULO1`–`MODULO4`, consulte
+metadados de todas as imagens e opcionalmente amostre imagens inicial e final
+de cada família anual e cada imagem não anual:
+
+```shell
+python TOOLS/audit_all_stages.py --project PROJETO_GEE --pixels --output MATERIAL_COMPLEMENTAR/auditoria_stages.json
+```
+
+Os resultados incluem apenas assets acessíveis sob essas pastas; destinos ainda
+ausentes devem ser comparados aos scripts separadamente. A amostragem de cada
+imagem usa somente primeira/última banda e pode não detectar eventos raros.
+
 `audit_outputs.py` consulta apenas metadados dos produtos consolidados nas pastas
 de versão. Requer `earthengine-api`, autenticação e um projeto autorizado:
 

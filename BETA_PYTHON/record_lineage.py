@@ -24,20 +24,21 @@ def main():
     parser.add_argument('--source-asset', required=True)
     parser.add_argument('--source-version', required=True, help='ex.: M3 v038')
     parser.add_argument('--equal-fraction', type=float, required=True)
-    parser.add_argument('--points', type=int, required=True)
+    parser.add_argument('--points', type=int, default=None, help='pixels válidos comparados (opcional)')
     parser.add_argument('--scale', type=float, required=True)
     parser.add_argument('--submit', action='store_true', help='grava propriedades no asset')
     args = parser.parse_args()
     ee.Initialize(credentials=auth.load(args.account_profile), project=args.project)
     now = datetime.now(timezone.utc).isoformat(timespec='seconds')
     properties = {
-        'ccal:source_asset': args.source_asset,
-        'ccal:source_version': args.source_version,
-        'ccal:lineage_equal_fraction': args.equal_fraction,
-        'ccal:lineage_points': args.points,
-        'ccal:lineage_scale_m': args.scale,
-        'ccal:lineage_checked_utc': now,
+        'ccal_source_asset': args.source_asset,
+        'ccal_source_version': args.source_version,
+        'ccal_lineage_equal_fraction': args.equal_fraction,
+        'ccal_lineage_scale_m': args.scale,
+        'ccal_lineage_checked_utc': now,
     }
+    if args.points is not None:
+        properties['ccal_lineage_valid_pixels'] = args.points
     print('Asset público:', args.public_asset)
     for key, value in properties.items():
         print(f'  {key} = {value}')

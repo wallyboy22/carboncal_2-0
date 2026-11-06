@@ -80,7 +80,7 @@ def copy_asset(src, dst, submit=True):
     return ('copy', dst, src)
 
 
-def export_image(image, asset_id, description, pyramiding='median', submit=True):
+def export_image(image, asset_id, description, pyramiding='median', submit=True, region=None):
     if exists(asset_id):
         return ('skip', asset_id, 'já existe')
     if not submit:
@@ -88,18 +88,37 @@ def export_image(image, asset_id, description, pyramiding='median', submit=True)
     assert_parent(asset_id)
     task = ee.batch.Export.image.toAsset(
         image=ee.Image(image).float(), description=TASK_PREFIX + description, assetId=asset_id,
-        region=ee.FeatureCollection('projects/ee-ipam/assets/IBGE/limite_biomas_IBGE_2026').geometry().bounds(),
+        region=region or ee.FeatureCollection('projects/ee-ipam/assets/IBGE/limite_biomas_IBGE_2026').geometry().bounds(),
         crs=CRS, crsTransform=TRANSFORM, scale=SCALE, maxPixels=MAX_PIXELS,
         pyramidingPolicy={'.default': pyramiding})
     task.start()
     return ('task', asset_id, task.id)
 
 
+def m1_intermediates(submit):
+    """Exporta o Stage 00 completo do M1 para a pasta da versão v05."""
+    out = ROOT + '/MODULO1/v05'
+    ensure_folder(out, submit)
+    biomes = ee.FeatureCollection('projects/ee-ipam/assets/IBGE/limite_biomas_IBGE_2026')
+    names = {'amz': 'Amazônia', 'cerr': 'Cerrado', 'pan': 'Pantanal',
+             'pam': 'Pampa', 'caa': 'Caatinga', 'ma': 'Mata Atlântica'}
+    data = modulo1.build_stage00(end_year=2024)
+    results = []
+    for key, image in data.items():
+        prefix = key.split('_', 1)[0]
+        bounds = biomes.filter(ee.Filter.eq('Bioma', names[prefix])).geometry().bounds()
+        results.append(('export', f'{out}/{key}', 'M1_v05_' + key))
+        if submit:
+            results[-1] = export_image(image, f'{out}/{key}', 'M1_v05_' + key,
+                                       'mean', submit, region=bounds)
+    return out, results
+
+
 def m1_operations():
     out = ROOT + '/MODULO1/v05'
     final_asset = out + '/ccal_02_brazil_modulo_1_frell_v5'
-    inputs = modulo1.build_stage00(end_year=2024)
-    stage = modulo1.build_stage01(end=2024, inputs=inputs)
+    # Lê os intermediários versionados na própria v05 (Stage 00 exportado).
+    stage = modulo1.build_stage01(source=out, end=2024)
     ops = [('export', stage['final'], final_asset, 'CCAL_M1_v05_final', 'median')]
     for name, image in stage['densities'].items():
         ops.append(('export', image, f'{out}/{name}',
@@ -182,7 +201,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--project', required=True)
     parser.add_argument('--account-profile', default='workspace2')
-    parser.add_argument('--modules', nargs='+', choices=['m1', 'm2', 'm3', 'm4'], required=True)
+    parser.add_argument('--modules', nargs='+', choices=['m1', 'm1i', 'm2', 'm3', 'm4'], required=True)
     parser.add_argument('--submit', action='store_true')
     args = parser.parse_args()
     ee.Initialize(credentials=auth.load(args.account_profile), project=args.project)
@@ -201,7 +220,7 @@ def main():
         out, results = m2_operations(args.submit)
         all_results += results
     if 'm1' in args.modules:
-        print('\nM1 v05: cálculo integral em Python + consolidação')
+        print('\nM1 v05: consolidação a partir dos intermediários versionados')
         out, ops = m1_operations()
         results = []
         for kind, image, asset, description, pyramiding in ops:
@@ -209,6 +228,10 @@ def main():
                 results.append(export_image(image, asset, description, pyramiding, True))
             else:
                 results.append(('plan', asset, description))
+        all_results += results
+    if 'm1i' in args.modules:
+        print('\nM1 v05: exportando 166 intermediários do Stage 00')
+        out, results = m1_intermediates(args.submit)
         all_results += results
     print('\nResumo:')
     for kind, target, detail in all_results:

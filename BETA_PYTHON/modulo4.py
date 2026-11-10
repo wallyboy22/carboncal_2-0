@@ -74,7 +74,10 @@ def stage00(end_year=2024):
     qcn = ee.ImageCollection(QCN).select('cagb').mosaic()
     b, k = ee.Image(B).clip(brazil), ee.Image(K).clip(brazil)
     years_c11 = tuple(range(1987, 2025))
-    transitions = ee.Image(TRANSITIONS).select([f'classification_{y}' for y in years_c11])
+    # by_coverage usa códigos de transição de 3 dígitos (from*100 + to);
+    # int(/100) recupera a classe desf_reg 1-7 (from), mod 100 é a cobertura (to).
+    transitions = ee.Image(TRANSITIONS).select(
+        [f'classification_{y}' for y in years_c11]).divide(100).int()
     corrected = correct_transitions(transitions, years_c11)
     area = ee.Image.pixelArea().multiply(0.0001)
     agc = qcn.multiply(baseline).clip(brazil)

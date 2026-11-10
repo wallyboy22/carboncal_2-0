@@ -70,8 +70,11 @@ for (var ty = 1987; ty <= END_YEAR; ty++) YEARS_C11_TRANSITION.push(String(ty));
 var c11Deforestation = deforestationReg.select(YEARS_C11_TRANSITION.map(function (year) {
   return 'classification_' + year;
 }));
+// by_coverage usa códigos de transição de 3 dígitos (from*100 + to);
+// int(/100) recupera a classe desf_reg 1-7 (from), mod 100 é a cobertura (to).
+var c11DeforestationClass = c11Deforestation.divide(100).int();
 var prep = require('users/workspaceipam/CCAL:MODULO3/v037/equations/00_data_prep.js');
-var c11DeforestationCorrected = prep.correctDesfReg(c11Deforestation, YEARS_C11_TRANSITION);
+var c11DeforestationCorrected = prep.correctDesfReg(c11DeforestationClass, YEARS_C11_TRANSITION);
 
 var BAND_PREFIX = 'classification_';
 var loggingBandName = function (year) { return 'logging_freq_' + year; };

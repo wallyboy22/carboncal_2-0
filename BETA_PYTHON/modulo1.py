@@ -46,7 +46,8 @@ def build_stage00(end_year=2024):
         if name == 'Amazônia':
             for y in range(2017, 2025):
                 dis = ee.Image(deter + str(y) + '_cs_disordered').multiply(pret)
-                layers.append(ee.Image(0).blend(dis))
+                # cs_disordered é esparso (EPSG:4674); zero-fill com footprint do pret.
+                layers.append(pret.multiply(0).blend(dis))
             layers.append(ee.Image(0))
             logging = layers[0]
         def stock(year):
@@ -57,7 +58,9 @@ def build_stage00(end_year=2024):
             def save(kind, im):
                 output[f'{prefix}_{kind}_{year}'] = im.multiply(area).multiply(factor).rename('emission_tCO2e_pixel').updateMask(mask).float()
             if name == 'Amazônia':
-                fire = ee.Image(deter + str(year) + '_fire').unmask(0).multiply(managed).multiply(ee.Image(1))
+                # fire é esparso (EPSG:4674); zero-fill com footprint do managed.
+                fire = managed.multiply(0).blend(
+                    ee.Image(deter + str(year) + '_fire').multiply(managed))
                 above = state['agb'].add(state['dw']).add(state['litter'])
                 save('emission_fire_co2', above.multiply(fire).multiply(0.368).multiply(44/12))
                 save('emission_fire_ch4', above.multiply(fire).multiply(1/0.47).multiply(0.368).multiply(6.8).multiply(0.001).multiply(28))

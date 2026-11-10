@@ -96,8 +96,8 @@ def export_image(image, asset_id, description, pyramiding='median', submit=True,
 
 
 def m1_intermediates(submit):
-    """Exporta o Stage 00 completo do M1 para a pasta da versão v05."""
-    out = ROOT + '/MODULO1/v05'
+    """Exporta o Stage 00 completo do M1 para a pasta da versão v06."""
+    out = ROOT + '/MODULO1/v06'
     ensure_folder(out, submit)
     biomes = ee.FeatureCollection('projects/ee-ipam/assets/IBGE/limite_biomas_IBGE_2026')
     names = {'amz': 'Amazônia', 'cerr': 'Cerrado', 'pan': 'Pantanal',
@@ -107,49 +107,52 @@ def m1_intermediates(submit):
     for key, image in data.items():
         prefix = key.split('_', 1)[0]
         bounds = biomes.filter(ee.Filter.eq('Bioma', names[prefix])).geometry().bounds()
-        results.append(('export', f'{out}/{key}', 'M1_v05_' + key))
+        results.append(('export', f'{out}/{key}', 'M1_v06_' + key))
         if submit:
-            results[-1] = export_image(image, f'{out}/{key}', 'M1_v05_' + key,
+            results[-1] = export_image(image, f'{out}/{key}', 'M1_v06_' + key,
                                        'mean', submit, region=bounds)
     return out, results
 
 
 def m1_operations():
-    out = ROOT + '/MODULO1/v05'
-    final_asset = out + '/ccal_02_brazil_modulo_1_frell_v5'
-    # Lê os intermediários versionados na própria v05 (Stage 00 exportado).
+    out = ROOT + '/MODULO1/v06'
+    final_asset = out + '/ccal_02_brazil_modulo_1_frell_v6'
+    # Lê os intermediários versionados na própria v06 (Stage 00 exportado).
     stage = modulo1.build_stage01(source=out, end=2024)
-    ops = [('export', stage['final'], final_asset, 'CCAL_M1_v05_final', 'median')]
+    ops = [('export', stage['final'], final_asset, 'CCAL_M1_v06_final', 'median')]
     for name, image in stage['densities'].items():
         ops.append(('export', image, f'{out}/{name}',
-                    'CCAL_M1_v05_' + name, 'mode' if name == 'land_cover_masks' else 'mean'))
+                    'CCAL_M1_v06_' + name, 'mode' if name == 'land_cover_masks' else 'mean'))
     return out, ops
 
 
 def m4_operations(submit):
-    src_root = ROOT + '/MODULO4/v02'
-    out = ROOT + '/MODULO4/v03'
-    annual_src = src_root + '/emissions_removals_v02'
-    annual_dst = out + '/emissions_removals_v03'
+    """Recomputa Stage 00 (corrigido) e consolida em MODULO4/v04."""
+    out = ROOT + '/MODULO4/v04'
+    annual_dst = out + '/emissions_removals_v04'
     results = []
     ensure_folder(out, submit)
     ensure_image_series(annual_dst, submit)
-    for year in range(1986, 2025):
-        results.append(copy_asset(f'{annual_src}/{year}', f'{annual_dst}/{year}', submit))
-    stage = modulo4.stage01(annual={y: ee.Image(f'{annual_dst}/{y}') for y in range(1986, 2025)})
-    for name, image in stage['densities'].items():
-        results.append(('export', f'{out}/{name}', 'CCAL_M4_v03_' + name))
+    annual = modulo4.stage00(end_year=2024)
+    for year, image in annual.items():
+        results.append(('export', f'{annual_dst}/{year}', 'CCAL_M4_v04_stage00_' + str(year)))
         if submit:
-            results[-1] = export_image(image, f'{out}/{name}', 'CCAL_M4_v03_' + name,
+            results[-1] = export_image(image, f'{annual_dst}/{year}',
+                                       'CCAL_M4_v04_stage00_' + str(year), 'mean', submit)
+    stage = modulo4.stage01(annual=annual)
+    for name, image in stage['densities'].items():
+        results.append(('export', f'{out}/{name}', 'CCAL_M4_v04_' + name))
+        if submit:
+            results[-1] = export_image(image, f'{out}/{name}', 'CCAL_M4_v04_' + name,
                                        'mean', submit)
-    results.append(('export', f'{out}/land_cover_masks', 'CCAL_M4_v03_land_cover_masks'))
+    results.append(('export', f'{out}/land_cover_masks', 'CCAL_M4_v04_land_cover_masks'))
     if submit:
         results[-1] = export_image(stage['land_cover_masks'], f'{out}/land_cover_masks',
-                                   'CCAL_M4_v03_land_cover_masks', 'mode', submit)
-    results.append(('export', f'{out}/CCAL_MODULO4-v03', 'CCAL_M4_v03_final'))
+                                   'CCAL_M4_v04_land_cover_masks', 'mode', submit)
+    results.append(('export', f'{out}/CCAL_MODULO4-v04', 'CCAL_M4_v04_final'))
     if submit:
-        results[-1] = export_image(stage['final'], f'{out}/CCAL_MODULO4-v03',
-                                   'CCAL_M4_v03_final', 'median', submit)
+        results[-1] = export_image(stage['final'], f'{out}/CCAL_MODULO4-v04',
+                                   'CCAL_M4_v04_final', 'median', submit)
     return out, results
 
 

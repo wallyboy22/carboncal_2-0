@@ -126,8 +126,8 @@ def m1_operations():
     return out, ops
 
 
-def m4_operations(submit):
-    """Recomputa Stage 00 (corrigido) e consolida em MODULO4/v04."""
+def m4_intermediates(submit):
+    """Exporta o Stage 00 do M4 (39 anuais) para a coleção v04. Não consolida."""
     out = ROOT + '/MODULO4/v04'
     annual_dst = out + '/emissions_removals_v04'
     results = []
@@ -139,6 +139,16 @@ def m4_operations(submit):
         if submit:
             results[-1] = export_image(image, f'{annual_dst}/{year}',
                                        'CCAL_M4_v04_stage00_' + str(year), 'mean', submit)
+    return out, results
+
+
+def m4_operations(submit):
+    """Consolida Stage 01 relendo os anuais já exportados em MODULO4/v04."""
+    out = ROOT + '/MODULO4/v04'
+    annual_dst = out + '/emissions_removals_v04'
+    results = []
+    ensure_folder(out, submit)
+    annual = {y: ee.Image(f'{annual_dst}/{y}') for y in range(1986, 2025)}
     stage = modulo4.stage01(annual=annual)
     for name, image in stage['densities'].items():
         results.append(('export', f'{out}/{name}', 'CCAL_M4_v04_' + name))
@@ -204,14 +214,18 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--project', required=True)
     parser.add_argument('--account-profile', default='workspace2')
-    parser.add_argument('--modules', nargs='+', choices=['m1', 'm1i', 'm2', 'm3', 'm4'], required=True)
+    parser.add_argument('--modules', nargs='+', choices=['m1', 'm1i', 'm2', 'm3', 'm4', 'm4i'], required=True)
     parser.add_argument('--submit', action='store_true')
     args = parser.parse_args()
     ee.Initialize(credentials=auth.load(args.account_profile), project=args.project)
     print('Conta:', args.account_profile, '| modo:', 'SUBMETER' if args.submit else 'dry-run')
     all_results = []
+    if 'm4i' in args.modules:
+        print('\nM4 v04: exportando 39 anuais do Stage 00 (recomputado, correcao by_coverage)')
+        out, results = m4_intermediates(args.submit)
+        all_results += results
     if 'm4' in args.modules:
-        print('\nM4 v03: cópia dos anuais + consolidação corrigida')
+        print('\nM4 v04: consolidação Stage 01 relendo os anuais v04')
         out, results = m4_operations(args.submit)
         all_results += results
     if 'm3' in args.modules:
@@ -223,7 +237,7 @@ def main():
         out, results = m2_operations(args.submit)
         all_results += results
     if 'm1' in args.modules:
-        print('\nM1 v05: consolidação a partir dos intermediários versionados')
+        print('\nM1 v06: consolidação a partir dos intermediários versionados')
         out, ops = m1_operations()
         results = []
         for kind, image, asset, description, pyramiding in ops:
@@ -233,7 +247,7 @@ def main():
                 results.append(('plan', asset, description))
         all_results += results
     if 'm1i' in args.modules:
-        print('\nM1 v05: exportando 166 intermediários do Stage 00')
+        print('\nM1 v06: exportando 166 intermediários do Stage 00')
         out, results = m1_intermediates(args.submit)
         all_results += results
     print('\nResumo:')

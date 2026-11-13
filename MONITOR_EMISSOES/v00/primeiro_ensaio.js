@@ -1,4 +1,4 @@
-var historical_carbon = ee.Image("projects/ee-ipam/assets/CCAL/public/qcn/qcn_brazil_historical_biomass_carbon_qcn_rect_v1");
+var historical_carbon = ee.Image(" projects/ee-ipam/assets/SEEG/SEEG14/RETIFICACAO/c_rect_col11_2019");
 var monthly_burned = ee.ImageCollection('projects/mapbiomas-public/assets/brazil/fire/monitor/mapbiomas_fire_monthly_burned_v1');
 var coverage = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection11/mapbiomas_brazil_collection11_coverage_v3');
 var biomas = ee.FeatureCollection('projects/ee-ipam/assets/ORIGINAIS/IBGE/limite_biomas_IBGE_2026');

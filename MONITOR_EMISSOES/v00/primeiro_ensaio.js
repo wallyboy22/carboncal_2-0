@@ -92,8 +92,10 @@ var fatoresPorGas = {
 };
 
 // definir o fator de conversão para CO2 equivalente, GWPAR5
-// de CH4 para CO2e: 28
-// de N2o para CO2e: 265
+var factor_convert_CO2e = {
+  'CH4':28,
+  'N2O':265
+};
 
 
 var classes_list = {
@@ -118,7 +120,12 @@ var coverage_list = Object.keys(fatoresEmissaoPorBioma['Amazônia']);
 
 monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
   
-  var monthly_list_collection = []; 
+  // var monthly_list_collection = []; 
+  var monthly_list_collection = {
+      'CO2':[],
+      'CH4':[],
+      'N2O':[],
+    }; 
   
   monthly_list.forEach(function(year_month){
     
@@ -133,6 +140,12 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
     
     var recipe = ee.Image(0);
     
+    var recipes = {
+      'CO2':ee.Image(0),
+      'CH4':ee.Image(0),
+      'N2O':ee.Image(0),
+    }
+
     biomas_list.forEach(function(bioma_str){
       var bioma = biomas.filter(ee.Filter.eq('Bioma',bioma_str));
       var bioma_mask = ee.Image().paint(bioma).eq(0);
@@ -178,37 +191,61 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
         
         [
           'CO2','CH4','N2O'
+          // 'emiss_CO2','emiss_CO2e_CH4','emiss_CO2e_N2O'
         ].forEach(function(gas){
           
           var fator_gas_coverage = fatoresPorGas[gas][coverage_str];
           
           var gas_calculate_gramas = biomass_calculate_kg.multiply(fator_gas_coverage);
           
+          var gas_name = 'emiss_' + gas;
+          
+          if (factor_convert_CO2e[gas] !== undefined){
+            gas_calculate_gramas = gas_calculate_gramas.multiply(factor_convert_CO2e[gas]);
+            
+            gas_name = 'emiss_CO2e_' + gas;
+          }
+          
+          var gas_calculate_t_ha = gas_calculate_gramas.divide(1000000).divide(area_ha).float();
+          
+          recipes[gas] = recipes[gas].where(coverage_binary.and(burned).and(bioma_mask),gas_calculate_t_ha)
+            .rename(gas_name);
           
         });
-        
-        
-        ///
-        
-        
-        recipe = recipe.where(coverage_binary.and(burned).and(bioma_mask),calculate);
+
+        // recipe = recipe.where(coverage_binary.and(burned).and(bioma_mask),calculate);
         
         
       });
       
     });  
     
-    var description = "co2_fire_emiss_"+ split[1] + '_' + (('0'+split[2]).slice(-2));
-    var assetId = "projects/ee-ipam/assets/MAPBIOMAS/FIRE/MONITOR/FIRE_EMISS/v00/" + description;
 
-    var time_start = ee.Date(ee.String(description.slice(-7).replace('_','-')).cat('-').cat('01'));
+    // var time_start = ee.Date(ee.String(description.slice(-7).replace('_','-')).cat('-').cat('01'));
+    
+    [
+      'CO2','CH4','N2O'
+    ].forEach(function(gas){
+      
+    var gas_name = 'emiss_' + gas;
 
-    var img = recipe
-      .rename(burned.bandNames())
+    if (factor_convert_CO2e[gas] !== undefined){
+      gas_name = 'emiss_CO2e_' + gas;
+    }
+
+    var description = "co2_fire_emiss_" + gas_name + split[1] + '_' + (('0'+split[2]).slice(-2));
+    print('split[1]',split[1]);
+    var time_start = ee.Date(ee.String(split[1].replace('_','-')).cat('-').cat('01'));
+
+    var assetId = "projects/ee-ipam/assets/MAPBIOMAS/FIRE/MONITOR/FIRE_EMISS/v00/"+ gas_name + '/' + description;
+
+
+    var img = recipes[gas]
+      .rename(gas_name)
       .copyProperties(burned)
       //.selfMask()
       .set({
-        "metric":"carbon",
+        "metric":recipes[gas].bandNames().get(0),
         "unit":"t/ha",
         "month":description.slice(-2),
         "year_month":description.slice(-7),
@@ -217,26 +254,61 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
         "system:time_start":time_start.millis(),
         "system:time_end":time_start.advance(1,'month').millis(),
       });
+    
+    monthly_list_collection[gas].push(img);
+    
+
+    Export.image.toAsset({
+      image:img,
+      description:'WS_IPAM_SEEG-'+description,
+      assetId:assetId,
+      pyramidingPolicy:'median',
+      // dimensions:,
+      region:biomas_bounds,
+      scale:30,
+      // crs:,
+      // crsTransform:,
+      maxPixels:1e13,
+      // shardSize:,
+      // priority:,
+      // overwrite:true
+    })
+    
+  });
+  // var img = recipe
+  //     .rename(burned.bandNames())
+  //     .copyProperties(burned)
+  //     //.selfMask()
+  //     .set({
+  //       "metric":"carbon",
+  //       "unit":"t/ha",
+  //       "month":description.slice(-2),
+  //       "year_month":description.slice(-7),
+  //       "name":description,
+  //       "system:index":description,
+  //       "system:time_start":time_start.millis(),
+  //       "system:time_end":time_start.advance(1,'month').millis(),
+  //     });
       
-    monthly_list_collection.push(img);
+  //   monthly_list_collection.push(img);
     
 
 
-    // Export.image.toAsset({
-    //   image:img,
-    //   description:'WS_IPAM_SEEG-'+description,
-    //   assetId:assetId,
-    //   pyramidingPolicy:'median',
-    //   // dimensions:,
-    //   region:biomas_bounds,
-    //   scale:30,
-    //   // crs:,
-    //   // crsTransform:,
-    //   maxPixels:1e13,
-    //   // shardSize:,
-    //   // priority:,
-    //   // overwrite:true
-    // })
+  //   // Export.image.toAsset({
+  //   //   image:img,
+  //   //   description:'WS_IPAM_SEEG-'+description,
+  //   //   assetId:assetId,
+  //   //   pyramidingPolicy:'median',
+  //   //   // dimensions:,
+  //   //   region:biomas_bounds,
+  //   //   scale:30,
+  //   //   // crs:,
+  //   //   // crsTransform:,
+  //   //   maxPixels:1e13,
+  //   //   // shardSize:,
+  //   //   // priority:,
+  //   //   // overwrite:true
+  //   // })
 
   });
   

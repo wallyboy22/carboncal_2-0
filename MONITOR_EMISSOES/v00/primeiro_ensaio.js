@@ -1,4 +1,4 @@
-var historical_carbon = ee.Image(" projects/ee-ipam/assets/SEEG/SEEG14/RETIFICACAO/c_rect_col11_2019");
+var historical_carbon = ee.Image("projects/ee-ipam/assets/SEEG/SEEG14/RETIFICACAO/c_rect_col11_2019");
 var monthly_burned = ee.ImageCollection('projects/mapbiomas-public/assets/brazil/fire/monitor/mapbiomas_fire_monthly_burned_v1');
 var coverage = ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection11/mapbiomas_brazil_collection11_coverage_v3');
 var biomas = ee.FeatureCollection('projects/ee-ipam/assets/ORIGINAIS/IBGE/limite_biomas_IBGE_2026');
@@ -119,19 +119,17 @@ var biomas_list = Object.keys(fatoresEmissaoPorBioma);
 var coverage_list = Object.keys(fatoresEmissaoPorBioma['Amazônia']);
 
 monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
-  
-  var monthly_list_collection = []; 
 
   monthly_list.forEach(function(year_month){
-    
+
     var burned = monthly_burned.filter(ee.Filter.eq('name',year_month)).first();
-    
+
     var split = year_month.split('-');
-    
+
     var year = split[1] === '2026' ? '2025' : split[1];
-    
+
     var coverage_year = coverage.select('classification_' + year);
-  
+
     var recipes = {
       'CO2':ee.Image(0),
       'CH4':ee.Image(0),
@@ -143,21 +141,21 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
       var bioma_mask = ee.Image().paint(bioma).eq(0);
       coverage_list.forEach(function(coverage_str){
         var classes = classes_list[coverage_str];
-        
+
         var coverage_binary = coverage_year.eq(classes).reduce('max');
-        
+
         var obj = fatoresEmissaoPorBioma[bioma_str][coverage_str]
         var c_pool = obj['c_pool']
         var cf = obj['cf']
-      
+
         var mean_carbon = ee.Image(obj['c_mean']).rename('AGB')
           .addBands(ee.Image(0).rename('CDW'))
           .addBands(ee.Image(0).rename('LITTER'))
-      
+
         var carbon = antropic_list.indexOf(coverage_str) === -1 ? historical_carbon : mean_carbon
-      
+
         var calculate = carbon.expression({
-          expression:c_pool, 
+          expression:c_pool,
           map:{
             'AGB':carbon.select('AGB'),
             // 'BGB':carbon.select('BGB'),
@@ -166,56 +164,56 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
             // 'TOTAL':carbon.select('TOTAL'),
           }
         });
-        
+
         calculate = calculate.multiply(cf);
-        
+
         //////////////
-        
+
         var factor_carbon_biomass = 0.47;
 
         var biomass_calculate_ton_ha = calculate.multiply(factor_carbon_biomass);
 
         var area_ha = ee.Image.pixelArea().divide(10000);
-        
+
         var biomass_calculate_ton = biomass_calculate_ton_ha.multiply(area_ha);
-        
+
         var biomass_calculate_kg = biomass_calculate_ton.multiply(1000);
-        
+
         [
           'CO2','CH4','N2O'
           // 'emiss_CO2','emiss_CO2e_CH4','emiss_CO2e_N2O'
         ].forEach(function(gas){
-          
+
           var fator_gas_coverage = fatoresPorGas[gas][coverage_str];
-          
+
           var gas_calculate_gramas = biomass_calculate_kg.multiply(fator_gas_coverage);
-          
+
           var gas_name = 'emiss_' + gas;
-          
+
           if (factor_convert_CO2e[gas] !== undefined){
             gas_calculate_gramas = gas_calculate_gramas.multiply(factor_convert_CO2e[gas]);
-            
+
             gas_name = 'emiss_CO2e_' + gas;
           }
-          
+
           var gas_calculate_t_ha = gas_calculate_gramas.divide(1000000).divide(area_ha).float();
-          
+
           recipes[gas] = recipes[gas].where(coverage_binary.and(burned).and(bioma_mask),gas_calculate_t_ha)
             .rename(gas_name);
-          
+
         });
 
         // recipe = recipe.where(coverage_binary.and(burned).and(bioma_mask),calculate);
-        
-        
-      });
-      
-    });  
-    
 
-    
+
+      });
+
+    });
+
+
+
     var recipe = ee.Image().select();
-    
+
     [
       'CO2','CH4','N2O'
     ].forEach(function(gas){
@@ -228,7 +226,7 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
 
     // print('split[1]',split[1]);
 
-  
+
     var assetId = "projects/ee-ipam/assets/MAPBIOMAS/FIRE/MONITOR/FIRE_EMISS/v00/" + description;
 
 
@@ -245,9 +243,7 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
         "system:time_start":time_start.millis(),
         "system:time_end":time_start.advance(1,'month').millis(),
       });
-    
-    
-    monthly_list_collection.push(img)
+
 
     Export.image.toAsset({
       image:img,
@@ -264,18 +260,9 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
       // priority:,
       // overwrite:true
     })
-    
-    
-  });
-  
-  print('monthly_list_collection',monthly_list_collection);
 
-  monthly_list_collection = ee.ImageCollection(monthly_list_collection);
-  // print('monthly_list_collection',monthly_list_collection);
-  // Map.addLayer(monthly_list_collection,{},'monthly_list_collection');
-  Map.addLayer(monthly_list_collection,{},'monthly_list_collection 2');
-  Map.addLayer(monthly_list_collection.select('emiss_CO2').toBands(),{},'CO2 monthly_list_collection 2');
-  Map.addLayer(monthly_list_collection.select('emiss_CO2e_CH4').toBands(),{},'CO2e_CH4 monthly_list_collection 2');
-  Map.addLayer(monthly_list_collection.select('emiss_CO2e_N2O').toBands(),{},'CO2e_N2O monthly_list_collection 2');
-  
+
+  });
+
+  print('Monthly three-band export tasks created:', monthly_list.length);
 });

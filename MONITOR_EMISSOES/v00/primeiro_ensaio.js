@@ -120,13 +120,8 @@ var coverage_list = Object.keys(fatoresEmissaoPorBioma['Amazônia']);
 
 monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
   
-  // var monthly_list_collection = []; 
-  var monthly_list_collection = {
-      'CO2':[],
-      'CH4':[],
-      'N2O':[],
-    }; 
-  
+  var monthly_list_collection = []; 
+
   monthly_list.forEach(function(year_month){
     
     var burned = monthly_burned.filter(ee.Filter.eq('name',year_month)).first();
@@ -231,7 +226,7 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
     var description = "co2_fire_emiss_" + split[1] + '_' + (('0'+split[2]).slice(-2));
     var time_start = ee.Date(ee.String(description.slice(-7).replace('_','-')).cat('-').cat('01'));
 
-    print('split[1]',split[1]);
+    // print('split[1]',split[1]);
 
   
     var assetId = "projects/ee-ipam/assets/MAPBIOMAS/FIRE/MONITOR/FIRE_EMISS/v00/" + description;

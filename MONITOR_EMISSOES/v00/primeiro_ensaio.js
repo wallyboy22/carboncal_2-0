@@ -91,6 +91,11 @@ var fatoresPorGas = {
   }
 };
 
+// definir o fator de conversão para CO2 equivalente, GWPAR5
+// de CH4 para CO2e: 28
+// de N2o para CO2e: 265
+
+
 var classes_list = {
   "Formação Florestal":[3,6,5,49,9],
   "Formação Savânica":[4,77,50],
@@ -158,6 +163,33 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
         });
         
         calculate = calculate.multiply(cf);
+        
+        //////////////
+        
+        var factor_carbon_biomass = 0.47;
+
+        var biomass_calculate_ton_ha = calculate.multiply(factor_carbon_biomass);
+
+        var area_ha = ee.Image.pixelArea().divide(10000);
+        
+        var biomass_calculate_ton = biomass_calculate_ton_ha.multiply(area_ha);
+        
+        var biomass_calculate_kg = biomass_calculate_ton.multiply(1000);
+        
+        [
+          'CO2','CH4','N2O'
+        ].forEach(function(gas){
+          
+          var fator_gas_coverage = fatoresPorGas[gas][coverage_str];
+          
+          var gas_calculate_gramas = biomass_calculate_kg.multiply(fator_gas_coverage);
+          
+          
+        });
+        
+        
+        ///
+        
         
         recipe = recipe.where(coverage_binary.and(burned).and(bioma_mask),calculate);
         

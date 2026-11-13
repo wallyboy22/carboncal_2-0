@@ -245,7 +245,9 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
         "system:time_start":time_start.millis(),
         "system:time_end":time_start.advance(1,'month').millis(),
       });
-
+    
+    
+    monthly_list_collection.push(img)
 
     Export.image.toAsset({
       image:img,
@@ -266,11 +268,14 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
     
   });
   
-  // print('monthly_list_collection',monthly_list_collection);
-  
+  print('monthly_list_collection',monthly_list_collection);
+
   monthly_list_collection = ee.ImageCollection(monthly_list_collection);
   // print('monthly_list_collection',monthly_list_collection);
   // Map.addLayer(monthly_list_collection,{},'monthly_list_collection');
-  Map.addLayer(monthly_list_collection.toBands(),{},'monthly_list_collection 2');
+  Map.addLayer(monthly_list_collection,{},'monthly_list_collection 2');
+  Map.addLayer(monthly_list_collection.select('emiss_CO2').toBands(),{},'CO2 monthly_list_collection 2');
+  Map.addLayer(monthly_list_collection.select('emiss_CO2e_CH4').toBands(),{},'CO2e_CH4 monthly_list_collection 2');
+  Map.addLayer(monthly_list_collection.select('emiss_CO2e_N2O').toBands(),{},'CO2e_N2O monthly_list_collection 2');
   
 });

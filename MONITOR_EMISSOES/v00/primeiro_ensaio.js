@@ -136,10 +136,7 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
     var year = split[1] === '2026' ? '2025' : split[1];
     
     var coverage_year = coverage.select('classification_' + year);
-    
-    
-    var recipe = ee.Image(0);
-    
+  
     var recipes = {
       'CO2':ee.Image(0),
       'CH4':ee.Image(0),
@@ -221,31 +218,30 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
     });  
     
 
-    // var time_start = ee.Date(ee.String(description.slice(-7).replace('_','-')).cat('-').cat('01'));
+    
+    var recipe = ee.Image().select();
     
     [
       'CO2','CH4','N2O'
     ].forEach(function(gas){
-      
-    var gas_name = 'emiss_' + gas;
+      recipe = recipe.addBands(recipes[gas]);
+    });
 
-    if (factor_convert_CO2e[gas] !== undefined){
-      gas_name = 'emiss_CO2e_' + gas;
-    }
 
-    var description = "co2_fire_emiss_" + gas_name + split[1] + '_' + (('0'+split[2]).slice(-2));
+    var description = "co2_fire_emiss_" + split[1] + '_' + (('0'+split[2]).slice(-2));
+    var time_start = ee.Date(ee.String(description.slice(-7).replace('_','-')).cat('-').cat('01'));
+
     print('split[1]',split[1]);
-    var time_start = ee.Date(ee.String(split[1].replace('_','-')).cat('-').cat('01'));
 
-    var assetId = "projects/ee-ipam/assets/MAPBIOMAS/FIRE/MONITOR/FIRE_EMISS/v00/"+ gas_name + '/' + description;
+  
+    var assetId = "projects/ee-ipam/assets/MAPBIOMAS/FIRE/MONITOR/FIRE_EMISS/v00/" + description;
 
 
-    var img = recipes[gas]
-      .rename(gas_name)
+    var img = recipe
       .copyProperties(burned)
       //.selfMask()
       .set({
-        "metric":recipes[gas].bandNames().get(0),
+        "metric":'CO2 equivalent',
         "unit":"t/ha",
         "month":description.slice(-2),
         "year_month":description.slice(-7),
@@ -254,9 +250,7 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
         "system:time_start":time_start.millis(),
         "system:time_end":time_start.advance(1,'month').millis(),
       });
-    
-    monthly_list_collection[gas].push(img);
-    
+
 
     Export.image.toAsset({
       image:img,
@@ -274,47 +268,13 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
       // overwrite:true
     })
     
-  });
-  // var img = recipe
-  //     .rename(burned.bandNames())
-  //     .copyProperties(burned)
-  //     //.selfMask()
-  //     .set({
-  //       "metric":"carbon",
-  //       "unit":"t/ha",
-  //       "month":description.slice(-2),
-  //       "year_month":description.slice(-7),
-  //       "name":description,
-  //       "system:index":description,
-  //       "system:time_start":time_start.millis(),
-  //       "system:time_end":time_start.advance(1,'month').millis(),
-  //     });
-      
-  //   monthly_list_collection.push(img);
     
-
-
-  //   // Export.image.toAsset({
-  //   //   image:img,
-  //   //   description:'WS_IPAM_SEEG-'+description,
-  //   //   assetId:assetId,
-  //   //   pyramidingPolicy:'median',
-  //   //   // dimensions:,
-  //   //   region:biomas_bounds,
-  //   //   scale:30,
-  //   //   // crs:,
-  //   //   // crsTransform:,
-  //   //   maxPixels:1e13,
-  //   //   // shardSize:,
-  //   //   // priority:,
-  //   //   // overwrite:true
-  //   // })
-
   });
+  
+  // print('monthly_list_collection',monthly_list_collection);
   
   monthly_list_collection = ee.ImageCollection(monthly_list_collection);
-  
-  print('monthly_list_collection',monthly_list_collection);
+  // print('monthly_list_collection',monthly_list_collection);
   // Map.addLayer(monthly_list_collection,{},'monthly_list_collection');
   Map.addLayer(monthly_list_collection.toBands(),{},'monthly_list_collection 2');
   

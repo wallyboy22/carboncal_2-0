@@ -11,7 +11,9 @@ print('historical_carbon',historical_carbon);
 // OBS: O fator de combustão (cf) utilizado de maneira padronizada para Agricultura
 // é o fator utilizado para algodão no terceiro inventario (0.9). O mesmo utilizado pelo IMAFLORA
 
-//atenção na camada de carbono: c_pool ´é usado para Agricultura e Pastagem, c_mean ´é usado para cobertura de nativas
+// atenção na camada de carbono: nas nativas (Formação Florestal, Savânica, Campestre e Campo Alagado)
+// usa-se o mapa c_rect_col11_2019, combinando os estoques pela expressão c_pool; em Agricultura e
+// Pastagem usa-se a média c_mean do bioma como AGB (c_pool = "AGB").
 
 var fatoresEmissaoPorBioma = {
   "Amazônia": {
@@ -180,7 +182,11 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
 
         var factor_carbon_biomass = 0.47;
 
-        var biomass_calculate_ton_ha = calculate.multiply(factor_carbon_biomass);
+        // Corrigido em 2026-11: o mapa de carbono está em t C/ha e os fatores de emissão
+        // são g/kg de matéria seca; biomassa = carbono / 0,47. A versão com multiply
+        // subestimava as emissões em ~4,5x (1/0,47²).
+        // var biomass_calculate_ton_ha = calculate.multiply(factor_carbon_biomass);
+        var biomass_calculate_ton_ha = calculate.divide(factor_carbon_biomass);
 
         var area_ha = ee.Image.pixelArea().divide(10000);
 
@@ -244,6 +250,7 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
       //.selfMask()
       .set({
         "metric":'CO2 equivalent',
+        "biomass_from_carbon":"carbon / 0.47",
         "unit":"t/ha",
         "month":description.slice(-2),
         "year_month":description.slice(-7),

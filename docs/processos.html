@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CCAL · Processos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@500;600&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+<style>
+.toc{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:1rem}
+.toc a{font:600 .8rem var(--mono);text-decoration:none;padding:.3rem .7rem;border:1px solid var(--line);border-radius:99px;color:var(--ink-2);background:var(--card)}
+.toc a i{display:inline-block;width:.6rem;height:.6rem;border-radius:50%;margin-right:.35rem;vertical-align:middle}
+.primary{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:1.4rem;align-items:center;background:var(--card);border:2px solid var(--brand);border-radius:22px;padding:1.4rem;box-shadow:var(--shadow)}
+.primary h2{margin-top:0}
+.states svg{width:100%;height:auto}
+.states text{font-family:var(--body);fill:var(--ink)}
+.states .lbl{font-size:12px;fill:var(--muted)}
+.states .t{font:600 15px var(--display)}
+.alt{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(330px,100%),1fr));gap:1rem}
+.alt .card{display:flex;flex-direction:column;gap:.5rem;border-top:5px solid var(--c)}
+.alt h3{margin:0}
+.who{display:flex;flex-wrap:wrap;gap:.3rem}
+.who span{font:600 .72rem var(--mono);padding:.15rem .5rem;border-radius:99px;color:var(--paper);background:var(--mc)}
+.where{font-size:.88rem;color:var(--ink-2);background:var(--paper-2);border-radius:10px;padding:.45rem .7rem}
+.where b{color:var(--brand)}
+.eq{font:500 .86rem/1.6 var(--mono);background:var(--paper);border:1px dashed var(--line);border-radius:10px;padding:.7rem .85rem;overflow-wrap:anywhere;color:var(--ink)}
+.eq .c{color:var(--muted)}
+.eq b{color:var(--accent);font-weight:600}
+.legend-eq{display:flex;flex-wrap:wrap;gap:.4rem 1rem;font-size:.86rem;color:var(--ink-2)}
+.legend-eq code{font-size:.8rem}
+.mini{position:relative;height:200px}
+.steps{display:flex;align-items:flex-end;gap:.4rem;height:110px;margin:.4rem 0}
+.steps div{flex:1;background:var(--logging);border-radius:6px 6px 0 0;display:flex;align-items:flex-start;justify-content:center;font:600 .78rem var(--mono);color:var(--ink);padding-top:.2rem}
+.steps-l{display:flex;gap:.4rem;font:.72rem var(--mono);color:var(--muted)}
+.steps-l span{flex:1;text-align:center}
+.order{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;font-weight:600}
+.order span{padding:.3rem .7rem;border-radius:99px;background:var(--paper-2);border:1px solid var(--line)}
+.order i{color:var(--muted);font-style:normal}
+table.rates{min-width:520px}
+table.rates td,table.rates th{text-align:right}
+table.rates td:first-child,table.rates th:first-child{text-align:left}
+@media (max-width:860px){.primary{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<script src="assets/site.js"></script>
+<main>
+  <section class="hero">
+    <div class="eyebrow">Processos</div>
+    <h1>Como cada processo é calculado.</h1>
+    <p class="lead">Cada perda e cada ganho de carbono tem sua própria equação, e ela muda de um módulo para outro. Aqui estão as alternativas de cada processo, com as equações usadas, onde elas se aplicam e o que cada módulo considera.</p>
+    <nav class="toc" aria-label="Processos">
+      <a href="#primaria">princípio</a><a href="#fogo"><i style="background:var(--fire)"></i>fogo</a><a href="#corte"><i style="background:var(--logging)"></i>corte seletivo</a><a href="#borda"><i style="background:var(--edge)"></i>borda</a><a href="#desmatamento"><i style="background:var(--defor)"></i>desmatamento</a><a href="#regeneracao"><i style="background:var(--regen)"></i>regeneração</a><a href="#notacao">notação</a>
+    </nav>
+  </section>
+
+  <section class="block" id="primaria">
+    <div class="primary">
+      <div>
+        <span class="tag">princípio comum</span>
+        <h2>A degradação só acontece na vegetação primária.</h2>
+        <p>Fogo, corte seletivo e borda reduzem o estoque da <strong>vegetação primária</strong>, aquela que existe desde o início da série e nunca foi desmatada. Uma vegetação que foi degradada continua primária, só que com menos carbono.</p>
+        <p>A <strong>vegetação secundária</strong>, que cresce depois de um desmatamento, segue outra regra. Ela acumula carbono (remoção) e pode ser desmatada de novo, mas não recebe perdas por fogo, corte ou borda.</p>
+        <p class="small muted">O que conta como primária muda por módulo. No M1 e no M2 é a vegetação pretérita (florestal; no M2, também a savânica) que o PRODES ainda não desmatou. No M3 é a classe primária das transições do MapBiomas, cruzada com a cobertura do ano. No M4 é o estoque florestal inicial, separado do estoque da floresta secundária.</p>
+      </div>
+      <div class="states">
+        <svg viewBox="0 0 560 330" role="img" aria-label="Estados do pixel: primária, primária degradada, desmatada e secundária">
+          <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/></marker></defs>
+          <rect x="20" y="30" width="200" height="74" rx="16" style="fill:color-mix(in srgb,var(--sage) 22%,var(--card));stroke:var(--sage);stroke-width:2"/>
+          <text class="t" x="38" y="62">Primária</text><text class="lbl" x="38" y="84">estoque inicial (QCN · EBA)</text>
+          <rect x="330" y="30" width="210" height="74" rx="16" style="fill:color-mix(in srgb,var(--fire) 16%,var(--card));stroke:var(--fire);stroke-width:2"/>
+          <text class="t" x="348" y="62">Primária degradada</text><text class="lbl" x="348" y="84">menos carbono, ainda primária</text>
+          <rect x="20" y="226" width="200" height="74" rx="16" style="fill:color-mix(in srgb,var(--defor) 25%,var(--card));stroke:var(--defor);stroke-width:2"/>
+          <text class="t" x="38" y="258">Desmatada</text><text class="lbl" x="38" y="280">estoque zero · uso da terra</text>
+          <rect x="330" y="226" width="210" height="74" rx="16" style="fill:color-mix(in srgb,var(--regen) 18%,var(--card));stroke:var(--regen);stroke-width:2;stroke-dasharray:6 4"/>
+          <text class="t" x="348" y="258">Secundária</text><text class="lbl" x="348" y="280">cresce · só M3 e M4</text>
+          <path d="M222,66 L326,66" style="stroke:var(--fire);stroke-width:2.5;fill:none" marker-end="url(#ar)"/>
+          <text class="lbl" x="229" y="46" style="fill:var(--fire);font-weight:700;font-size:11px">fogo · corte · borda</text>
+          <path d="M435,108 C435,140 470,140 470,108" style="stroke:var(--fire);stroke-width:2;fill:none" marker-end="url(#ar)"/>
+          <text class="lbl" x="420" y="156">novos eventos</text>
+          <path d="M120,108 L120,222" style="stroke:var(--defor);stroke-width:2.5;fill:none" marker-end="url(#ar)"/>
+          <path d="M360,108 L190,222" style="stroke:var(--defor);stroke-width:2.5;fill:none" marker-end="url(#ar)"/>
+          <text class="lbl" x="126" y="170" style="fill:var(--defor);font-weight:700">desmatamento</text>
+          <path d="M222,252 L326,252" style="stroke:var(--regen);stroke-width:2.5;fill:none" marker-end="url(#ar)"/>
+          <text class="lbl" x="236" y="244" style="fill:var(--regen);font-weight:700">regeneração</text>
+          <path d="M326,280 L222,280" style="stroke:var(--defor);stroke-width:2;fill:none;stroke-dasharray:5 4" marker-end="url(#ar)"/>
+          <text class="lbl" x="226" y="300">desmatamento da secundária</text>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="fogo">
+    <div class="sec-head"><span class="num">fogo</span><h2>Seis maneiras de calcular o fogo.</h2>
+      <p class="muted">O fogo é o processo que mais muda entre os módulos. Variam a fonte (DETER ou MapBiomas Fogo), a vegetação atingida e o que acontece com as árvores depois da queima.</p></div>
+    <div class="alt">
+      <article class="card" style="--c:var(--fire)">
+        <div class="who"><span style="--mc:var(--m1)">M1</span></div>
+        <h3>Floresta · fração fixa da queima</h3>
+        <p>Usa o DETER fogo na Amazônia, dentro das áreas manejadas. A queima leva uma fração fixa dos compartimentos acima do solo.</p>
+        <div class="eq">ΔC = (AGB + DW + LIT) × <b>0,368</b><br>CO₂ = ΔC × 44/12<br>CH₄ = ΔC ÷ 0,47 × 6,8·10⁻³ × 28<br>N₂O = ΔC ÷ 0,47 × 0,2·10⁻³ × 265</div>
+        <div class="where"><b>Onde:</b> floresta primária da Amazônia. Fora desse recorte, o M1 não calcula fogo.</div>
+      </article>
+      <article class="card" style="--c:var(--fire)">
+        <div class="who"><span style="--mc:var(--m2)">M2</span></div>
+        <h3>Floresta · fator de combustão</h3>
+        <p>Usa o MapBiomas Fogo em vez do DETER. A fração queimada vem de um mapa de fatores de combustão por bioma.</p>
+        <div class="eq">CO₂ = AGB × <b>CF</b> × 44/12<br>CH₄ = (AGB + DW + LIT) ÷ 0,47 × CF × 6,8·10⁻³ × 28<br>N₂O = (AGB + DW + LIT) ÷ 0,47 × CF × 0,2·10⁻³ × 265<br><span class="c">cada compartimento perde a fração CF</span></div>
+        <div class="where"><b>Onde:</b> floresta primária (vegetação pretérita florestal) ainda não desmatada.</div>
+      </article>
+      <article class="card" style="--c:var(--fire)">
+        <div class="who"><span style="--mc:var(--m2)">M2</span><span style="--mc:var(--m3)">M3</span></div>
+        <h3>Savana · resposta por severidade</h3>
+        <p>Na savana, o fogo faz parte do ecossistema. A biomassa reage à <strong>recorrência</strong> e ao <strong>tempo desde a última queima</strong>: pode até crescer depois de fogos espaçados.</p>
+        <div class="eq">severidade = classe de frequência (1–4) + classe de tempo após o fogo (4–1)<br>fator = <b>+2,1%</b> (severidade 2–3) · <b>−0,4%</b> (4–6) · <b>−2,0%</b> (acima de 6)<br>ΔAGB = AGB × fator<br><span class="c">queima imediata:</span> LIT × 0,873 + DW × 0,459 (+ 26% da AGB como combustível fino)</div>
+        <div class="where"><b>Onde:</b> savana primária. CH₄ e N₂O saem do combustível queimado.</div>
+      </article>
+      <article class="card" style="--c:var(--fire)">
+        <div class="who"><span style="--mc:var(--m3)">M3</span></div>
+        <h3>Floresta · mortalidade tardia</h3>
+        <p>Na floresta, as árvores não morrem todas no ano do fogo. No ano da queima entram a serrapilheira e a madeira morta. Nos anos seguintes, uma fração da biomassa viva morre a cada ano, vira madeira morta e se decompõe.</p>
+        <div class="mini"><canvas id="cFate"></canvas></div>
+        <div class="eq">ano do fogo: queima LIT × f + DW × g <span class="c">(Amazônia f = 0,683 · g = 0,643)</span><br>anos seguintes: AGB(t+1) = AGB(t) × (1 − <b>r(t)</b>) <span class="c">r = 10,4% · 8,0% · 6,0% · 4,4% …</span><br>necromassa: decompõe <b>19%</b> ao ano · fogo repetido queima parte dela</div>
+        <div class="where"><b>Onde:</b> floresta primária (transição primária + cobertura florestal).</div>
+      </article>
+      <article class="card" style="--c:var(--grass)">
+        <div class="who"><span style="--mc:var(--m3)">M3</span></div>
+        <h3>Campo · só gases não-CO₂</h3>
+        <p>As gramíneas rebrotam quase por completo depois do fogo, então o balanço de CO₂ é neutro. Entram só o metano e o óxido nitroso da queima.</p>
+        <div class="eq">combustível = LIT × 0,883 + (AGB + DW) × 0,331<br>CH₄ = combustível × 2,3 g/kg × 28<br>N₂O = combustível × 0,21 g/kg × 265<br><span class="c">CO₂ do fogo em campo = 0</span></div>
+        <div class="where"><b>Onde:</b> campo primário (classes 11, 12 e 50). Aparece separado, como "fogo em campo".</div>
+      </article>
+      <article class="card" style="--c:var(--fire)">
+        <div class="who"><span style="--mc:var(--m4)">M4</span></div>
+        <h3>Floresta · curva de potência</h3>
+        <p>O carbono que sobra depois do fogo depende do carbono que havia: florestas mais densas perdem uma fração menor.</p>
+        <div class="mini"><canvas id="cM4fire"></canvas></div>
+        <div class="eq">AGC pós-fogo = <b>0,07816 × AGC<sup>1,4702</sup></b><br>perda = (AGC − AGC pós-fogo) × 44/12 <span class="c">· só CO₂</span></div>
+        <div class="where"><b>Onde:</b> floresta primária, já descontadas a borda e o corte do ano.</div>
+      </article>
+    </div>
+  </section>
+
+  <section class="block" id="corte">
+    <div class="sec-head"><span class="num">corte seletivo</span><h2>Duas regras para a exploração de madeira.</h2>
+      <p class="muted">As duas regras retiram uma fração da biomassa acima do solo a cada evento, e a fração diminui com a repetição. Muda o que conta como repetição.</p></div>
+    <div class="alt">
+      <article class="card" style="--c:var(--logging)">
+        <div class="who"><span style="--mc:var(--m1)">M1</span><span style="--mc:var(--m2)">M2</span></div>
+        <h3>Anos seguidos de corte (DETER)</h3>
+        <p>A fração depende de quantos <strong>anos seguidos</strong> o pixel teve alerta. Um ano sem alerta zera a contagem.</p>
+        <div class="steps"><div style="height:100%">29%</div><div style="height:93%">27%</div><div style="height:90%">26%</div><div style="height:76%">22%</div><div style="height:76%">22%</div></div>
+        <div class="steps-l"><span>1º ano</span><span>2º</span><span>3º</span><span>4º</span><span>5º +</span></div>
+        <div class="eq">perda = AGB × f(anos seguidos) × 44/12</div>
+        <div class="where"><b>Onde:</b> M1, corte desordenado só na Amazônia. M2, corte desordenado e geométrico, em floresta e savana primárias.</div>
+      </article>
+      <article class="card" style="--c:var(--logging)">
+        <div class="who"><span style="--mc:var(--m3)">M3</span><span style="--mc:var(--m4)">M4</span></div>
+        <h3>Eventos acumulados (decaimento)</h3>
+        <p>A fração depende do <strong>número acumulado</strong> de eventos no pixel e cai de forma exponencial.</p>
+        <div class="mini"><canvas id="cLog"></canvas></div>
+        <div class="eq">f(n) = <b>0,196 × e<sup>−0,0782 (n − 1)</sup></b><br>perda = AGB × f(n) × 44/12</div>
+        <div class="where"><b>Onde:</b> M3, corte seletivo do MapBiomas em floresta primária. M4, frequência de exploração em floresta primária, fora do desmatamento do ano.</div>
+      </article>
+    </div>
+  </section>
+
+  <section class="block" id="borda">
+    <div class="sec-head"><span class="num">borda · M4</span><h2>A borda perde carbono aos poucos.</h2>
+      <p class="muted">Quando uma floresta é cortada, a mata que fica na beira recebe mais luz, calor e vento, e as árvores morrem mais. A perda é maior nos primeiros anos e diminui com a idade da borda, até se estabilizar em cerca de 22,5% do carbono.</p></div>
+    <div class="grid two">
+      <div class="card"><div class="mini" style="height:240px"><canvas id="cEdge"></canvas></div></div>
+      <div class="card">
+        <div class="eq">perda acumulada L(a) = <b>22,518 × a ÷ (a + 1,615)</b> %<br>perda do ano ΔL(a) = 22,518 × 1,615 ÷ [(a + 1,615)(a + 0,615)] %<br>perda = AGC × ΔL(a) × 44/12 <span class="c">a = idade da borda em anos</span></div>
+        <p style="margin-top:1rem"><strong>Ordem no ano (M4):</strong> cada processo age sobre o que sobrou do anterior.</p>
+        <div class="order"><span style="border-color:var(--edge)">borda</span><i>→</i><span style="border-color:var(--logging)">corte</span><i>→</i><span style="border-color:var(--fire)">fogo</span><i>→</i><span style="border-color:var(--defor)">desmatamento</span></div>
+        <div class="where" style="margin-top:.8rem"><b>Convergência:</b> quando dois ou três processos caem no mesmo pixel e no mesmo ano, a soma deles aparece também como "convergência". É um diagnóstico da sobreposição, não uma perda extra.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="desmatamento">
+    <div class="sec-head"><span class="num">desmatamento</span><h2>O corte raso emite o que restou.</h2>
+      <p class="muted">Em todos os módulos, o desmatamento leva o estoque a zero. Como a degradação já foi descontada antes, ele emite só o carbono que ainda estava no pixel.</p></div>
+    <div class="alt">
+      <article class="card" style="--c:var(--defor)"><div class="who"><span style="--mc:var(--m1)">M1</span><span style="--mc:var(--m2)">M2</span></div><h3>PRODES</h3>
+        <div class="eq">CO₂ = (AGB + BGB + DW + LIT) × 44/12<br>CH₄, N₂O = queima de (AGB + DW + LIT) ÷ 0,47 × 0,368<br><span class="c">M1: + emissão pós-desmatamento (4,2% Amazônia, 8,8% Cerrado)</span></div>
+        <div class="where"><b>Fonte:</b> ano do desmatamento do PRODES, incluindo polígonos menores que 6,25 ha.</div></article>
+      <article class="card" style="--c:var(--defor)"><div class="who"><span style="--mc:var(--m3)">M3</span></div><h3>Transições do MapBiomas</h3>
+        <div class="eq">perda = max(0, estoque anterior − estoque atual − degradação do ano) × 3,67</div>
+        <div class="where"><b>Quando:</b> o ano é classificado como desmatamento da primária ou da secundária. Nesse caso, fogo e corte do mesmo ano não entram separados.</div></article>
+      <article class="card" style="--c:var(--defor)"><div class="who"><span style="--mc:var(--m4)">M4</span></div><h3>Primária e secundária separadas</h3>
+        <div class="eq">primária: AGC depois da borda, do corte e do fogo × 44/12<br>secundária: estoque secundário do ano anterior × 44/12</div>
+        <div class="where"><b>Saídas:</b> "desmatamento" e "desmatamento da secundária" aparecem separados.</div></article>
+    </div>
+  </section>
+
+  <section class="block" id="regeneracao">
+    <div class="sec-head"><span class="num">regeneração · M3 e M4</span><h2>Dois modelos de crescimento da vegetação secundária.</h2>
+      <p class="muted">Os módulos 1 e 2 não contabilizam regeneração. No M3 o crescimento é um incremento anual fixo por bioma e idade. No M4 é uma curva que acelera e depois desacelera até o estoque de referência.</p></div>
+    <div class="grid two">
+      <div class="card" style="border-top:5px solid var(--m3)">
+        <div class="who"><span style="--mc:var(--m3)">M3</span></div>
+        <h3>Incremento anual por bioma e idade</h3>
+        <p>O estoque cresce um valor fixo por ano, que depende do bioma, do grupo de vegetação e da idade, até o teto do estoque primário (QCN). A idade volta a zero quando o pixel deixa de ser secundário.</p>
+        <div class="table-wrap"><table class="rates">
+          <thead><tr><th>Bioma</th><th>Floresta/savana &lt; 20 anos</th><th>≥ 20 anos</th><th>Campo &lt; 20 anos</th></tr></thead>
+          <tbody>
+            <tr><td>Amazônia</td><td>4,78</td><td>1,17</td><td>1,7</td></tr>
+            <tr><td>Caatinga</td><td>2,44</td><td>0,59</td><td>0,6</td></tr>
+            <tr><td>Cerrado</td><td>3,88</td><td>0,95</td><td>1,7</td></tr>
+            <tr><td>Mata Atlântica</td><td>3,17</td><td>0,78</td><td>0,6</td></tr>
+            <tr><td>Pampa</td><td>2,99</td><td>0,73</td><td>1,7</td></tr>
+            <tr><td>Pantanal</td><td>3,92</td><td>0,96</td><td>1,7</td></tr>
+          </tbody></table></div>
+        <p class="small muted">tC/ha/ano. Campo com 20 anos ou mais não cresce.</p>
+      </div>
+      <div class="card" style="border-top:5px solid var(--m4)">
+        <div class="who"><span style="--mc:var(--m4)">M4</span></div>
+        <h3>Curva de crescimento com B e K</h3>
+        <p>O estoque segue uma curva em S (Chapman-Richards) em direção ao carbono de referência do pixel. Os parâmetros <strong>B</strong> e <strong>K</strong> vêm de mapas e variam no espaço.</p>
+        <div class="eq">estoque(idade) = AGC<sub>QCN</sub> × [1 − <b>B</b> × e<sup>−<b>K</b> × idade</sup>]<sup>1/(1 − 0,67)</sup><br>ganho = (estoque(t) − estoque(t−1)) × 44/12</div>
+        <div class="mini" style="height:220px"><canvas id="cRegen"></canvas></div>
+        <p class="small muted">Gráfico ilustrativo para um pixel da Amazônia com 150 tC/ha de referência. No M4, B e K são ilustrativos (B = 1, K = 0,03).</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="notacao">
+    <div class="sec-head"><span class="num">notação</span><h2>Siglas e conversões</h2></div>
+    <div class="legend-eq">
+      <span><code>AGB</code> biomassa acima do solo (em carbono)</span><span><code>BGB</code> abaixo do solo</span><span><code>DW</code> madeira morta</span><span><code>LIT</code> serrapilheira</span>
+      <span><code>AGC</code> carbono acima do solo (M4)</span><span><code>CF</code> fator de combustão</span><span><code>44/12 ≈ 3,67</code> carbono → CO₂</span><span><code>÷ 0,47</code> carbono → biomassa</span>
+      <span><code>× 28</code> CH₄ → CO₂e</span><span><code>× 265</code> N₂O → CO₂e</span>
+    </div>
+    <p class="small muted" style="margin-top:1rem">Equações transcritas das versões atuais dos módulos, de forma simplificada. A referência completa é a Nota Metodológica da CCAL.</p>
+  </section>
+</main>
+<script src="assets/chart.umd.min.js"></script>
+<script>
+const C = n => window.ccalColor(n);
+const charts = {};
+function mk(id, cfg) { if (charts[id]) charts[id].destroy(); Chart.defaults.color = C('muted'); Chart.defaults.borderColor = C('line'); Chart.defaults.font.family = getComputedStyle(document.body).fontFamily; charts[id] = new Chart(document.getElementById(id), cfg); }
+const opts = (x, y, extra = {}) => ({maintainAspectRatio: false, animation: false, plugins: {legend: {display: !!extra.legend, position: 'bottom', labels: {boxWidth: 12}}}, scales: {x: {title: {display: true, text: x}}, y: {title: {display: true, text: y}, beginAtZero: true}}, ...extra.o});
+function draw() {
+  // M3 floresta: mortalidade tardia (AGB relativa após um fogo)
+  const r = [0, .104, .08, .06, .044, .032, .023, .016, .011, .008, .006, .004, .003, .002, .001, .001, .001];
+  let a = 100; const agb = [100]; for (let t = 1; t <= 16; t++) { a *= 1 - r[t]; agb.push(+a.toFixed(1)); }
+  mk('cFate', {type: 'line', data: {labels: agb.map((_, i) => i), datasets: [{data: agb, borderColor: C('fire'), backgroundColor: C('fire'), pointRadius: 2, tension: .3, fill: false}]}, options: opts('anos depois do fogo', 'AGB restante (%)', {o: {scales: {x: {title: {display: true, text: 'anos depois do fogo'}}, y: {min: 50, max: 100, title: {display: true, text: 'AGB restante (%)'}}}}})});
+  // M4 fogo: perda relativa por densidade
+  const xs = [20, 40, 60, 80, 100, 120, 140, 160]; const loss = xs.map(x => +(100 * (1 - Math.min(x, .07816 * Math.pow(x, 1.4702)) / x)).toFixed(1));
+  mk('cM4fire', {type: 'bar', data: {labels: xs, datasets: [{data: loss, backgroundColor: C('fire'), borderRadius: 4}]}, options: opts('AGC antes do fogo (tC/ha)', 'perda (%)')});
+  // corte: decaimento
+  const ns = [1, 2, 3, 4, 5, 6, 7, 8]; const fr = ns.map(n => +(19.6 * Math.exp(-.0782 * (n - 1))).toFixed(1));
+  mk('cLog', {type: 'bar', data: {labels: ns.map(n => n + 'º'), datasets: [{data: fr, backgroundColor: C('logging'), borderRadius: 4}]}, options: opts('evento (acumulado)', 'fração da AGB (%)')});
+  // borda
+  const ages = Array.from({length: 30}, (_, i) => i + 1);
+  mk('cEdge', {data: {labels: ages, datasets: [
+    {type: 'bar', label: 'perda do ano (%)', data: ages.map(a => +(22.518 * 1.615 / ((a + 1.615) * (a + .615))).toFixed(2)), backgroundColor: C('edge'), yAxisID: 'y', borderRadius: 3},
+    {type: 'line', label: 'perda acumulada (%)', data: ages.map(a => +(22.518 * a / (a + 1.615)).toFixed(1)), borderColor: C('brand'), backgroundColor: C('brand'), yAxisID: 'y2', pointRadius: 0, borderWidth: 2.5}]},
+    options: {maintainAspectRatio: false, animation: false, plugins: {legend: {position: 'bottom', labels: {boxWidth: 12}}}, scales: {x: {title: {display: true, text: 'idade da borda (anos)'}}, y: {beginAtZero: true, title: {display: true, text: 'perda do ano (%)'}}, y2: {position: 'right', min: 0, max: 25, grid: {drawOnChartArea: false}, title: {display: true, text: 'acumulada (%)'}}}}});
+  // regeneração M3 × M4
+  const yrs = Array.from({length: 61}, (_, i) => i); const cap = 150;
+  let s = 0; const m3 = yrs.map(t => { if (t > 0) s = Math.min(cap, s + (t < 20 ? 4.7841 : 1.1698)); return +s.toFixed(1); });
+  const m4 = yrs.map(t => t ? +(cap * Math.pow(Math.max(0, 1 - Math.exp(-.03 * t)), 1 / (1 - .67))).toFixed(1) : 0);
+  mk('cRegen', {type: 'line', data: {labels: yrs, datasets: [{label: 'M3 · incremento fixo', data: m3, borderColor: C('m3'), backgroundColor: C('m3'), pointRadius: 0, borderWidth: 2.5}, {label: 'M4 · curva B/K', data: m4, borderColor: C('m4'), backgroundColor: C('m4'), pointRadius: 0, borderWidth: 2.5}]}, options: opts('idade da secundária (anos)', 'estoque (tC/ha)', {legend: true, o: {plugins: {legend: {position: 'bottom', labels: {boxWidth: 12}}}, scales: {x: {title: {display: true, text: 'idade da secundária (anos)'}, ticks: {maxTicksLimit: 7}}, y: {beginAtZero: true, title: {display: true, text: 'estoque (tC/ha)'}}}}})});
+}
+draw();
+document.addEventListener('ccal-theme', draw);
+</script>
+</body>
+</html>

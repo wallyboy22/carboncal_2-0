@@ -1,6 +1,6 @@
 // Aviso, menu, rodapé e tema comuns às páginas.
 (function () {
-  var PAGES = [['index.html', 'Início'], ['metodo.html', 'Método'], ['estatisticas.html', 'Estatísticas'], ['dados.html', 'Dados']];
+  var PAGES = [['index.html', 'Início'], ['metodo.html', 'Método'], ['processos.html', 'Processos'], ['estatisticas.html', 'Estatísticas'], ['dados.html', 'Dados']];
   var here = location.pathname.split('/').pop() || 'index.html';
   var root = document.documentElement;
   var theme = 'light';

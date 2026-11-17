@@ -72,7 +72,7 @@
     <div class="sec-head"><span class="num">01 / camadas</span><h2>O dado chega em camadas.</h2>
       <p class="muted">As bases de fogo, corte seletivo, desmatamento, regeneração e carbono vêm de fontes diferentes. Cada uma cobre um período e uma vegetação diferentes. O método junta todas no mesmo pixel sem que um evento apague o outro.</p></div>
     <div class="layers" id="layers"></div>
-    <p class="small muted">Períodos usados na versão atual de cada fonte. Os módulos 1 e 2 começam em 2016; os módulos 3 e 4 seguem a série do MapBiomas desde 1985. Em 2025, corte seletivo do MapBiomas e idade de borda ainda não tinham dado novo.</p>
+    <p class="small muted">Períodos de cada fonte. Os módulos 1 e 2 começam em 2016; os módulos 3 e 4 seguem a série do MapBiomas desde 1985. Corte seletivo do MapBiomas e idade de borda ainda não têm dado de 2025.</p>
   </section>
 
   <section class="block" id="transversal">
@@ -266,7 +266,7 @@ const MODS = {
     proc: [['defor', 'desmatamento'], ['fire', 'fogo em floresta e savana'], ['grass', 'fogo em campo (CH₄, N₂O)'], ['logging', 'corte seletivo'], ['regen', 'regeneração']],
     rules: ['Na floresta, o fogo tem duas partes: a queima imediata da serrapilheira e da madeira morta, e a morte das árvores, que se espalha pelos anos seguintes.', 'O corte seletivo tira 19,6% da biomassa no primeiro evento. A fração diminui a cada evento seguinte.', 'A vegetação secundária cresce conforme o bioma e a idade, sem passar do estoque primário da região.', 'No campo, o balanço de CO₂ é neutro. Entram só o CH₄ e o N₂O da queima.']},
   M4: {name: 'Módulo 4 · borda', c: 'm4', yrs: '1986–2025',
-    what: 'Proposto pelo IPAM. É um módulo <strong>só de floresta</strong> desde a primeira versão, com estoque, borda, corte seletivo, fogo, desmatamento e regeneração. Não é uma extensão do Módulo 3: compartilha a cobertura do MapBiomas, mas tem fontes e equações próprias. O processo exclusivo dele é a perda de carbono nas bordas dos fragmentos, onde há mais luz, calor e vento, e as árvores morrem mais.',
+    what: 'Proposto pelo IPAM. É um módulo <strong>só de floresta</strong>: estoque, borda, corte seletivo, fogo, desmatamento e regeneração valem só para floresta. Usa a cobertura do MapBiomas com fontes e equações próprias. O processo exclusivo dele é a perda de carbono nas bordas dos fragmentos, onde há mais luz, calor e vento, e as árvores morrem mais.',
     veg: 'Só floresta: primária (floresta ou floresta alagável em 1985) e secundária. Savana e campo ficam fora. O carbono é só o acima do solo.',
     src: ['QCN (carbono acima do solo)', 'MapBiomas cobertura e transições', 'MapBiomas Fogo', 'idade de borda', 'idade da floresta secundária', 'frequência de exploração madeireira'],
     proc: [['edge', 'efeito de borda'], ['logging', 'corte seletivo'], ['fire', 'fogo'], ['defor', 'desmatamento'], ['regen', 'regeneração']],

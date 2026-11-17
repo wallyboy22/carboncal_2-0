@@ -21,7 +21,7 @@ Unidades das bandas:
 | `loss_*_YYYY`, `gain_*_YYYY`, `net_balance_YYYY` | tCO₂e por pixel |
 | `stock_YYYY` | tC/ha |
 
-As versões terminadas em `_1` estendem a série até 2025 sem reprocessar os anos anteriores, que são idênticos aos da versão anterior. As limitações de 2025 estão em [`docs/index.html`](docs/index.html).
+Séries até 2025. As limitações de dados de 2025 estão na página [Dados](https://wallyboy22.github.io/carboncal_2-0/dados.html#limitacoes).
 
 ## Estrutura
 

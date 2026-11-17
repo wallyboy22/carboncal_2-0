@@ -105,6 +105,68 @@ def year_table(module, year, variables, bands, geometry=None, scale=SCALE):
     return ee.FeatureCollection(ee.List(result.get('groups')).map(per_biome)).flatten(), cols
 
 
+M3_CORRECTED = 'projects/ee-ipam/assets/CCAL/MODULO3/v039/desf_reg_corrected'
+M3_TRANSITIONS_V5 = ('projects/mapbiomas-public/assets/brazil/lulc/collection11/'
+                     'mapbiomas_brazil_collection11_deforestation_secondary_vegetation_v5')
+FIRE = 'projects/mapbiomas-public/assets/brazil/fire/collection5_1/mapbiomas_fire_collection51_annual_burned_v1'
+
+
+def m3_transition(year):
+    """Transição corrigida do M3; 2025 = v5 com preenchimento para frente (igual à extensão)."""
+    corrected = ee.Image(M3_CORRECTED)
+    if year <= 2024:
+        return corrected.select(f'classification_{year}')
+    current = ee.Image(M3_TRANSITIONS_V5).select(f'classification_{year}')
+    return corrected.select('classification_2024').where(current.neq(7), current)
+
+
+def m3_extra_table(year, geometry=None, scale=SCALE):
+    """M3: desmatamento primária × secundária e fogo no ano da queima × anos seguintes."""
+    img = ee.Image(asset('M3'))
+    area = ee.Image.pixelArea().divide(1e4)
+    tr = m3_transition(year)
+    defor = img.select(f'loss_deforestation_{year}').unmask(0)
+    fire = img.select(f'loss_fire_{year}').unmask(0)
+    burned = ee.Image(FIRE).select(f'burned_area_{year}').unmask(0).gt(0)
+    values = [defor.multiply(tr.eq(4)), defor.multiply(tr.eq(6)), fire.multiply(burned),
+              fire.multiply(burned.Not()), area.multiply(burned).multiply(fire.gt(0)),
+              area.multiply(fire.gt(0)).multiply(burned.Not())]
+    cols = ['loss_deforestation_primary_tCO2e', 'loss_deforestation_secondary_tCO2e',
+            'loss_fire_burned_year_tCO2e', 'loss_fire_after_tCO2e',
+            'area_fire_burned_year_ha', 'area_fire_after_ha']
+    n = len(values)
+    biomes, ufs = zones()
+    stack = ee.Image.cat(values).unmask(0).addBands(ufs).addBands(biomes).updateMask(biomes.mask().And(ufs.mask()))
+    geometry = geometry or ee.FeatureCollection(BIOMES).geometry().bounds()
+    reducer = ee.Reducer.sum().repeat(n).group(n, 'uf').group(n + 1, 'bioma')
+    result = stack.reduceRegion(reducer, geometry, scale, maxPixels=1e13, tileScale=4)
+
+    def per_biome(b):
+        b = ee.Dictionary(b)
+
+        def per_uf(u):
+            u = ee.Dictionary(u)
+            props = {'modulo': 'M3', 'asset': MODULES['M3'][0], 'ano': year,
+                     'bioma_id': b.getNumber('bioma').int(), 'uf_id': u.getNumber('uf').int()}
+            return ee.Feature(None, props).set(ee.Dictionary.fromLists(cols, ee.List(u.get('sum'))))
+        return ee.FeatureCollection(ee.List(b.get('groups')).map(per_uf))
+    return ee.FeatureCollection(ee.List(result.get('groups')).map(per_biome)).flatten(), cols
+
+
+def extract_m3extra(args):
+    for year in (args.years or range(1986, 2026)):
+        table, cols = m3_extra_table(year)
+        name = f'M3extra_{year}'
+        if not args.submit:
+            print('plan', name); continue
+        task = ee.batch.Export.table.toCloudStorage(
+            collection=table, description=TASK_PREFIX + name, bucket=BUCKET,
+            fileNamePrefix=f'{PREFIX}/{name}', fileFormat='CSV',
+            selectors=['modulo', 'asset', 'ano', 'bioma_id', 'uf_id'] + cols)
+        task.start()
+        print('task', name, task.id, flush=True)
+
+
 def extract(args):
     for module in args.modules:
         variables, years, bands = variables_and_years(module)
@@ -172,6 +234,7 @@ def build(args):
     wide = pd.concat([pd.read_csv(f) for f in files], ignore_index=True)
     ids = ['modulo', 'asset', 'ano', 'bioma_id', 'uf_id']
     long = wide.melt(id_vars=ids, var_name='variavel', value_name='valor').dropna(subset=['valor'])
+    long = long.groupby(['modulo', 'asset', 'ano', 'bioma_id', 'uf_id', 'variavel'], as_index=False)['valor'].sum()
     long['unidade'] = long['variavel'].str.extract(r'_(tCO2e|tC|ha)$')[0]
     long['variavel'] = long['variavel'].str.replace(r'_(tCO2e|tC|ha)$', '', regex=True)
     long['bioma'] = long['bioma_id'].map(BIOME_NAMES)
@@ -189,7 +252,7 @@ def build(args):
 def main():
     global args_global
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('step', choices=['test', 'extract', 'download', 'build'])
+    parser.add_argument('step', choices=['test', 'extract', 'extract-m3extra', 'download', 'build'])
     parser.add_argument('--project', default=PROJECT)
     parser.add_argument('--account-profile', default='workspace2')
     parser.add_argument('--modules', nargs='+', default=list(MODULES), choices=list(MODULES))
@@ -198,7 +261,7 @@ def main():
     args_global = args = parser.parse_args()
     if args.step != 'build':
         ee.Initialize(credentials=auth.load(args.account_profile), project=args.project)
-    {'test': test, 'extract': extract, 'download': download, 'build': build}[args.step](args)
+    {'test': test, 'extract': extract, 'extract-m3extra': extract_m3extra, 'download': download, 'build': build}[args.step](args)
 
 
 if __name__ == '__main__':

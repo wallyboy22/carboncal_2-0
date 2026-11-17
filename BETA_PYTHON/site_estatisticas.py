@@ -24,7 +24,7 @@ PROCESSES = {
     'loss_grassland': ('Fogo em campo', 'grass', 'loss'),
     'loss_deforestation_secondary': ('Desmat. de secundária', 'rose', 'loss'),
     'gain_secondary_vegetation': ('Regeneração', 'regen', 'gain'),
-    'net_balance': ('Balanço líquido', 'accent', 'net'),
+    'net_balance': ('Balanço líquido', 'net', 'net'),
     'stock': ('Estoque', 'stock', 'stock'),
 }
 REGIONS = {'Norte': ['AC', 'AM', 'AP', 'PA', 'RO', 'RR', 'TO'], 'Nordeste': ['AL', 'BA', 'CE', 'MA', 'PB', 'PE', 'PI', 'RN', 'SE'],
@@ -59,6 +59,12 @@ PAGE = r"""<!doctype html>
 .mx td.h{border-radius:4px;color:var(--ink)}
 .mx th:first-child,.mx td:first-child{text-align:left;position:sticky;left:0;background:var(--card)}
 .hint{font-size:.85rem;color:var(--muted)}
+.sm{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:1rem}
+.sm>div{border:1px solid var(--line);border-radius:14px;padding:.7rem .8rem;background:var(--paper)}
+.sm h3{font-size:1rem;margin:0 0 .2rem;display:flex;align-items:center;gap:.4rem}
+.sm .u{font-size:.75rem;color:var(--muted)}
+.sm .box{position:relative;height:170px}
+.sm button{all:unset;cursor:pointer}
 @media (max-width:960px){.layout{grid-template-columns:minmax(0,1fr)}.filters{position:static}}
 @media (max-width:640px){.kpi .v{font-size:1.35rem}.card-head{flex-direction:column}}
 </style></head><body><script src="assets/site.js"></script>
@@ -77,6 +83,8 @@ PAGE = r"""<!doctype html>
 </aside>
 <div class="content">
   <div class="kpis" id="kpis"></div>
+  <section class="card"><div class="card-head"><div><h2>Comparar módulos</h2><p>O mesmo recorte lido pelos quatro módulos, processo a processo. Cada módulo usa fontes e regras próprias (veja o <a href="metodo.html#transversal">método</a>).</p></div></div>
+    <div class="sm" id="sm"></div></section>
   <section class="card"><div class="card-head"><div><h2 id="tLine">Série anual</h2><p id="sLine"></p></div><div class="seg small" id="fLineMode"></div></div><div class="chart-box"><canvas id="cLine"></canvas></div></section>
   <section class="card"><div class="card-head"><div><h2>De onde vêm as emissões</h2><p>Perdas por processo e remoções pela regeneração, a cada ano, para um módulo.</p></div><div class="seg small" id="fStackMod"></div></div><div class="chart-box"><canvas id="cStack"></canvas></div></section>
   <div class="grid two">
@@ -126,6 +134,13 @@ function render(){
     const last=ys[ys.length-1],val=sign(v,series[m+'|'+last])/sc.k,prev=series[m+'|'+(last-1)];let d='';
     if(prev!=null&&prev!==0){const p=(series[m+'|'+last]-prev)/Math.abs(prev)*100;d=`<span class="${(p>0)===(P[v][2]!=='gain')?'up':'down'}">${p>0?'▲':'▼'} ${fmt(Math.abs(p))}%</span> vs ${last-1}`}
     return `<div class="card kpi" style="--c:var(--${m.toLowerCase()})"><div class="l">${m} · ${P[v][0]} · ${last}</div><div class="v">${fmt(val)}</div><div class="d">${sc.u}${d?' · '+d:''}</div></div>`}).join('');
+  // comparar módulos (pequenos múltiplos)
+  const SMV=['loss_deforestation','loss_fire','loss_selective_logging','gain_secondary_vegetation','loss_edge','stock'].filter(k=>P[k]);
+  $('sm').innerHTML=SMV.map(k=>`<div><button type="button" data-k="${k}" title="Ver no gráfico principal"><h3><i class="dot" style="background:var(--${P[k][1]})"></i>${P[k][0]}</h3></button><div class="u">${scale(k).u}</div><div class="box"><canvas id="sm_${k}"></canvas></div></div>`).join('');
+  $('sm').onclick=e=>{const b=e.target.closest('button');if(b){S.proc=b.dataset.k;render();$('tLine').scrollIntoView({behavior:'smooth',block:'center'})}};
+  SMV.forEach(k=>{const ki=vIdx[k],sk=scale(k),ser=agg(i=>D.p[i]===ki&&inScope(i),i=>MODS[D.m[i]]+'|'+D.y[i]);
+    mk('sm_'+k,{type:'line',data:{labels:years,datasets:MODS.filter(m=>S.mods.includes(m)).map(m=>({label:m,data:years.map(y=>ser[m+'|'+y]==null?null:sign(k,ser[m+'|'+y])/sk.k),borderColor:C(m.toLowerCase()),backgroundColor:C(m.toLowerCase()),pointRadius:0,borderWidth:2,tension:.2}))},
+      options:{maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmt(c.parsed.y)} ${sk.u}`}}},scales:{x:{ticks:{maxTicksLimit:5}},y:{ticks:{maxTicksLimit:4}}}}})});
   const lineDs=MODS.filter(m=>S.mods.includes(m)).map(m=>{let acc=0;return{label:m,data:years.map(y=>{const x=series[m+'|'+y];if(x==null)return null;const s=sign(v,x)/sc.k;if(S.lineMode==='idx'){acc+=s;return acc}return s}),borderColor:C(m.toLowerCase()),backgroundColor:C(m.toLowerCase()),tension:.2,pointRadius:2,borderWidth:2.5,spanGaps:false}});
   $('tLine').textContent=P[v][0]+(S.lineMode==='idx'?' · acumulado':'');$('sLine').textContent=sc.u+' · '+scopeTxt();
   mk('cLine',{type:'line',data:{labels:years,datasets:lineDs},options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{boxWidth:12}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmt(c.parsed.y)} ${sc.u}`}}}}});

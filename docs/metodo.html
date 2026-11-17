@@ -81,7 +81,7 @@
     <div class="grid two">
       <div class="card"><span class="tag">transversal</span><h3>Igual em todos</h3>
         <ul>
-          <li>Os mapas de carbono da Quarta Comunicação Nacional do Brasil (QCN), em quatro compartimentos: biomassa acima do solo, abaixo do solo, madeira morta e serrapilheira.</li>
+          <li>O carbono em quatro compartimentos: biomassa acima do solo, abaixo do solo, madeira morta e serrapilheira.</li>
           <li>Uma grade de 30 m. A área de cada pixel é calculada pela latitude e varia de cerca de 890 m² no norte a 746 m² no sul.</li>
           <li>O carbono perdido vira CO₂ pela proporção 44/12. CH₄ e N₂O são convertidos em CO₂ equivalente (GWP 28 e 265).</li>
           <li>Não há dupla contagem: a degradação sai do estoque antes. Um desmatamento posterior só emite o que restou no pixel.</li>
@@ -89,6 +89,7 @@
         </ul></div>
       <div class="card"><span class="tag">específico</span><h3>Muda por módulo</h3>
         <ul>
+          <li><strong>Base de carbono:</strong> mapas da Quarta Comunicação Nacional (QCN) em todo o Brasil. Na Amazônia, os módulos 1 e 2 usam a EBA (Estimativa de Biomassa da Amazônia), como no FREL.</li>
           <li><strong>Desmatamento:</strong> PRODES (M1, M2) ou transições do MapBiomas (M3, M4).</li>
           <li><strong>Fogo:</strong> DETER (M1) ou MapBiomas Fogo (M2, M3, M4), com regras próprias para floresta, savana e campo.</li>
           <li><strong>Corte seletivo:</strong> DETER (M1, M2), MapBiomas (M3) ou frequência de exploração (M4).</li>
@@ -190,7 +191,7 @@ function seg(el, items, value, onChange) {
 
 /* 01 camadas: linha do tempo 1985–2025 */
 const LAYERS = [
-  ['Carbono', 'stock', [['QCN · mapa de referência (estoque pré-perturbação)', 1985, 2025, 'all']]],
+  ['Carbono', 'stock', [['QCN · mapa de referência · M3 M4 e M1 M2 fora da Amazônia', 1985, 2025, 'all'], ['EBA · M1 M2 na Amazônia', 2016, 2025, 'm12']]],
   ['Desmatamento', 'defor', [['MapBiomas transições · M3 M4', 1986, 2025, 'm34'], ['PRODES · M1 M2', 2016, 2025, 'm12']]],
   ['Fogo', 'fire', [['MapBiomas Fogo · M2 M3 M4', 1985, 2025, 'm234'], ['DETER fogo · M1', 2017, 2025, 'm12']]],
   ['Corte seletivo', 'logging', [['MapBiomas · M3', 1988, 2024, 'm34'], ['DETER · M1 M2', 2017, 2025, 'm12'], ['frequência de exploração · M4', 1986, 2024, 'm4']]],
@@ -210,7 +211,7 @@ const LAYERS = [
 })();
 /* 02 matriz */
 const MX = [
-  ['Estoque inicial (QCN)', '●', '●', '●', '●'],
+  ['Base de carbono', '● EBA na Amazônia, QCN no resto', '● EBA na Amazônia, QCN no resto', '● QCN', '● QCN'],
   ['Desmatamento', '● PRODES', '● PRODES', '● MapBiomas', '● MapBiomas'],
   ['Fogo em floresta', '◐ DETER, Amazônia', '● MapBiomas', '● com mortalidade tardia', '●'],
   ['Fogo em savana', '○', '● resposta por recorrência', '● resposta por recorrência', '○'],
@@ -229,7 +230,7 @@ $('mx').innerHTML = MX.map(r => '<tr>' + r.map((v, i) => {
 
 /* 03 fluxo */
 (function () {
-  const steps = [['Fontes', 'QCN · PRODES · DETER', 'MapBiomas · Fogo'], ['Eventos anuais', 'fogo · corte · desmate', 'regeneração · borda'], ['Estado do pixel', 'idade · estoque', 'histórico de degradação'], ['Carbono', 'estoque (tC/ha)', 'emissões · remoções'], ['Território', 'estado · município', 'bioma · TI · UC']];
+  const steps = [['Fontes', 'QCN · EBA · PRODES', 'DETER · MapBiomas'], ['Eventos anuais', 'fogo · corte · desmate', 'regeneração · borda'], ['Estado do pixel', 'idade · estoque', 'histórico de degradação'], ['Carbono', 'estoque (tC/ha)', 'emissões · remoções'], ['Território', 'estado · município', 'bioma · TI · UC']];
   const w = 186, gap = 34, y = 55, h = 140;
   let s = '';
   steps.forEach(([t, a, b], i) => {
@@ -247,14 +248,14 @@ $('mx').innerHTML = MX.map(r => '<tr>' + r.map((v, i) => {
 const MODS = {
   M1: {name: 'Módulo 1 · FREL', c: 'm1', yrs: '2016–2025',
     what: 'Segue a metodologia do <em>Forest Reference Emission Level</em> (FREL 2024), que o Brasil submete à UNFCCC. Estima as emissões multiplicando dados de atividade por fatores de emissão, conforme as diretrizes do IPCC de 2006.',
-    veg: 'Fitofisionomias florestais do IBGE (vegetação pretérita), por bioma.',
-    src: ['QCN (carbono)', 'PRODES', 'DETER fogo', 'DETER corte desordenado', 'áreas manejadas'],
+    veg: 'Fitofisionomias florestais do IBGE (vegetação pretérita), por bioma. Carbono da EBA na Amazônia e da QCN nos demais biomas.',
+    src: ['QCN (carbono)', 'EBA (carbono, Amazônia)', 'PRODES', 'DETER fogo', 'DETER corte desordenado', 'áreas manejadas'],
     proc: [['defor', 'desmatamento'], ['fire', 'fogo (Amazônia)'], ['logging', 'corte seletivo (Amazônia)']],
     rules: ['O fogo reduz em 36,8% a biomassa acima do solo, a madeira morta e a serrapilheira.', 'A perda pelo corte seletivo depende de quantos anos seguidos houve corte: 29%, 27%, 26% e depois 22% da biomassa acima do solo.', 'O desmatamento emite todo o estoque restante. O CH₄ e o N₂O da queima entram na Amazônia e no Cerrado.']},
   M2: {name: 'Módulo 2 · FREL adaptado', c: 'm2', yrs: '2016–2025',
     what: 'Desenvolvido pelo IPAM. Usa as mesmas bases do Módulo 1, mas troca o DETER Fogo pelo MapBiomas Fogo e inclui a savana arborizada, onde o fogo também degrada a vegetação.',
-    veg: 'Floresta e savana arborizada (vegetação pretérita).',
-    src: ['QCN (carbono)', 'PRODES', 'DETER corte (geométrico e desordenado)', 'MapBiomas Fogo', 'frequência e tempo após o fogo'],
+    veg: 'Floresta e savana arborizada (vegetação pretérita). Carbono da EBA na Amazônia e da QCN nos demais biomas.',
+    src: ['QCN (carbono)', 'EBA (carbono, Amazônia)', 'PRODES', 'DETER corte (geométrico e desordenado)', 'MapBiomas Fogo', 'frequência e tempo após o fogo'],
     proc: [['defor', 'desmatamento'], ['fire', 'fogo em floresta e savana'], ['logging', 'corte seletivo']],
     rules: ['Na floresta, o fogo queima uma fração dos compartimentos (fator de combustão).', 'Na savana, a biomassa reage conforme a recorrência do fogo e o tempo desde a última queima: pode ganhar 2,1% ou perder de 0,4% a 2%.', 'O corte seletivo segue as frações do Módulo 1 e vale também para a savana.']},
   M3: {name: 'Módulo 3 · QCN + MapBiomas', c: 'm3', yrs: '1986–2025',

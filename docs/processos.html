@@ -37,6 +37,10 @@
 .order{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;font-weight:600}
 .order span{padding:.3rem .7rem;border-radius:99px;background:var(--paper-2);border:1px solid var(--line)}
 .order i{color:var(--muted);font-style:normal}
+table.fito td{font-size:.88rem}
+table.fito td small{color:var(--muted)}
+table.fito tr.g td{background:var(--paper-2);font:600 .78rem var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+table.fito td:not(:first-child){color:var(--ink)}
 table.rates{min-width:520px}
 table.rates td,table.rates th{text-align:right}
 table.rates td:first-child,table.rates th:first-child{text-align:left}
@@ -51,7 +55,7 @@ table.rates td:first-child,table.rates th:first-child{text-align:left}
     <h1>Como cada processo é calculado.</h1>
     <p class="lead">Cada perda e cada ganho de carbono tem sua própria equação, e ela muda de um módulo para outro. Aqui estão as alternativas de cada processo, com as equações usadas, onde elas se aplicam e o que cada módulo considera.</p>
     <nav class="toc" aria-label="Processos">
-      <a href="#primaria">princípio</a><a href="#fogo"><i style="background:var(--fire)"></i>fogo</a><a href="#corte"><i style="background:var(--logging)"></i>corte seletivo</a><a href="#borda"><i style="background:var(--edge)"></i>borda</a><a href="#desmatamento"><i style="background:var(--defor)"></i>desmatamento</a><a href="#regeneracao"><i style="background:var(--regen)"></i>regeneração</a><a href="#notacao">notação</a>
+      <a href="#primaria">princípio</a><a href="#fitofisionomia">fitofisionomia</a><a href="#fogo"><i style="background:var(--fire)"></i>fogo</a><a href="#corte"><i style="background:var(--logging)"></i>corte seletivo</a><a href="#borda"><i style="background:var(--edge)"></i>borda</a><a href="#desmatamento"><i style="background:var(--defor)"></i>desmatamento</a><a href="#regeneracao"><i style="background:var(--regen)"></i>regeneração</a><a href="#notacao">notação</a>
     </nav>
   </section>
 
@@ -91,9 +95,34 @@ table.rates td:first-child,table.rates th:first-child{text-align:left}
     </div>
   </section>
 
+
+  <section class="block" id="fitofisionomia">
+    <div class="sec-head"><span class="num">fitofisionomia</span><h2>Cada processo, em cada tipo de vegetação.</h2>
+      <p class="muted">O mesmo processo muda entre módulos e, dentro de um módulo, entre floresta, savana e campo. A borda é exclusiva de floresta. O corte seletivo é florestal no M3 e no M4.</p></div>
+    <div class="table-wrap"><table class="fito">
+      <thead><tr><th>Processo · vegetação</th><th>M1 · FREL</th><th>M2 · FREL adaptado</th><th>M3 · QCN + MapBiomas</th><th>M4 · borda</th></tr></thead>
+      <tbody>
+        <tr class="g"><td colspan="5"><i class="dot" style="background:var(--fire)"></i> Fogo</td></tr>
+        <tr><td>Floresta</td><td>● fração fixa 36,8% <small>(DETER, Amazônia)</small></td><td>● fator de combustão</td><td>● mortalidade tardia</td><td>● curva de potência</td></tr>
+        <tr><td>Savana</td><td>◐ entra como floresta <small>(vegetação pretérita agrupada)</small></td><td>● severidade + queima imediata</td><td>● severidade + queima imediata</td><td>○</td></tr>
+        <tr><td>Campo</td><td>○</td><td>○</td><td>● só CH₄ e N₂O</td><td>○</td></tr>
+        <tr class="g"><td colspan="5"><i class="dot" style="background:var(--logging)"></i> Corte seletivo</td></tr>
+        <tr><td>Floresta</td><td>● anos seguidos <small>(DETER, Amazônia)</small></td><td>● anos seguidos</td><td>● eventos acumulados <small>(Amazônia)</small></td><td>● eventos acumulados</td></tr>
+        <tr><td>Savana</td><td>◐ entra como floresta <small>(vegetação pretérita agrupada)</small></td><td>◐ também aplicado à savana arborizada</td><td>○</td><td>○</td></tr>
+        <tr><td>Campo</td><td>○</td><td>○</td><td>○</td><td>○</td></tr>
+        <tr class="g"><td colspan="5"><i class="dot" style="background:var(--edge)"></i> Borda</td></tr>
+        <tr><td>Floresta</td><td>○</td><td>○</td><td>○</td><td>● idade da borda</td></tr>
+        <tr><td>Savana · campo</td><td>○</td><td>○</td><td>○</td><td>○</td></tr>
+        <tr class="g"><td colspan="5"><i class="dot" style="background:var(--regen)"></i> Regeneração</td></tr>
+        <tr><td>Floresta · savana</td><td>○</td><td>○</td><td>● incremento por bioma</td><td>● curva B/K <small>(só floresta)</small></td></tr>
+        <tr><td>Campo</td><td>○</td><td>○</td><td>● incremento menor, até 20 anos</td><td>○</td></tr>
+      </tbody>
+    </table></div>
+    <p class="small muted">● considerado · ◐ considerado com ressalva · ○ não considerado. Fogo, corte e borda atuam só sobre a vegetação primária.</p>
+  </section>
   <section class="block" id="fogo">
     <div class="sec-head"><span class="num">fogo</span><h2>Seis maneiras de calcular o fogo.</h2>
-      <p class="muted">O fogo é o processo que mais muda entre os módulos. Variam a fonte (DETER ou MapBiomas Fogo), a vegetação atingida e o que acontece com as árvores depois da queima.</p></div>
+      <p class="muted">O fogo é o processo que mais muda: entre módulos e, dentro do mesmo módulo, entre floresta, savana e campo. Variam a fonte (DETER ou MapBiomas Fogo) e o que acontece com a vegetação depois da queima.</p></div>
     <div class="alt">
       <article class="card" style="--c:var(--fire)">
         <div class="who"><span style="--mc:var(--m1)">M1</span></div>
@@ -143,7 +172,7 @@ table.rates td:first-child,table.rates th:first-child{text-align:left}
   </section>
 
   <section class="block" id="corte">
-    <div class="sec-head"><span class="num">corte seletivo</span><h2>Duas regras para a exploração de madeira.</h2>
+    <div class="sec-head"><span class="num">corte seletivo · floresta</span><h2>Duas regras para a exploração de madeira.</h2>
       <p class="muted">As duas regras retiram uma fração da biomassa acima do solo a cada evento, e a fração diminui com a repetição. Muda o que conta como repetição.</p></div>
     <div class="alt">
       <article class="card" style="--c:var(--logging)">
@@ -153,7 +182,7 @@ table.rates td:first-child,table.rates th:first-child{text-align:left}
         <div class="steps"><div style="height:100%">29%</div><div style="height:93%">27%</div><div style="height:90%">26%</div><div style="height:76%">22%</div><div style="height:76%">22%</div></div>
         <div class="steps-l"><span>1º ano</span><span>2º</span><span>3º</span><span>4º</span><span>5º +</span></div>
         <div class="eq">perda = AGB × f(anos seguidos) × 44/12</div>
-        <div class="where"><b>Onde:</b> M1, corte desordenado só na Amazônia. M2, corte desordenado e geométrico, em floresta e savana primárias.</div>
+        <div class="where"><b>Onde:</b> M1, corte desordenado na Amazônia, sobre a vegetação pretérita, que agrupa floresta e savana. M2, corte desordenado e geométrico, aplicado à floresta e também à savana arborizada.</div>
       </article>
       <article class="card" style="--c:var(--logging)">
         <div class="who"><span style="--mc:var(--m3)">M3</span><span style="--mc:var(--m4)">M4</span></div>
@@ -161,13 +190,13 @@ table.rates td:first-child,table.rates th:first-child{text-align:left}
         <p>A fração depende do <strong>número acumulado</strong> de eventos no pixel e cai de forma exponencial.</p>
         <div class="mini"><canvas id="cLog"></canvas></div>
         <div class="eq">f(n) = <b>0,196 × e<sup>−0,0782 (n − 1)</sup></b><br>perda = AGB × f(n) × 44/12</div>
-        <div class="where"><b>Onde:</b> M3, corte seletivo do MapBiomas em floresta primária. M4, frequência de exploração em floresta primária, fora do desmatamento do ano.</div>
+        <div class="where"><b>Onde:</b> só floresta primária. M3, corte seletivo do MapBiomas na Amazônia. M4, frequência de exploração, fora do desmatamento do ano.</div>
       </article>
     </div>
   </section>
 
   <section class="block" id="borda">
-    <div class="sec-head"><span class="num">borda · M4</span><h2>A borda perde carbono aos poucos.</h2>
+    <div class="sec-head"><span class="num">borda · M4 · só floresta</span><h2>A borda perde carbono aos poucos.</h2>
       <p class="muted">Quando uma floresta é cortada, a mata que fica na beira recebe mais luz, calor e vento, e as árvores morrem mais. A perda é maior nos primeiros anos e diminui com a idade da borda, até se estabilizar em cerca de 22,5% do carbono.</p></div>
     <div class="grid two">
       <div class="card"><div class="mini" style="height:240px"><canvas id="cEdge"></canvas></div></div>

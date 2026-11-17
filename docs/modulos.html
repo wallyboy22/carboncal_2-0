@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CCAL · Módulos</title>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<script src="assets/site.js"></script>
+<main>
+  <section class="hero">
+    <div class="eyebrow">Métodos</div>
+    <h1>Os quatro módulos</h1>
+    <p class="lead">Os módulos usam bases de carbono nos compartimentos da biomassa: acima do solo, abaixo do solo, madeira morta e serrapilheira. O que muda entre eles são os mapas de distúrbio usados e a vegetação considerada.</p>
+  </section>
+  <div class="grid">
+    <div class="card"><span class="tag"><span class="dot" style="background:var(--m1)"></span>2016–2025</span>
+      <h3>Módulo 1 · FREL</h3>
+      <p>Segue as metodologias oficiais submetidas pelo Brasil à UNFCCC (<em>Forest Reference Emission Level</em>). Usa os mapas de desmatamento do PRODES e o DETER para fogo e corte seletivo, por bioma.</p></div>
+    <div class="card"><span class="tag"><span class="dot" style="background:var(--m2)"></span>2016–2025</span>
+      <h3>Módulo 2 · FREL adaptado</h3>
+      <p>Amplia o Módulo 1. Inclui as emissões do fogo em savanas (MapBiomas Fogo), além das florestas primárias, e o corte seletivo do DETER.</p></div>
+    <div class="card"><span class="tag"><span class="dot" style="background:var(--m3)"></span>1986–2025</span>
+      <h3>Módulo 3 · QCN + MapBiomas</h3>
+      <p>Considera toda a vegetação nativa mapeada: florestas, savanas e campos. Atualiza o estoque pixel a pixel com as transições do MapBiomas e contabiliza a regeneração da vegetação secundária, com remoções líquidas.</p></div>
+    <div class="card"><span class="tag"><span class="dot" style="background:var(--m4)"></span>1986–2025</span>
+      <h3>Módulo 4 · borda</h3>
+      <p>Acrescenta ao Módulo 3 as perdas por efeito de borda e a convergência entre borda, fogo e corte seletivo no mesmo pixel.</p></div>
+  </div>
+
+  <h2>Princípios comuns</h2>
+  <ul>
+    <li><strong>Sem dupla contagem.</strong> A degradação (fogo, corte seletivo) é descontada do estoque antes de um desmatamento posterior, que só emite o carbono remanescente.</li>
+    <li><strong>Fogo em florestas.</strong> Tem emissões imediatas (CH₄ e N₂O da serrapilheira e da madeira morta) e emissões tardias de CO₂, pela mortalidade das árvores ao longo dos anos.</li>
+    <li><strong>Fogo em savanas e campos.</strong> Nas savanas, a resposta da biomassa depende da recorrência do fogo. Nos campos, o balanço de CO₂ de longo prazo é neutro e só entram as emissões instantâneas.</li>
+    <li><strong>Vegetação secundária.</strong> O crescimento depende do bioma, do tipo de vegetação e da idade. O estoque nunca passa do teto do estoque primário da região.</li>
+  </ul>
+  <p class="muted">A documentação detalhada de cada versão fica nas pastas <code>MODULO1/</code> a <code>MODULO4/</code> do <a href="https://github.com/wallyboy22/carboncal_2-0">repositório</a>.</p>
+</main>
+<footer>CCAL · IPAM</footer>
+</body>
+</html>

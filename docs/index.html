@@ -4,100 +4,39 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CCAL · Calculadora de Carbono</title>
-<meta name="description" content="Calculadora de Carbono (CCAL) do IPAM: estoques, emissões e remoções de carbono da vegetação nativa no Brasil, 4 módulos metodológicos no Google Earth Engine.">
-<style>
-:root{--ink:#3b2f25;--muted:#7a6857;--paper:#f6f0e6;--card:#fffaf2;--line:#e5d9c6;--forest:#a95f3d;--soft:#f0e0cf;--amber:#b88a3e;--amber-soft:#f6ead2}
-:root[data-theme=dark]{--ink:#f1e6d6;--muted:#c4b29d;--paper:#352b24;--card:#41352c;--line:#5a4a3d;--forest:#e2a17c;--soft:#4d3d31;--amber:#d9b26a;--amber-soft:#4a3d2a}
-.theme{position:fixed;top:.8rem;right:.8rem;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:.4rem .8rem;font:inherit;font-size:.85rem;cursor:pointer}
-*{box-sizing:border-box}
-body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
-a{color:var(--forest)}
-header{padding:3rem 1rem 2rem;max-width:1080px;margin:auto}
-.eyebrow{text-transform:uppercase;letter-spacing:.14em;font-size:.75rem;font-weight:750;color:var(--forest)}
-h1{font-size:clamp(2rem,5vw,3.1rem);line-height:1.1;margin:.4rem 0 1rem}
-h2{font-size:1.5rem;margin:2.5rem 0 .8rem}
-header p{max-width:70ch;color:var(--muted);font-size:1.08rem}
-main{max-width:1080px;margin:auto;padding:0 1rem 4rem}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:1.2rem}
-.card h3{margin:.2rem 0 .5rem;font-size:1.1rem}
-.card p{margin:.3rem 0;color:var(--muted);font-size:.95rem}
-.tag{display:inline-block;font-size:.75rem;font-weight:700;padding:.1rem .55rem;border-radius:99px;background:var(--soft);color:var(--forest)}
-.cta{display:flex;flex-wrap:wrap;gap:.7rem;margin-top:1.4rem}
-.cta a{padding:.65rem 1.1rem;border-radius:999px;border:1px solid var(--forest);text-decoration:none;font-weight:700}
-.cta a.primary{background:var(--forest);color:var(--paper)}
-code{font-size:.85em;background:var(--soft);padding:.1rem .3rem;border-radius:4px;overflow-wrap:anywhere}
-.table-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:.92rem;min-width:620px}
-th,td{text-align:left;padding:.6rem;border-bottom:1px solid var(--line);vertical-align:top}
-th{font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
-.note{background:var(--amber-soft);border-left:4px solid var(--amber);padding:.9rem 1rem;border-radius:8px;font-size:.93rem}
-ol li{margin:.4rem 0}
-footer{max-width:1080px;margin:auto;padding:2rem 1rem;color:var(--muted);font-size:.85rem;border-top:1px solid var(--line)}
-</style>
+<meta name="description" content="Calculadora de Carbono (CCAL) do IPAM: estoques, emissões e remoções de carbono da vegetação nativa no Brasil, em 4 módulos no Google Earth Engine.">
+<link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
-<button class="theme" id="theme" type="button">☾ Escuro</button>
-<script>
-(function(){var r=document.documentElement,b=document.getElementById('theme');
-function set(t){r.dataset.theme=t;b.textContent=t==='dark'?'☀ Claro':'☾ Escuro';try{localStorage.setItem('ccal-theme',t)}catch(e){}}
-var s='light';try{s=localStorage.getItem('ccal-theme')||'light'}catch(e){}set(s);
-b.onclick=function(){set(r.dataset.theme==='dark'?'light':'dark')};})();
-</script>
-<header>
-  <div class="eyebrow">IPAM · Calculadora de Carbono</div>
-  <h1>CCAL: estoques, emissões e remoções de carbono da vegetação nativa no Brasil</h1>
-  <p>Mapas anuais a 30 m de estoque de carbono e de emissões por desmatamento, fogo, corte seletivo e efeito de borda, além das remoções pela vegetação secundária. Calculados no Google Earth Engine em quatro módulos metodológicos, com séries até 2025.</p>
-  <div class="cta">
-    <a class="primary" href="estatisticas.html">Estatísticas por bioma e UF</a>
-    <a href="#dados">Assets no Earth Engine</a>
-    <a href="#fluxo">Fluxo em Python</a>
-  </div>
-</header>
+<script src="assets/site.js"></script>
 <main>
-  <h2>Os quatro módulos</h2>
+  <section class="hero">
+    <div class="eyebrow">IPAM · Calculadora de Carbono</div>
+    <h1>Estoques, emissões e remoções de carbono da vegetação nativa no Brasil</h1>
+    <p class="lead">Mapas anuais a 30 m de estoque de carbono e de emissões por desmatamento, fogo, corte seletivo e efeito de borda, além das remoções pela vegetação secundária. O cálculo é feito no Google Earth Engine, em quatro módulos metodológicos, com séries até 2025.</p>
+    <div class="cta">
+      <a class="primary" href="estatisticas.html">Ver estatísticas</a>
+      <a href="modulos.html">Conhecer os módulos</a>
+    </div>
+  </section>
+
+  <h2>Navegue</h2>
   <div class="grid">
-    <div class="card"><span class="tag">2016–2025</span><h3>Módulo 1 · FREL</h3><p>Segue as metodologias oficiais do Brasil na UNFCCC (<em>Forest Reference Emission Level</em>), com PRODES e DETER.</p></div>
-    <div class="card"><span class="tag">2016–2025</span><h3>Módulo 2 · FREL adaptado</h3><p>Amplia o Módulo 1 com o fogo em savanas (MapBiomas Fogo) e o corte seletivo do DETER.</p></div>
-    <div class="card"><span class="tag">1986–2025</span><h3>Módulo 3 · QCN + MapBiomas</h3><p>Toda a vegetação nativa (florestas, savanas e campos), transições do MapBiomas e regeneração da vegetação secundária.</p></div>
-    <div class="card"><span class="tag">1986–2025</span><h3>Módulo 4 · borda</h3><p>Acrescenta ao Módulo 3 as perdas por efeito de borda e a convergência entre borda, fogo e corte seletivo.</p></div>
+    <a class="card" href="modulos.html"><span class="tag">4 módulos</span><h3>Módulos</h3><p>Do FREL oficial (UNFCCC) ao QCN + MapBiomas com efeito de borda: o que cada um considera.</p><span class="go">Abrir →</span></a>
+    <a class="card" href="estatisticas.html"><span class="tag">bioma × UF × ano</span><h3>Estatísticas</h3><p>Painel interativo com séries anuais por módulo, bioma e UF.</p><span class="go">Abrir →</span></a>
+    <a class="card" href="dados.html"><span class="tag">Earth Engine · CSV</span><h3>Dados</h3><p>Endereços dos assets públicos, unidades das bandas, downloads e uso no Looker Studio.</p><span class="go">Abrir →</span></a>
+    <a class="card" href="fluxo.html"><span class="tag">Python</span><h3>Fluxo</h3><p>Como os módulos são calculados, validados e publicados, e como as versões “.1” e “.0” funcionam.</p><span class="go">Abrir →</span></a>
   </div>
 
-  <h2 id="dados">Assets públicos (Earth Engine)</h2>
-  <p>Cada asset é um <em>raster stack</em> com todos os anos. Bandas <code>loss_*</code>, <code>gain_*</code> e <code>net_balance_*</code> estão em tCO₂e por pixel; <code>stock_*</code> em tC/ha.</p>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Módulo</th><th>Asset</th><th>Bandas</th></tr></thead>
-    <tbody>
-      <tr><td>M1</td><td><code>projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_1_frell_v6_1</code></td><td>46</td></tr>
-      <tr><td>M2</td><td><code>projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_2_frell_adaptado_v3_1</code></td><td>46</td></tr>
-      <tr><td>M3</td><td><code>projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_3_qcn_mapbiomas_v5_1</code></td><td>280</td></tr>
-      <tr><td>M4</td><td><code>projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_4_qcn_mapbiomas_borda_v3_1</code></td><td>520</td></tr>
-    </tbody>
-  </table></div>
-
-  <h2>Extensão 2025 (versões “.1”)</h2>
-  <p>As versões terminadas em <code>_1</code> acrescentam 2025 sem reprocessar a série: os anos anteriores são idênticos à versão anterior, conferido pixel a pixel nas áreas de teste.</p>
-  <div class="note">
-    <strong>Limitações de 2025.</strong>
-    <ul>
-      <li><strong>M1 e M2:</strong> o PRODES 2025 cobre Amazônia, Cerrado e Pantanal. A base de desmatamento anual &lt; 6,25 ha não tem 2025.</li>
-      <li><strong>M3 e M4:</strong> não há dado novo de corte seletivo do MapBiomas, então não entra evento novo.</li>
-      <li><strong>M4:</strong> a idade de borda e a da vegetação secundária avançam um ano a partir de 2024.</li>
-    </ul>
-    Uma próxima versão “.0” reprocessa tudo com fontes atualizadas.
+  <h2>Destaques de 2025</h2>
+  <p class="muted">Totais Brasil, versões <code>_1</code>, em milhões de tCO₂e (Mt).</p>
+  <div class="grid">
+    <div class="card"><span class="tag">Desmatamento · M1</span><h3>371 Mt</h3><p>Eram 577 Mt em 2024. Parte da queda vem das lacunas de dados de 2025 (veja <a href="dados.html#limitacoes">limitações</a>).</p></div>
+    <div class="card"><span class="tag">Desmatamento · M3</span><h3>619 Mt</h3><p>Eram 652 Mt em 2024, considerando toda a vegetação nativa mapeada pelo MapBiomas.</p></div>
+    <div class="card"><span class="tag">Fogo · M2</span><h3>123 Mt</h3><p>Eram 664 Mt no ano excepcional de 2024.</p></div>
+    <div class="card"><span class="tag">Balanço líquido · M4</span><h3>250 Mt</h3><p>Eram 884 Mt em 2024. É o saldo de perdas menos remoções da vegetação secundária.</p></div>
   </div>
-
-  <h2 id="fluxo">Fluxo em Python</h2>
-  <p>A pasta <code>BETA_PYTHON/</code> traduz os scripts do Earth Engine para a API Python:</p>
-  <ol>
-    <li><code>modulo1.py</code> a <code>modulo4.py</code>: os estágios de cada módulo;</li>
-    <li><code>export_beta.py</code>: os exports, que recusam sobrescrever e rodam em dry-run por padrão;</li>
-    <li><code>validate*.py</code> e <code>lineage.py</code>: as regressões contra as versões publicadas;</li>
-    <li><code>promote.py</code>: a cópia para <code>public/</code>, com checagem de linhagem;</li>
-    <li><code>statistics_ccal.py</code>: as estatísticas por bioma × UF × ano, que alimentam a <a href="estatisticas.html">página de estatísticas</a> e o Looker Studio.</li>
-  </ol>
-  <p>As credenciais ficam fora do repositório, em <code>%APPDATA%/CCAL/credentials/</code>. Veja <code>BETA_PYTHON/README.md</code>.</p>
 </main>
-<footer>CCAL · Instituto de Pesquisa Ambiental da Amazônia (IPAM). Os dados e os métodos estão em desenvolvimento contínuo. Ao usar, cite a versão do asset.</footer>
+<footer>CCAL · Instituto de Pesquisa Ambiental da Amazônia (IPAM). Dados e métodos em desenvolvimento contínuo; ao usar, cite a versão do asset. · <a href="https://github.com/wallyboy22/carboncal_2-0">Código no GitHub</a></footer>
 </body>
 </html>

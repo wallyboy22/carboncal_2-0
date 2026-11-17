@@ -31,26 +31,17 @@ LABELS = {
 PAGE = """<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CCAL · Estatísticas</title>
+<link rel="stylesheet" href="assets/site.css">
 <style>
-:root{--ink:#3b2f25;--muted:#7a6857;--paper:#f6f0e6;--card:#fffaf2;--line:#e5d9c6;--forest:#a95f3d;--soft:#f0e0cf;
---m1:#b8653f;--m2:#c49a3c;--m3:#6f8f5c;--m4:#8f6f8a}
-:root[data-theme=dark]{--ink:#f1e6d6;--muted:#c4b29d;--paper:#352b24;--card:#41352c;--line:#5a4a3d;--forest:#e2a17c;--soft:#4d3d31;
---m1:#e59a72;--m2:#e2c06f;--m3:#a9c58f;--m4:#c9a3c2}
-.theme{position:fixed;top:.8rem;right:.8rem;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:.4rem .8rem;font:inherit;font-size:.85rem;cursor:pointer}
-code{background:var(--soft);padding:.1rem .3rem;border-radius:4px}
-*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
-a{color:var(--forest)}.wrap{max-width:1180px;margin:auto;padding:1.5rem 1rem 3rem}
-h1{font-size:clamp(1.6rem,4vw,2.3rem);margin:.3rem 0}.muted{color:var(--muted)}
 .controls{display:flex;flex-wrap:wrap;gap:.8rem;margin:1.2rem 0}.controls label{font-size:.8rem;font-weight:700;color:var(--muted);display:flex;flex-direction:column;gap:.25rem}
 select{padding:.5rem;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;min-width:150px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:1rem;margin:1rem 0}
+.wrap .card{margin:1rem 0}.kpis .card{margin:0}
 .chart{position:relative;height:380px}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.8rem}
-.kpi strong{display:block;font-size:1.4rem;color:var(--forest)}.kpi span{font-size:.8rem;color:var(--muted)}
+.kpi strong{display:block;font-size:1.4rem;color:var(--accent)}.kpi span{font-size:.8rem;color:var(--muted)}
 .table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:.88rem;min-width:520px}
-th,td{padding:.45rem .6rem;border-bottom:1px solid var(--line);text-align:right}th:first-child,td:first-child{text-align:left}
-th{font-size:.72rem;text-transform:uppercase;color:var(--muted)}
-</style></head><body><button class="theme" id="theme" type="button">☾ Escuro</button><div class="wrap">
-<a href="index.html">← CCAL</a>
+.num th,.num td{text-align:right}.num th:first-child,.num td:first-child{text-align:left}
+</style></head><body><script src="assets/site.js"></script><div class="wrap">
+<div class="eyebrow">Estatísticas</div>
 <h1>Estatísticas por bioma, UF e ano</h1>
 <p class="muted">Somas dos assets públicos <code>ccal_02 · _1</code> (30 m). Perdas, remoções e balanço em tCO₂e; estoque em tC; áreas em ha. Gerado em __DATE__ · <a href="data/ccal_estatisticas_bioma_uf.csv">baixar CSV</a></p>
 <div class="controls">
@@ -61,18 +52,15 @@ th{font-size:.72rem;text-transform:uppercase;color:var(--muted)}
 </div>
 <div class="kpis" id="kpis"></div>
 <div class="card"><div class="chart"><canvas id="chart"></canvas></div></div>
-<div class="card"><h3 style="margin-top:0">Último ano por UF</h3><div class="table-wrap"><table id="tbl"></table></div></div>
+<div class="card"><h3 style="margin-top:0">Último ano por UF</h3><div class="table-wrap"><table id="tbl" class="num"></table></div></div>
 </div>
 <script>__CHARTJS__</script>
 <script>
 const D=__DATA__;const L=__LABELS__;
 const $=id=>document.getElementById(id);const uniq=a=>[...new Set(a)].sort();
 const N=D.ano.length;const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const color=m=>css('--'+m.toLowerCase())||css('--forest');
-(function(){const r=document.documentElement,b=$('theme');
- function set(t){r.dataset.theme=t;b.textContent=t==='dark'?'☀ Claro':'☾ Escuro';try{localStorage.setItem('ccal-theme',t)}catch(e){}}
- let s='light';try{s=localStorage.getItem('ccal-theme')||'light'}catch(e){}set(s);
- b.onclick=()=>{set(r.dataset.theme==='dark'?'light':'dark');if(typeof render==='function')render()};})();
+const color=m=>css('--'+m.toLowerCase())||css('--accent');
+document.addEventListener('ccal-theme',()=>render());
 function fill(sel,vals,all,lab){sel.innerHTML=(all?'<option value="">Todos</option>':'')+vals.map(v=>`<option value="${v}">${lab?lab(v):v}</option>`).join('')}
 const vars=uniq(D.variavel);fill($('var'),vars,false,v=>L[v]||v);$('var').value=vars.includes('net_balance')?'net_balance':'loss_deforestation';
 fill($('bioma'),uniq(D.bioma),true);fill($('uf'),uniq(D.uf),true);

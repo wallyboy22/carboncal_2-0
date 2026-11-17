@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CCAL · Fluxo</title>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<script src="assets/site.js"></script>
+<main>
+  <section class="hero">
+    <div class="eyebrow">Fluxo em Python</div>
+    <h1>Do cálculo à publicação</h1>
+    <p class="lead">A pasta <code>BETA_PYTHON/</code> traduz os scripts do Earth Engine para a API Python. Com ela, os módulos são recalculados, validados contra o que já foi publicado e promovidos para a pasta pública.</p>
+  </section>
+
+  <div class="grid">
+    <div class="card"><span class="tag">1 · calcular</span><h3><code>modulo1.py</code> … <code>modulo4.py</code></h3><p>Os estágios de cada módulo. Nas extensões, os estados internos (idades, estoques, acumulados) são recalculados em memória.</p></div>
+    <div class="card"><span class="tag">2 · exportar</span><h3><code>export_beta.py</code></h3><p>Monta os exports. Roda em dry-run por padrão e recusa sobrescrever um asset existente.</p></div>
+    <div class="card"><span class="tag">3 · validar</span><h3><code>validate*.py</code> · <code>lineage.py</code></h3><p>Faz as regressões: grafo idêntico ao código anterior, histórico idêntico ao publicado e reprodução do ano anterior.</p></div>
+    <div class="card"><span class="tag">4 · publicar</span><h3><code>promote.py</code></h3><p>Copia para <code>public/ccal_02</code> com checagem de linhagem e mantém a cópia na pasta da versão.</p></div>
+    <div class="card"><span class="tag">5 · resumir</span><h3><code>statistics_ccal.py</code></h3><p>Soma por bioma × UF × ano. Alimenta a <a href="estatisticas.html">página de estatísticas</a> e o Looker Studio.</p></div>
+  </div>
+
+  <h2>Versões “.1” e “.0”</h2>
+  <ul>
+    <li><strong>“.1” (extensão):</strong> acrescenta um ano novo com o mínimo de reprocessamento. O histórico é relido da versão publicada, e o asset público é sempre um <em>raster stack</em> completo com todos os anos.</li>
+    <li><strong>“.0” (versão cheia):</strong> reprocessa a série inteira com fontes atualizadas e remove os remendos das extensões.</li>
+  </ul>
+
+  <h2>Rodando localmente</h2>
+  <p>Na raiz do repositório, com um ambiente que tenha <code>earthengine-api</code>:</p>
+  <pre class="card" style="overflow-x:auto"><code>python -m BETA_PYTHON.auth --login &lt;perfil&gt;
+python -m BETA_PYTHON.export_beta --project &lt;projeto&gt; --modules m3x        # dry-run
+python -m BETA_PYTHON.statistics_ccal extract --submit
+python -m BETA_PYTHON.statistics_ccal download &amp;&amp; python -m BETA_PYTHON.statistics_ccal build
+python -m BETA_PYTHON.site_estatisticas</code></pre>
+  <p class="muted">As credenciais ficam fora do repositório (<code>%APPDATA%/CCAL/credentials/</code>). Veja <code>BETA_PYTHON/README.md</code>.</p>
+</main>
+<footer>CCAL · IPAM</footer>
+</body>
+</html>

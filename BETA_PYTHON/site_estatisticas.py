@@ -92,7 +92,7 @@ PAGE = r"""<!doctype html>
     <section class="card"><div class="card-head"><div><h2>Processo × módulo</h2><p id="sMP"></p></div></div><div class="mx" id="mxMP"></div><p class="hint">Cada célula é a soma do período selecionado. As cores comparam os módulos dentro de cada processo.</p></section>
   </div>
   <section class="card"><div class="card-head"><div><h2>Matriz no tempo</h2><p id="sMx"></p></div><div style="display:flex;gap:.5rem;flex-wrap:wrap"><div class="seg small" id="fMxRows"></div><div class="seg small" id="fMxMod"></div></div></div><div class="mx" id="mx"></div></section>
-  <p class="hint">Convergências (sobreposição de processos) não aparecem aqui porque já estão dentro das perdas. As remoções aparecem como valores negativos. Os módulos 1 e 2 começam em 2016; os módulos 3 e 4, em 1986. <a href="dados.html#limitacoes">Limitações de 2025</a> · <a href="data/ccal_estatisticas_bioma_uf.csv">baixar CSV</a></p>
+  <p class="hint">Convergências (sobreposição de processos) não aparecem aqui porque já estão dentro das perdas. No M3, o desmatamento já inclui o da vegetação secundária; só o M4 o mostra separado. As remoções aparecem como valores negativos. Os módulos 1 e 2 começam em 2016; os módulos 3 e 4, em 1986. <a href="dados.html#limitacoes">Limitações de 2025</a> · <a href="data/ccal_estatisticas_bioma_uf.csv">baixar CSV</a></p>
 </div></div>
 </main>
 <script src="assets/chart.umd.min.js"></script>

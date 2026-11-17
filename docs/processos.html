@@ -218,7 +218,7 @@ table.rates td:first-child,table.rates th:first-child{text-align:left}
         <div class="where"><b>Fonte:</b> ano do desmatamento do PRODES, incluindo polígonos menores que 6,25 ha.</div></article>
       <article class="card" style="--c:var(--defor)"><div class="who"><span style="--mc:var(--m3)">M3</span></div><h3>Transições do MapBiomas</h3>
         <div class="eq">perda = max(0, estoque anterior − estoque atual − degradação do ano) × 3,67</div>
-        <div class="where"><b>Quando:</b> o ano é classificado como desmatamento da primária ou da secundária. Nesse caso, fogo e corte do mesmo ano não entram separados.</div></article>
+        <div class="where"><b>Quando:</b> o ano é classificado como desmatamento da primária ou da secundária. As duas emissões saem juntas, numa só camada de desmatamento. Nesse caso, fogo e corte do mesmo ano não entram separados.</div></article>
       <article class="card" style="--c:var(--defor)"><div class="who"><span style="--mc:var(--m4)">M4</span></div><h3>Primária e secundária separadas</h3>
         <div class="eq">primária: AGC depois da borda, do corte e do fogo × 44/12<br>secundária: estoque secundário do ano anterior × 44/12</div>
         <div class="where"><b>Saídas:</b> "desmatamento" e "desmatamento da secundária" aparecem separados.</div></article>

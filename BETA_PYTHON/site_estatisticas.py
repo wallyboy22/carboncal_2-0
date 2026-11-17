@@ -32,8 +32,12 @@ PAGE = """<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CCAL · Estatísticas</title>
 <style>
-:root{--ink:#142a24;--muted:#5c6f68;--paper:#f5f7f2;--card:#fff;--line:#dbe4de;--forest:#0f5d4f;--soft:#e1f0e9}
-@media (prefers-color-scheme:dark){:root{--ink:#e4ece8;--muted:#a3b5ad;--paper:#101816;--card:#17221f;--line:#2a3a35;--forest:#6cc4a6;--soft:#1d3a32}}
+:root{--ink:#3b2f25;--muted:#7a6857;--paper:#f6f0e6;--card:#fffaf2;--line:#e5d9c6;--forest:#a95f3d;--soft:#f0e0cf;
+--m1:#b8653f;--m2:#c49a3c;--m3:#6f8f5c;--m4:#8f6f8a}
+:root[data-theme=dark]{--ink:#f1e6d6;--muted:#c4b29d;--paper:#352b24;--card:#41352c;--line:#5a4a3d;--forest:#e2a17c;--soft:#4d3d31;
+--m1:#e59a72;--m2:#e2c06f;--m3:#a9c58f;--m4:#c9a3c2}
+.theme{position:fixed;top:.8rem;right:.8rem;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:.4rem .8rem;font:inherit;font-size:.85rem;cursor:pointer}
+code{background:var(--soft);padding:.1rem .3rem;border-radius:4px}
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
 a{color:var(--forest)}.wrap{max-width:1180px;margin:auto;padding:1.5rem 1rem 3rem}
 h1{font-size:clamp(1.6rem,4vw,2.3rem);margin:.3rem 0}.muted{color:var(--muted)}
@@ -45,7 +49,7 @@ select{padding:.5rem;border:1px solid var(--line);border-radius:8px;background:v
 .table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:.88rem;min-width:520px}
 th,td{padding:.45rem .6rem;border-bottom:1px solid var(--line);text-align:right}th:first-child,td:first-child{text-align:left}
 th{font-size:.72rem;text-transform:uppercase;color:var(--muted)}
-</style></head><body><div class="wrap">
+</style></head><body><button class="theme" id="theme" type="button">☾ Escuro</button><div class="wrap">
 <a href="index.html">← CCAL</a>
 <h1>Estatísticas por bioma, UF e ano</h1>
 <p class="muted">Somas dos assets públicos <code>ccal_02 · _1</code> (30 m). Perdas, remoções e balanço em tCO₂e; estoque em tC; áreas em ha. Gerado em __DATE__ · <a href="data/ccal_estatisticas_bioma_uf.csv">baixar CSV</a></p>
@@ -63,7 +67,12 @@ th{font-size:.72rem;text-transform:uppercase;color:var(--muted)}
 <script>
 const D=__DATA__;const L=__LABELS__;
 const $=id=>document.getElementById(id);const uniq=a=>[...new Set(a)].sort();
-const N=D.ano.length;const COLORS={M1:'#2d6a9f',M2:'#aa6918',M3:'#0f8a6d',M4:'#735a9e'};
+const N=D.ano.length;const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const color=m=>css('--'+m.toLowerCase())||css('--forest');
+(function(){const r=document.documentElement,b=$('theme');
+ function set(t){r.dataset.theme=t;b.textContent=t==='dark'?'☀ Claro':'☾ Escuro';try{localStorage.setItem('ccal-theme',t)}catch(e){}}
+ let s='light';try{s=localStorage.getItem('ccal-theme')||'light'}catch(e){}set(s);
+ b.onclick=()=>{set(r.dataset.theme==='dark'?'light':'dark');if(typeof render==='function')render()};})();
 function fill(sel,vals,all,lab){sel.innerHTML=(all?'<option value="">Todos</option>':'')+vals.map(v=>`<option value="${v}">${lab?lab(v):v}</option>`).join('')}
 const vars=uniq(D.variavel);fill($('var'),vars,false,v=>L[v]||v);$('var').value=vars.includes('net_balance')?'net_balance':'loss_deforestation';
 fill($('bioma'),uniq(D.bioma),true);fill($('uf'),uniq(D.uf),true);
@@ -80,8 +89,9 @@ function render(){
   ((byUf[m]=byUf[m]||{})[y]=byUf[m][y]||{})[D.uf[i]]=(byUf[m][y][D.uf[i]]||0)+D.valor[i];
  }
  const mods=Object.keys(series).sort();const years=uniq(mods.flatMap(m=>Object.keys(series[m]).map(Number)));
- const ds=mods.map(m=>({label:m,data:years.map(y=>series[m][y]??null),borderColor:COLORS[m],backgroundColor:COLORS[m],tension:.2,pointRadius:2,spanGaps:false}));
+ const ds=mods.map(m=>({label:m,data:years.map(y=>series[m][y]??null),borderColor:color(m),backgroundColor:color(m),tension:.2,pointRadius:2,spanGaps:false}));
  if(chart)chart.destroy();
+ Chart.defaults.color=css('--muted');Chart.defaults.borderColor=css('--line');
  chart=new Chart($('chart'),{type:'line',data:{labels:years,datasets:ds},options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
   plugins:{tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmt(c.parsed.y)} ${unit[c.dataset.label]||''}`}}},scales:{y:{ticks:{callback:fmt}}}}});
  $('kpis').innerHTML=mods.map(m=>{const ys=Object.keys(series[m]).map(Number);const last=Math.max(...ys);const prev=series[m][last-1];

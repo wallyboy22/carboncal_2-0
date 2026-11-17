@@ -6,8 +6,9 @@
 <title>CCAL · Calculadora de Carbono</title>
 <meta name="description" content="Calculadora de Carbono (CCAL) do IPAM: estoques, emissões e remoções de carbono da vegetação nativa no Brasil, 4 módulos metodológicos no Google Earth Engine.">
 <style>
-:root{--ink:#142a24;--muted:#5c6f68;--paper:#f5f7f2;--card:#fff;--line:#dbe4de;--forest:#0f5d4f;--soft:#e1f0e9;--amber:#aa6918;--amber-soft:#fff0d8}
-@media (prefers-color-scheme:dark){:root{--ink:#e4ece8;--muted:#a3b5ad;--paper:#101816;--card:#17221f;--line:#2a3a35;--forest:#6cc4a6;--soft:#1d3a32;--amber:#e3ae5c;--amber-soft:#3a2d17}}
+:root{--ink:#3b2f25;--muted:#7a6857;--paper:#f6f0e6;--card:#fffaf2;--line:#e5d9c6;--forest:#a95f3d;--soft:#f0e0cf;--amber:#b88a3e;--amber-soft:#f6ead2}
+:root[data-theme=dark]{--ink:#f1e6d6;--muted:#c4b29d;--paper:#352b24;--card:#41352c;--line:#5a4a3d;--forest:#e2a17c;--soft:#4d3d31;--amber:#d9b26a;--amber-soft:#4a3d2a}
+.theme{position:fixed;top:.8rem;right:.8rem;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:.4rem .8rem;font:inherit;font-size:.85rem;cursor:pointer}
 *{box-sizing:border-box}
 body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
 a{color:var(--forest)}
@@ -36,6 +37,13 @@ footer{max-width:1080px;margin:auto;padding:2rem 1rem;color:var(--muted);font-si
 </style>
 </head>
 <body>
+<button class="theme" id="theme" type="button">☾ Escuro</button>
+<script>
+(function(){var r=document.documentElement,b=document.getElementById('theme');
+function set(t){r.dataset.theme=t;b.textContent=t==='dark'?'☀ Claro':'☾ Escuro';try{localStorage.setItem('ccal-theme',t)}catch(e){}}
+var s='light';try{s=localStorage.getItem('ccal-theme')||'light'}catch(e){}set(s);
+b.onclick=function(){set(r.dataset.theme==='dark'?'light':'dark')};})();
+</script>
 <header>
   <div class="eyebrow">IPAM · Calculadora de Carbono</div>
   <h1>CCAL: estoques, emissões e remoções de carbono da vegetação nativa no Brasil</h1>

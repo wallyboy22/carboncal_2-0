@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CCAL · Dados</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@500;600&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
@@ -11,47 +13,67 @@
 <main>
   <section class="hero">
     <div class="eyebrow">Dados</div>
-    <h1>Assets, unidades e downloads</h1>
-    <p class="lead">Cada asset público é um <em>raster stack</em> no Google Earth Engine, com uma banda por variável e por ano.</p>
+    <h1>Onde estão os dados e como usá-los.</h1>
+    <p class="lead">Os mapas da CCAL ficam no Google Earth Engine, um conjunto por módulo, com uma camada por variável e por ano. As estatísticas por bioma e estado podem ser baixadas aqui em planilha.</p>
   </section>
 
-  <h2>Assets públicos</h2>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Módulo</th><th>Período</th><th>Asset</th><th>Bandas</th></tr></thead>
-    <tbody>
-      <tr><td><span class="dot" style="background:var(--m1)"></span>M1</td><td>2016–2025</td><td><code>projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_1_frell_v6_1</code></td><td>46</td></tr>
-      <tr><td><span class="dot" style="background:var(--m2)"></span>M2</td><td>2016–2025</td><td><code>projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_2_frell_adaptado_v3_1</code></td><td>46</td></tr>
-      <tr><td><span class="dot" style="background:var(--m3)"></span>M3</td><td>1986–2025</td><td><code>projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_3_qcn_mapbiomas_v5_1</code></td><td>280</td></tr>
-      <tr><td><span class="dot" style="background:var(--m4)"></span>M4</td><td>1986–2025</td><td><code>projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_4_qcn_mapbiomas_borda_v3_1</code></td><td>520</td></tr>
-    </tbody>
-  </table></div>
+  <section class="block">
+    <div class="sec-head"><span class="num">mapas</span><h2>Mapas anuais por módulo</h2>
+      <p class="muted">Cada endereço abaixo é um conjunto completo, com todos os anos, a 30 m.</p></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Módulo</th><th>Anos</th><th>Endereço no Earth Engine</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag"><i class="dot" style="background:var(--m1)"></i>M1 · FREL</span></td><td>2016–2025</td><td><code>projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_1_frell_v6_1</code></td></tr>
+        <tr><td><span class="tag"><i class="dot" style="background:var(--m2)"></i>M2 · FREL adaptado</span></td><td>2016–2025</td><td><code>projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_2_frell_adaptado_v3_1</code></td></tr>
+        <tr><td><span class="tag"><i class="dot" style="background:var(--m3)"></i>M3 · QCN + MapBiomas</span></td><td>1986–2025</td><td><code>projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_3_qcn_mapbiomas_v5_1</code></td></tr>
+        <tr><td><span class="tag"><i class="dot" style="background:var(--m4)"></i>M4 · borda</span></td><td>1986–2025</td><td><code>projects/ee-ipam/assets/CCAL/public/ccal_02/ccal_02_brazil_modulo_4_qcn_mapbiomas_borda_v3_1</code></td></tr>
+      </tbody>
+    </table></div>
+    <h3 style="margin-top:1.6rem">O que cada camada traz</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Camada</th><th>Unidade</th><th>Significado</th></tr></thead>
+      <tbody>
+        <tr><td><code>stock_AAAA</code></td><td>tC/ha</td><td>Estoque de carbono no ano</td></tr>
+        <tr><td><code>loss_deforestation_AAAA</code></td><td>tCO₂e por pixel</td><td>Emissão por desmatamento (corte raso)</td></tr>
+        <tr><td><code>loss_fire_AAAA</code></td><td>tCO₂e por pixel</td><td>Emissão pelo fogo</td></tr>
+        <tr><td><code>loss_selective_logging_AAAA</code></td><td>tCO₂e por pixel</td><td>Emissão por corte seletivo</td></tr>
+        <tr><td><code>loss_edge_AAAA</code></td><td>tCO₂e por pixel</td><td>Emissão por efeito de borda (M4)</td></tr>
+        <tr><td><code>loss_grassland_AAAA</code></td><td>tCO₂e por pixel</td><td>CH₄ e N₂O do fogo em campos (M3)</td></tr>
+        <tr><td><code>gain_secondary_vegetation_AAAA</code></td><td>tCO₂e por pixel</td><td>Carbono recuperado pela vegetação secundária (M3, M4)</td></tr>
+        <tr><td><code>net_balance_AAAA</code></td><td>tCO₂e por pixel</td><td>Perdas menos remoções (M4)</td></tr>
+        <tr><td><code>loss_convergence_*_AAAA</code></td><td>tCO₂e por pixel</td><td>Parte das perdas em que dois ou mais processos se sobrepõem. É um diagnóstico e não deve ser somado de novo.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
 
-  <h2>Unidades das bandas</h2>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Banda</th><th>Unidade</th><th>Significado</th></tr></thead>
-    <tbody>
-      <tr><td><code>loss_&lt;processo&gt;_AAAA</code></td><td>tCO₂e por pixel</td><td>Emissão do processo no ano (desmatamento, fogo, corte seletivo, borda…)</td></tr>
-      <tr><td><code>gain_secondary_vegetation_AAAA</code></td><td>tCO₂e por pixel</td><td>Remoção pela vegetação secundária. O sinal segue o módulo: positivo no M3 e negativo no M4.</td></tr>
-      <tr><td><code>net_balance_AAAA</code></td><td>tCO₂e por pixel</td><td>Perdas menos remoções (só no M4)</td></tr>
-      <tr><td><code>stock_AAAA</code></td><td>tC/ha</td><td>Densidade de estoque de carbono</td></tr>
-    </tbody>
-  </table></div>
+  <section class="block" id="planilhas">
+    <div class="sec-head"><span class="num">planilhas</span><h2>Estatísticas para baixar</h2>
+      <p class="muted">São somas dos mapas por bioma, estado e ano. Servem para planilhas, Looker Studio ou qualquer ferramenta de análise.</p></div>
+    <div class="grid two">
+      <a class="card" href="data/ccal_estatisticas_bioma_uf.csv"><span class="tag">CSV · ~6 MB</span><h3>Bioma × estado × ano</h3><p>Uma linha por módulo, ano, bioma, estado e variável, com unidade e valor.</p><span class="go">Baixar →</span></a>
+      <a class="card" href="data/ccal_estatisticas_brasil.csv"><span class="tag">CSV · ~55 kB</span><h3>Totais do Brasil</h3><p>As mesmas variáveis somadas por módulo e ano.</p><span class="go">Baixar →</span></a>
+    </div>
+  </section>
 
-  <h2 id="limitacoes">Extensão 2025 e limitações</h2>
-  <p>As versões terminadas em <code>_1</code> acrescentam 2025 sem reprocessar a série. Os anos anteriores são idênticos aos da versão anterior, conferido pixel a pixel nas áreas de teste.</p>
-  <div class="note"><ul style="margin:.2rem 0">
-    <li><strong>M1 e M2:</strong> o PRODES 2025 cobre só Amazônia, Cerrado e Pantanal. A base de desmatamento anual &lt; 6,25 ha não tem 2025.</li>
-    <li><strong>M3 e M4:</strong> não há dado novo de corte seletivo do MapBiomas para 2025, então nenhum evento novo foi considerado.</li>
-    <li><strong>M4:</strong> a idade de borda e a da vegetação secundária avançam um ano a partir de 2024.</li>
-  </ul>Uma próxima versão “.0” vai reprocessar toda a série com fontes atualizadas.</div>
+  <section class="block" id="limitacoes">
+    <div class="sec-head"><span class="num">2025</span><h2>O que considerar em 2025</h2>
+      <p class="muted">A série foi estendida até 2025 sem alterar os anos anteriores. Algumas bases ainda não tinham dados novos para 2025.</p></div>
+    <div class="note"><ul>
+      <li><strong>Módulos 1 e 2:</strong> o PRODES 2025 cobre Amazônia, Cerrado e Pantanal. Caatinga, Mata Atlântica e Pampa ainda não têm 2025, e a base de desmatamentos menores que 6,25 ha também não. A queda do desmatamento em 2025 nesses módulos inclui esse efeito.</li>
+      <li><strong>Módulos 3 e 4:</strong> não havia dado novo de corte seletivo do MapBiomas para 2025, por isso nenhum evento novo de corte foi considerado.</li>
+      <li><strong>Módulo 4:</strong> a idade das bordas e a da floresta secundária avançam um ano a partir de 2024.</li>
+    </ul></div>
+    <p class="muted" style="margin-top:1rem">Uma próxima versão completa vai reprocessar toda a série quando essas bases forem atualizadas.</p>
+  </section>
 
-  <h2>Downloads e Looker Studio</h2>
-  <div class="grid">
-    <a class="card" href="data/ccal_estatisticas_bioma_uf.csv"><span class="tag">CSV · 6 MB</span><h3>Bioma × UF × ano</h3><p>Colunas <code>modulo, ano, bioma, uf, variavel, unidade, valor</code>. Formato longo, pronto para o Looker Studio ou planilhas.</p><span class="go">Baixar →</span></a>
-    <a class="card" href="data/ccal_estatisticas_brasil.csv"><span class="tag">CSV · 55 kB</span><h3>Totais Brasil</h3><p>As mesmas variáveis somadas por módulo e ano.</p><span class="go">Baixar →</span></a>
-  </div>
-  <p class="muted">No Looker Studio, use o conector “Upload de arquivo” ou importe o CSV para o Google Sheets e conecte a planilha. As somas são feitas a 30 m sobre os assets públicos.</p>
+  <section class="block">
+    <div class="sec-head"><span class="num">fontes</span><h2>Bases utilizadas</h2></div>
+    <div class="chips">
+      <span class="tag">Quarta Comunicação Nacional (QCN) · carbono e vegetação pretérita</span><span class="tag">INPE · PRODES</span><span class="tag">INPE · DETER</span>
+      <span class="tag">MapBiomas · cobertura e transições</span><span class="tag">MapBiomas Fogo</span><span class="tag">MapBiomas · vegetação secundária</span>
+      <span class="tag">IBGE · biomas e estados</span><span class="tag">IPCC 2006 · fatores de emissão</span>
+    </div>
+  </section>
 </main>
-<footer>CCAL · IPAM</footer>
 </body>
 </html>

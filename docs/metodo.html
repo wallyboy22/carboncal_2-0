@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CCAL · Método</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@500;600&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+<style>
+.toc{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:1rem}
+.toc a{font:600 .8rem var(--mono);text-decoration:none;padding:.3rem .7rem;border:1px solid var(--line);border-radius:99px;color:var(--ink-2);background:var(--card)}
+.tlx{display:grid;grid-template-columns:150px minmax(0,1fr);gap:.7rem 1rem;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:1rem 1.2rem}
+.tlx b{display:flex;align-items:center;gap:.45rem;font-size:.95rem;padding-top:.15rem}
+.axis{position:relative;height:18px;border-bottom:1px solid var(--line)}
+.axis span{position:absolute;transform:translateX(-50%);font:600 .7rem var(--mono);color:var(--muted)}
+.lane{position:relative;background:repeating-linear-gradient(90deg,transparent 0 calc(25% - 1px),var(--line) calc(25% - 1px) 25%)}
+.seg-bar{position:absolute;height:22px;border-radius:6px;overflow:hidden;white-space:nowrap}
+.seg-bar span{font-size:.75rem;padding:0 .5rem;line-height:22px;color:var(--ink);font-weight:600}
+.flow svg{width:100%;height:auto}
+.flow .box{fill:var(--card);stroke:var(--line);stroke-width:1.5}
+.flow .boxa{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+.flow text{fill:var(--ink);font-family:var(--body);font-size:15px}
+.flow .t{font-family:var(--display);font-size:19px;font-weight:600}
+.flow .s{fill:var(--muted);font-size:13px}
+.flow .arrow{stroke:var(--muted);stroke-width:2;fill:none;marker-end:url(#ah)}
+.flow #ah path{fill:var(--muted)}
+.mx td.c{text-align:center;font-size:1.05rem}
+.mx .yes{color:var(--sage)}.mx .part{color:var(--ochre)}.mx .no{color:var(--line)}
+.panel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:1.4rem;margin-top:1rem}
+.panel h3{margin-top:0}
+.pchip{display:inline-flex;align-items:center;gap:.35rem;padding:.25rem .65rem;border-radius:99px;border:1px solid var(--line);background:var(--paper-2);font-size:.86rem;margin:.15rem}
+.rules{display:grid;gap:.7rem}
+.rule{display:grid;grid-template-columns:170px 1fr;gap:1rem;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:1rem}
+.rule .pair{font-weight:700;display:flex;flex-direction:column;gap:.2rem}
+.rule dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:.25rem .7rem;font-size:.95rem}
+.rule dt{font:600 .78rem var(--mono);color:var(--muted);padding-top:.15rem}
+.rule dd{margin:0}
+.sim{display:grid;grid-template-columns:minmax(0,1fr);gap:1rem}
+.ctrl{display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-end}
+.tl{overflow-x:auto}
+.tl table{min-width:640px;font-size:.85rem}
+.tl th,.tl td{padding:.35rem .3rem;text-align:center}
+.tl th:first-child,.tl td:first-child{text-align:left;padding-left:.7rem;white-space:nowrap}
+.tl button{width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:var(--paper-2);cursor:pointer}
+.tl button[aria-pressed=true]{background:var(--c);border-color:var(--c)}
+.tl button:disabled{opacity:.25;cursor:not-allowed}
+.why{background:var(--paper-2);border-radius:12px;padding:.8rem 1rem;font-size:.95rem}
+.pxsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.6rem}
+.pxsum .card{padding:.8rem 1rem}
+.pxsum .card b{font-family:var(--display);font-size:1.05rem}
+.area-demo{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;text-align:center;max-width:620px}
+.area-demo div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:.8rem}
+.area-demo i{display:block;margin:.4rem auto;background:var(--sage);opacity:.75;border-radius:3px}
+@media (max-width:640px){.tlx{grid-template-columns:1fr;padding:.8rem}.tlx>div:first-child{display:none}.tlx b{margin-top:.4rem}.seg-bar span{font-size:.68rem}.flow svg{min-width:760px}.flow{overflow-x:auto}}
+@media (max-width:820px){.panel{grid-template-columns:1fr}.rule{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<script src="assets/site.js"></script>
+<main>
+  <section class="hero">
+    <div class="eyebrow">Método</div>
+    <h1>Como a CCAL lê a vegetação, pixel a pixel.</h1>
+    <p class="lead">A CCAL segue cada pixel de 30 m ano a ano. Primeiro registra o que aconteceu naquele ano: fogo, corte seletivo, desmatamento ou regeneração. Depois atualiza o estado da vegetação e calcula quanto carbono restou, quanto foi emitido e quanto foi recuperado. Só no fim os pixels são somados por território.</p>
+    <nav class="toc" aria-label="Seções">
+      <a href="#camadas">01 camadas</a><a href="#transversal">02 transversal × específico</a><a href="#fluxo">03 fluxo</a><a href="#modulos">04 módulos</a><a href="#simultaneos">05 eventos simultâneos</a><a href="#simulador">06 simulador</a><a href="#real">07 pixel real</a><a href="#territorio">08 território</a>
+    </nav>
+  </section>
+
+  <section class="block" id="camadas">
+    <div class="sec-head"><span class="num">01 / camadas</span><h2>O dado chega em camadas.</h2>
+      <p class="muted">As bases de fogo, corte seletivo, desmatamento, regeneração e carbono vêm de fontes diferentes. Cada uma cobre um período e uma vegetação diferentes. O método junta todas no mesmo pixel sem que um evento apague o outro.</p></div>
+    <div class="layers" id="layers"></div>
+    <p class="small muted">Períodos usados na versão atual de cada fonte. Os módulos 1 e 2 começam em 2016; os módulos 3 e 4 seguem a série do MapBiomas desde 1985. Em 2025, corte seletivo do MapBiomas e idade de borda ainda não tinham dado novo.</p>
+  </section>
+
+  <section class="block" id="transversal">
+    <div class="sec-head"><span class="num">02 / transversal × específico</span><h2>O que todos os módulos compartilham e o que muda entre eles.</h2>
+      <p class="muted">A base comum garante que os módulos sejam comparáveis. As diferenças estão nas fontes de distúrbio, na vegetação considerada e nos processos que entram na conta.</p></div>
+    <div class="grid two">
+      <div class="card"><span class="tag">transversal</span><h3>Igual em todos</h3>
+        <ul>
+          <li>Os mapas de carbono da Quarta Comunicação Nacional do Brasil (QCN), em quatro compartimentos: biomassa acima do solo, abaixo do solo, madeira morta e serrapilheira.</li>
+          <li>Uma grade de 30 m. A área de cada pixel é calculada pela latitude e varia de cerca de 890 m² no norte a 746 m² no sul.</li>
+          <li>O carbono perdido vira CO₂ pela proporção 44/12. CH₄ e N₂O são convertidos em CO₂ equivalente (GWP 28 e 265).</li>
+          <li>Não há dupla contagem: a degradação sai do estoque antes. Um desmatamento posterior só emite o que restou no pixel.</li>
+          <li>O estado da vegetação é atualizado ano a ano, e os resultados ficam anuais, por pixel.</li>
+        </ul></div>
+      <div class="card"><span class="tag">específico</span><h3>Muda por módulo</h3>
+        <ul>
+          <li><strong>Desmatamento:</strong> PRODES (M1, M2) ou transições do MapBiomas (M3, M4).</li>
+          <li><strong>Fogo:</strong> DETER (M1) ou MapBiomas Fogo (M2, M3, M4), com regras próprias para floresta, savana e campo.</li>
+          <li><strong>Corte seletivo:</strong> DETER (M1, M2), MapBiomas (M3) ou frequência de exploração (M4).</li>
+          <li><strong>Vegetação:</strong> floresta e savana arborizada no FREL; toda a vegetação nativa no M3; só floresta no M4.</li>
+          <li><strong>Processos exclusivos:</strong> regeneração (M3, M4), fogo em campo (M3) e efeito de borda (M4).</li>
+        </ul></div>
+    </div>
+    <h3 style="margin-top:2rem">Matriz de processos</h3>
+    <div class="table-wrap"><table class="mx">
+      <thead><tr><th>Processo</th><th>M1 · FREL</th><th>M2 · FREL adaptado</th><th>M3 · QCN + MapBiomas</th><th>M4 · borda</th></tr></thead>
+      <tbody id="mx"></tbody>
+    </table></div>
+    <p class="small muted">● considerado · ◐ parcial ou com regra própria · ○ não considerado</p>
+  </section>
+
+  <section class="block flow" id="fluxo">
+    <div class="sec-head"><span class="num">03 / fluxo</span><h2>Das fontes ao território.</h2>
+      <p class="muted">O mesmo fluxo vale para os quatro módulos. O que muda são as fontes e as regras de cada etapa.</p></div>
+    <svg viewBox="0 0 1100 250" role="img" aria-label="Fluxo: fontes, eventos anuais, estado do pixel, carbono, território">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
+      <g id="flowg"></g>
+    </svg>
+  </section>
+
+  <section class="block" id="modulos">
+    <div class="sec-head"><span class="num">04 / módulos</span><h2>Os quatro módulos.</h2></div>
+    <div class="seg" id="modSeg" role="group" aria-label="Módulo"></div>
+    <div class="panel" id="modPanel"></div>
+  </section>
+
+  <section class="block" id="simultaneos">
+    <div class="sec-head"><span class="num">05 / eventos simultâneos</span><h2>Quando dois eventos caem no mesmo pixel e no mesmo ano.</h2>
+      <p class="muted">Todos os eventos ficam registrados. O estado da vegetação naquele ano decide quais entram na conta e em que ordem. Num pixel já desmatado, o estoque é zero e um novo evento não gera emissão.</p></div>
+    <div class="rules">
+      <div class="rule"><div class="pair"><span style="color:var(--fire)">fogo</span><span>+ corte seletivo</span></div>
+        <dl><dt>M1</dt><dd>O fogo reduz os compartimentos acima do solo. O corte incide depois, sobre a biomassa que sobrou.</dd>
+            <dt>M2</dt><dd>Os dois contam no mesmo ano. A perda pelo corte é calculada sobre a biomassa do início do ano.</dd>
+            <dt>M3</dt><dd>Fogo e corte geram perdas separadas, cada uma pela sua regra.</dd>
+            <dt>M4</dt><dd>Primeiro a borda, depois o corte, depois o fogo. A sobreposição aparece como "convergência", que é um diagnóstico e não uma perda extra.</dd></dl></div>
+      <div class="rule"><div class="pair"><span style="color:var(--fire)">fogo</span><span>+ desmatamento</span></div>
+        <dl><dt>M1 · M2</dt><dd>O fogo entra antes, e o desmatamento leva o restante.</dd>
+            <dt>M3</dt><dd>Quando o ano é classificado como desmatamento, ele leva o estoque a zero e o fogo não entra separado.</dd>
+            <dt>M4</dt><dd>O desmatamento emite o estoque depois do fogo do ano.</dd></dl></div>
+      <div class="rule"><div class="pair"><span style="color:var(--regen)">regeneração</span><span>+ desmatamento</span></div>
+        <dl><dt>M3 · M4</dt><dd>Vale uma única classificação por ano. Como desmatamento, o estoque zera. Como vegetação secundária, o estoque cresce.</dd>
+            <dt>M1 · M2</dt><dd>A regeneração não é contabilizada.</dd></dl></div>
+    </div>
+  </section>
+
+  <section class="block" id="simulador">
+    <div class="sec-head"><span class="num">06 / simulador</span><h2>Simule um pixel.</h2>
+      <p class="muted">Ligue e desligue eventos em cada ano e veja como cada módulo responde. Este é um <strong>exemplo didático</strong>: ele usa as regras principais de cada módulo, mas não substitui o cálculo real.</p></div>
+    <div class="sim">
+      <div class="ctrl">
+        <div><span class="flabel">Módulo</span><div class="seg" id="simMod"></div></div>
+        <div><span class="flabel">Vegetação</span><div class="seg" id="simVeg"></div></div>
+        <div><span class="flabel">Exemplos</span><div class="seg" id="simPreset"></div></div>
+      </div>
+      <div class="card tl"><table id="simTl"></table></div>
+      <div class="card"><div class="chart-box"><canvas id="simChart"></canvas></div></div>
+      <div class="why" id="simWhy"></div>
+    </div>
+  </section>
+
+  <section class="block" id="real">
+    <div class="sec-head"><span class="num">07 / pixel real</span><h2>Um pixel de verdade, lido pelos quatro módulos.</h2>
+      <p class="muted">Séries tiradas dos assets públicos da CCAL, no mesmo ponto, para os quatro módulos. As diferenças vêm das fontes e das regras de cada um. Por exemplo, um evento visto no MapBiomas pode não aparecer no PRODES, e vice-versa.</p></div>
+    <div class="ctrl"><div><span class="flabel">Pixel</span><select id="pxSel" style="padding:.55rem .8rem;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;max-width:100%"></select></div>
+      <div><span class="flabel">Emissões do módulo</span><div class="seg" id="pxMod"></div></div></div>
+    <div class="grid two" style="margin-top:1rem">
+      <div class="card"><h3>Estoque de carbono (tC/ha)</h3><div class="chart-box"><canvas id="pxStock"></canvas></div></div>
+      <div class="card"><h3 id="pxEmTitle">Emissões e remoções (tCO₂e/ha)</h3><div class="chart-box"><canvas id="pxEm"></canvas></div></div>
+    </div>
+    <div class="pxsum" id="pxSum" style="margin-top:1rem"></div>
+  </section>
+
+  <section class="block" id="territorio">
+    <div class="sec-head"><span class="num">08 / território</span><h2>Do pixel ao território.</h2>
+      <p class="muted">O resultado não é um número nacional calculado de uma vez. É uma soma de pixels, e a mesma soma responde por estado, município, bioma, terra indígena, unidade de conservação ou qualquer outro recorte.</p></div>
+    <div class="grid two">
+      <div class="card"><h3>O pixel não tem área constante</h3><p>Numa grade geográfica, o pixel de 30 m encolhe à medida que se afasta do Equador. A área é calculada para cada linha da grade e entra em todas as somas.</p>
+        <div class="area-demo"><div><b>+5° N</b><i style="width:60px;height:60px"></i><span class="small">≈ 890 m²</span></div><div><b>0°</b><i style="width:60px;height:60px"></i><span class="small">≈ 894 m²</span></div><div><b>-34° S</b><i style="width:52px;height:60px"></i><span class="small">≈ 746 m²</span></div></div></div>
+      <div class="card"><h3>Unidades</h3>
+        <ul><li><strong>Estoque:</strong> densidade em tC/ha. No território, é multiplicado pela área e somado em tC.</li>
+            <li><strong>Emissões e remoções:</strong> tCO₂e por pixel, somadas diretamente.</li>
+            <li><strong>Balanço líquido</strong> (M4): perdas menos remoções.</li>
+            <li>Nos pixels da divisa entre recortes, cada um entra pela fração da sua área.</li></ul></div>
+    </div>
+  </section>
+</main>
+<script src="assets/chart.umd.min.js"></script>
+<script>
+const C = n => window.ccalColor(n);
+const $ = id => document.getElementById(id);
+function seg(el, items, value, onChange) {
+  el.innerHTML = items.map(([v, l, dis]) => `<button type="button" data-v="${v}" aria-pressed="${v === value}" ${dis ? 'disabled' : ''}>${l}</button>`).join('');
+  el.onclick = e => { const b = e.target.closest('button'); if (!b || b.disabled) return; onChange(b.dataset.v); };
+}
+
+/* 01 camadas: linha do tempo 1985–2025 */
+const LAYERS = [
+  ['Carbono', 'stock', [['QCN · mapa de referência (estoque pré-perturbação)', 1985, 2025, 'all']]],
+  ['Desmatamento', 'defor', [['MapBiomas transições · M3 M4', 1986, 2025, 'm34'], ['PRODES · M1 M2', 2016, 2025, 'm12']]],
+  ['Fogo', 'fire', [['MapBiomas Fogo · M2 M3 M4', 1985, 2025, 'm234'], ['DETER fogo · M1', 2017, 2025, 'm12']]],
+  ['Corte seletivo', 'logging', [['MapBiomas · M3', 1988, 2024, 'm34'], ['DETER · M1 M2', 2017, 2025, 'm12'], ['frequência de exploração · M4', 1986, 2024, 'm4']]],
+  ['Regeneração', 'regen', [['MapBiomas vegetação secundária · M3 M4', 1986, 2025, 'm34']]],
+  ['Borda', 'edge', [['idade de borda · M4', 1986, 2024, 'm4']]],
+];
+(function () {
+  const X = y => ((y - 1985) / 41 * 100).toFixed(2) + "%";
+  let h = '<div class="tlx"><div></div><div class="axis">' + [1985, 1995, 2005, 2015, 2025].map(y => `<span style="left:${X(y)}">${y}</span>`).join('') + '</div>';
+  LAYERS.forEach(([n, c, segs]) => {
+    h += `<b><i class="dot" style="background:var(--${c})"></i>${n}</b><div class="lane">` + segs.map(([l, a, z], i) =>
+      `<div class="seg-bar" style="left:${X(a)};width:calc(${X(z + 1)} - ${X(a)});top:${i * 26}px;background:color-mix(in srgb,var(--${c}) ${i ? 45 : 80}%,transparent)"><span>${l}</span></div>`).join('') + `</div>`;
+    h += '';
+  });
+  $('layers').innerHTML = h + '</div>';
+  document.querySelectorAll('#layers .lane').forEach(el => el.style.height = (el.children.length * 26) + 'px');
+})();
+/* 02 matriz */
+const MX = [
+  ['Estoque inicial (QCN)', '●', '●', '●', '●'],
+  ['Desmatamento', '● PRODES', '● PRODES', '● MapBiomas', '● MapBiomas'],
+  ['Fogo em floresta', '◐ DETER, Amazônia', '● MapBiomas', '● com mortalidade tardia', '●'],
+  ['Fogo em savana', '○', '● resposta por recorrência', '● resposta por recorrência', '○'],
+  ['Fogo em campo (CH₄, N₂O)', '○', '○', '●', '○'],
+  ['Corte seletivo', '◐ DETER, Amazônia', '● DETER', '● MapBiomas', '● frequência'],
+  ['Efeito de borda', '○', '○', '○', '●'],
+  ['Regeneração (remoções)', '○', '○', '●', '●'],
+  ['Série', '2016–2025', '2016–2025', '1986–2025', '1986–2025'],
+];
+$('mx').innerHTML = MX.map(r => '<tr>' + r.map((v, i) => {
+  if (!i) return `<td>${v}</td>`;
+  const k = v.startsWith('●') ? 'yes' : v.startsWith('◐') ? 'part' : v.startsWith('○') ? 'no' : '';
+  const sym = v.slice(0, 1), rest = /^[●◐○]/.test(v) ? v.slice(1) : v;
+  return `<td>${k ? `<span class="${k}">${sym}</span>` : ''}<span class="small">${rest}</span></td>`;
+}).join('') + '</tr>').join('');
+
+/* 03 fluxo */
+(function () {
+  const steps = [['Fontes', 'QCN · PRODES · DETER', 'MapBiomas · Fogo'], ['Eventos anuais', 'fogo · corte · desmate', 'regeneração · borda'], ['Estado do pixel', 'idade · estoque', 'histórico de degradação'], ['Carbono', 'estoque (tC/ha)', 'emissões · remoções'], ['Território', 'estado · município', 'bioma · TI · UC']];
+  const w = 186, gap = 34, y = 55, h = 140;
+  let s = '';
+  steps.forEach(([t, a, b], i) => {
+    const x = 10 + i * (w + gap);
+    s += `<rect class="${i === 3 ? 'boxa' : 'box'}" x="${x}" y="${y}" width="${w}" height="${h}" rx="18"/>`;
+    s += `<text class="s" x="${x + 18}" y="${y + 30}">${String(i + 1).padStart(2, '0')}</text><text class="t" x="${x + 18}" y="${y + 62}">${t}</text>`;
+    s += `<text x="${x + 18}" y="${y + 92}">${a}</text><text x="${x + 18}" y="${y + 114}">${b}</text>`;
+    if (i < steps.length - 1) s += `<path class="arrow" d="M${x + w + 4},${y + h / 2} L${x + w + gap - 4},${y + h / 2}"/>`;
+  });
+  s += `<text class="s" x="10" y="30">mesma grade de 30 m · cálculo ano a ano</text><text class="s" x="${10 + 4 * (w + gap)}" y="230">soma ponderada pela área</text>`;
+  $('flowg').innerHTML = s;
+})();
+
+/* 04 módulos */
+const MODS = {
+  M1: {name: 'Módulo 1 · FREL', c: 'm1', yrs: '2016–2025',
+    what: 'Segue a metodologia do <em>Forest Reference Emission Level</em> (FREL 2024), que o Brasil submete à UNFCCC. Estima as emissões multiplicando dados de atividade por fatores de emissão, conforme as diretrizes do IPCC de 2006.',
+    veg: 'Fitofisionomias florestais do IBGE (vegetação pretérita), por bioma.',
+    src: ['QCN (carbono)', 'PRODES', 'DETER fogo', 'DETER corte desordenado', 'áreas manejadas'],
+    proc: [['defor', 'desmatamento'], ['fire', 'fogo (Amazônia)'], ['logging', 'corte seletivo (Amazônia)']],
+    rules: ['O fogo reduz em 36,8% a biomassa acima do solo, a madeira morta e a serrapilheira.', 'A perda pelo corte seletivo depende de quantos anos seguidos houve corte: 29%, 27%, 26% e depois 22% da biomassa acima do solo.', 'O desmatamento emite todo o estoque restante. O CH₄ e o N₂O da queima entram na Amazônia e no Cerrado.']},
+  M2: {name: 'Módulo 2 · FREL adaptado', c: 'm2', yrs: '2016–2025',
+    what: 'Desenvolvido pelo IPAM. Usa as mesmas bases do Módulo 1, mas troca o DETER Fogo pelo MapBiomas Fogo e inclui a savana arborizada, onde o fogo também degrada a vegetação.',
+    veg: 'Floresta e savana arborizada (vegetação pretérita).',
+    src: ['QCN (carbono)', 'PRODES', 'DETER corte (geométrico e desordenado)', 'MapBiomas Fogo', 'frequência e tempo após o fogo'],
+    proc: [['defor', 'desmatamento'], ['fire', 'fogo em floresta e savana'], ['logging', 'corte seletivo']],
+    rules: ['Na floresta, o fogo queima uma fração dos compartimentos (fator de combustão).', 'Na savana, a biomassa reage conforme a recorrência do fogo e o tempo desde a última queima: pode ganhar 2,1% ou perder de 0,4% a 2%.', 'O corte seletivo segue as frações do Módulo 1 e vale também para a savana.']},
+  M3: {name: 'Módulo 3 · QCN + MapBiomas', c: 'm3', yrs: '1986–2025',
+    what: 'Proposto pelo IPAM. Atualiza o estoque pixel a pixel com a série histórica do MapBiomas (cobertura e transições da Coleção 11, Fogo da Coleção 5) e contabiliza também o que a vegetação secundária recupera.',
+    veg: 'Toda a vegetação nativa mapeada: florestas, savanas e campos.',
+    src: ['QCN (carbono)', 'MapBiomas cobertura e transições', 'MapBiomas Fogo, frequência e tempo após o fogo', 'MapBiomas corte seletivo', 'taxas de crescimento por bioma'],
+    proc: [['defor', 'desmatamento'], ['fire', 'fogo em floresta e savana'], ['grass', 'fogo em campo (CH₄, N₂O)'], ['logging', 'corte seletivo'], ['regen', 'regeneração']],
+    rules: ['Na floresta, o fogo tem duas partes: a queima imediata da serrapilheira e da madeira morta, e a morte das árvores, que se espalha pelos anos seguintes.', 'O corte seletivo tira 19,6% da biomassa no primeiro evento. A fração diminui a cada evento seguinte.', 'A vegetação secundária cresce conforme o bioma e a idade, sem passar do estoque primário da região.', 'No campo, o balanço de CO₂ é neutro. Entram só o CH₄ e o N₂O da queima.']},
+  M4: {name: 'Módulo 4 · borda', c: 'm4', yrs: '1986–2025',
+    what: 'Proposto pelo IPAM. É um módulo florestal: usa as bases do Módulo 3 e acrescenta a perda de carbono nas bordas dos fragmentos, onde há mais luz, calor e vento, e as árvores morrem mais.',
+    veg: 'Floresta primária e secundária. Não inclui savana nem campo.',
+    src: ['QCN (carbono)', 'MapBiomas cobertura e transições', 'MapBiomas Fogo', 'idade de borda', 'idade da vegetação secundária', 'frequência de exploração madeireira'],
+    proc: [['edge', 'efeito de borda'], ['logging', 'corte seletivo'], ['fire', 'fogo'], ['defor', 'desmatamento'], ['regen', 'regeneração']],
+    rules: ['A perda na borda é maior nos primeiros anos depois que a borda se forma e diminui com o tempo.', 'Ordem no ano: borda, depois corte seletivo, depois fogo e por fim desmatamento, cada um sobre o que restou do anterior.', 'A sobreposição de processos aparece como convergência. É um diagnóstico e não soma de novo no balanço.', 'Balanço líquido = perdas − crescimento da floresta secundária.']},
+};
+function drawMod(k) {
+  const m = MODS[k];
+  seg($('modSeg'), Object.keys(MODS).map(x => [x, MODS[x].name.split(' · ')[0] + ' · ' + MODS[x].name.split(' · ')[1]]), k, drawMod);
+  $('modPanel').innerHTML = `<div class="card" style="border-top:5px solid var(--${m.c})"><span class="tag">${m.yrs}</span><h3>${m.name}</h3><p>${m.what}</p>
+    <p><strong>Vegetação:</strong> ${m.veg}</p><p><strong>Fontes:</strong></p><div>${m.src.map(s => `<span class="pchip">${s}</span>`).join('')}</div></div>
+    <div class="card"><h3>Processos e regras</h3><div>${m.proc.map(([c, l]) => `<span class="pchip"><i class="dot" style="background:var(--${c})"></i>${l}</span>`).join('')}</div>
+    <ul>${m.rules.map(r => `<li>${r}</li>`).join('')}</ul>
+    <svg viewBox="0 0 520 120" style="width:100%;height:auto;margin-top:.4rem">${miniFlow(m)}</svg></div>`;
+}
+function miniFlow(m) {
+  const col = (x, items, title) => `<text x="${x}" y="14" style="font:600 11px var(--mono);fill:var(--muted)">${title}</text>` + items.map((t, i) => `<rect x="${x}" y="${22 + i * 19}" width="150" height="16" rx="8" style="fill:var(--paper-2);stroke:var(--line)"/><text x="${x + 8}" y="${34 + i * 19}" style="font:11px var(--body);fill:var(--ink)">${t.length > 24 ? t.slice(0, 23) + '…' : t}</text>`).join('');
+  const procs = m.proc.map(p => p[1]);
+  return col(0, m.src.slice(0, 5), 'FONTES') + `<path d="M156,60 L180,60" style="stroke:var(--muted);stroke-width:2"/>` + col(185, procs, 'PROCESSOS') + `<path d="M341,60 L365,60" style="stroke:var(--muted);stroke-width:2"/>` + col(370, ['estoque (tC/ha)', 'emissões (tCO₂e)', 'remoções (tCO₂e)'], 'SAÍDAS');
+}
+drawMod('M1');
+
+/* 06 simulador didático */
+const YEARS = Array.from({length: 10}, (_, i) => 2016 + i);
+const EV = [['fire', 'Fogo', 'fire'], ['logging', 'Corte seletivo', 'logging'], ['defor', 'Desmatamento', 'defor'], ['regen', 'Regeneração', 'regen'], ['edge', 'Borda se forma', 'edge']];
+const PRESETS = {
+  corte: {logging: [2018, 2019], defor: [2023]},
+  fogo: {fire: [2017, 2020, 2024]},
+  regen: {defor: [2017], regen: [2019]},
+  borda: {edge: [2017], fire: [2021]},
+};
+let S = {mod: 'M1', veg: 'floresta', ev: {fire: [2017], logging: [2019, 2020], defor: [2023], regen: [], edge: []}};
+const allowed = (mod, veg, e) => !((e === 'regen' && (mod === 'M1' || mod === 'M2')) || (e === 'edge' && mod !== 'M4') || (veg === 'savana' && e === 'edge'));
+function simulate() {
+  const {mod, veg, ev} = S, on = (e, y) => allowed(mod, veg, e) && ev[e].includes(y);
+  const forest = veg === 'floresta';
+  let agb = forest ? 105 : 28, bgb = forest ? 25 : 8, dw = forest ? 12 : 3, lit = forest ? 8 : 3;
+  const s0 = agb + bgb + dw + lit;
+  let consec = 0, cum = 0, freq = 0, lastFire = null, fireYear = null, edgeAge = 0, edgeCum = 0, cleared = false, secondary = false;
+  const out = {stock: [], fire: [], logging: [], defor: [], edge: [], regen: []};
+  for (const y of YEARS) {
+    const L = {fire: 0, logging: 0, defor: 0, edge: 0, regen: 0};
+    if (cleared && on('regen', y)) secondary = true;
+    if (secondary) { const tot = agb + bgb + dw + lit, g = Math.min(4, s0 - tot); agb += g * .7; bgb += g * .3; L.regen = -g; }
+    if (!cleared || secondary) {
+      if (mod === 'M4' && (on('edge', y) || edgeAge > 0)) { edgeAge++; const inc = 22.518 * 1.615 / ((edgeAge + 1.615) * (edgeAge + .615)) / 100; const l = agb * inc; agb -= l; L.edge = l; }
+      if (on('logging', y)) {
+        if (mod === 'M1' || mod === 'M2') { consec++; const f = [0, .29, .27, .26, .22][Math.min(consec, 4)]; const l = agb * f; agb -= l; L.logging = l; }
+        else { cum++; const f = .196 * Math.exp(-.0782 * (cum - 1)); const l = agb * f; agb -= l; L.logging = l; }
+      } else consec = 0;
+      if (on('fire', y)) {
+        freq++;
+        if (mod === 'M1' || (mod === 'M2' && forest)) { const k = .368; L.fire = (agb + dw + lit) * k; agb *= 1 - k; dw *= 1 - k; lit *= 1 - k; }
+        else if ((mod === 'M2' || mod === 'M3') && !forest) {
+          const tsf = lastFire == null ? 99 : y - lastFire; const fc = freq < 3 ? 1 : freq < 5 ? 2 : freq < 7 ? 3 : 4; const tc = 4;
+          const sev = fc + tc, fct = sev <= 3 ? .021 : sev <= 6 ? -.004 : -.02; const d = agb * fct; agb += d; L.fire = -d + lit * .873; lit *= .127;
+        } else if (mod === 'M3') { L.fire = lit * .683 + dw * .64; lit *= .317; dw *= .36; fireYear = y; }
+        else if (mod === 'M4') { const post = Math.pow(agb, 1.4702) * .07816; const l = Math.max(0, agb - Math.min(agb, post)); agb -= l; L.fire = l; }
+        lastFire = y;
+      }
+      if (mod === 'M3' && forest && fireYear != null && y > fireYear) { const t = y - fireYear; const r = [0, .104, .08, .06, .044, .032, .023, .016, .011, .008, .006][t] || 0; const l = agb * r; agb -= l; L.fire += l; }
+      if (on('defor', y)) { L.defor = agb + bgb + dw + lit; agb = bgb = dw = lit = 0; cleared = true; secondary = false; edgeAge = 0; }
+    }
+    out.stock.push(+(agb + bgb + dw + lit).toFixed(1));
+    for (const k of ['fire', 'logging', 'defor', 'edge', 'regen']) out[k].push(+(L[k] * 44 / 12).toFixed(1));
+  }
+  return out;
+}
+let simChart;
+function drawSim() {
+  seg($('simMod'), Object.keys(MODS).map(k => [k, k]), S.mod, v => { S.mod = v; if (v === 'M1' || v === 'M4') S.veg = 'floresta'; drawSim(); });
+  seg($('simVeg'), [['floresta', 'Floresta'], ['savana', 'Savana', S.mod === 'M1' || S.mod === 'M4']], S.veg, v => { S.veg = v; drawSim(); });
+  seg($('simPreset'), [['corte', 'corte + desmatamento'], ['fogo', 'fogo recorrente'], ['regen', 'regeneração'], ['borda', 'borda + fogo']], '', v => { S.ev = {fire: [], logging: [], defor: [], regen: [], edge: [], ...JSON.parse(JSON.stringify(PRESETS[v]))}; if (v === 'regen' && (S.mod === 'M1' || S.mod === 'M2')) S.mod = 'M3'; if (v === 'borda') { S.mod = 'M4'; S.veg = 'floresta'; } drawSim(); });
+  $('simTl').innerHTML = '<tr><th>evento</th>' + YEARS.map(y => `<th>${String(y).slice(2)}</th>`).join('') + '</tr>' +
+    EV.map(([k, l, c]) => `<tr><td><i class="dot" style="background:var(--${c})"></i> ${l}</td>` + YEARS.map(y => `<td><button type="button" style="--c:var(--${c})" data-e="${k}" data-y="${y}" aria-pressed="${S.ev[k].includes(y)}" ${allowed(S.mod, S.veg, k) ? '' : 'disabled'} aria-label="${l} ${y}"></button></td>`).join('') + '</tr>').join('');
+  const r = simulate();
+  if (simChart) simChart.destroy();
+  Chart.defaults.color = C('muted'); Chart.defaults.borderColor = C('line'); Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+  const bar = (k, l) => ({type: 'bar', label: l, data: r[k], backgroundColor: C(k), stack: 'e', yAxisID: 'e', borderRadius: 3});
+  simChart = new Chart($('simChart'), {data: {labels: YEARS, datasets: [
+    {type: 'line', label: 'estoque (tC/ha)', data: r.stock, borderColor: C('stock'), backgroundColor: C('stock'), yAxisID: 's', tension: .25, borderWidth: 3, pointRadius: 3},
+    bar('fire', 'fogo'), bar('logging', 'corte seletivo'), bar('defor', 'desmatamento'), bar('edge', 'borda'), bar('regen', 'remoção (regeneração)')]},
+    options: {maintainAspectRatio: false, interaction: {mode: 'index', intersect: false}, plugins: {legend: {position: 'bottom', labels: {boxWidth: 12}}},
+      scales: {s: {position: 'left', min: 0, title: {display: true, text: 'estoque · tC/ha'}}, e: {position: 'right', stacked: true, grid: {drawOnChartArea: false}, title: {display: true, text: 'emissões · tCO₂e/ha'}}, x: {stacked: true}}}});
+  const why = {
+    M1: 'M1: o fogo leva 36,8% dos compartimentos acima do solo. O corte seletivo leva 29%, 27%, 26% e depois 22% da biomassa acima do solo, conforme os anos seguidos de corte. Sem corte num ano, a contagem recomeça. Não há regeneração.',
+    M2: S.veg === 'savana' ? 'M2, savana: a biomassa reage à recorrência do fogo, com mudança de +2,1% a −2%. A queima da serrapilheira emite na hora. Não há regeneração.' : 'M2, floresta: o fogo queima uma fração dos compartimentos e o corte segue as frações do M1. Não há regeneração.',
+    M3: S.veg === 'savana' ? 'M3, savana: a biomassa reage à recorrência do fogo. Depois de um desmatamento, a regeneração recompõe o estoque até o teto primário.' : 'M3, floresta: o fogo queima a serrapilheira e a madeira morta na hora, e a morte das árvores se espalha pelos anos seguintes. O corte tira 19,6% no primeiro evento, menos nos seguintes. Depois de um desmatamento, a regeneração recompõe o estoque.',
+    M4: 'M4: a borda tira uma fração que diminui com a idade da borda. O fogo tem efeito forte sobre a biomassa. Depois de um desmatamento, a floresta secundária cresce, e o balanço líquido é perdas menos esse crescimento.'};
+  $('simWhy').innerHTML = '<strong>Regra simplificada.</strong> ' + why[S.mod] + ' <span class="muted">Exemplo didático com estoque inicial ilustrativo. Não é o modelo real.</span>';
+}
+$('simTl').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.disabled) return; const k = b.dataset.e, y = +b.dataset.y; const a = S.ev[k]; S.ev[k] = a.includes(y) ? a.filter(x => x !== y) : [...a, y]; drawSim(); });
+drawSim();
+
+/* 07 pixel real */
+let PX, pxStock, pxEm, pxModSel = 'M3';
+const VARS = [['loss_deforestation', 'desmatamento', 'defor'], ['loss_fire', 'fogo', 'fire'], ['loss_selective_logging', 'corte seletivo', 'logging'], ['loss_edge', 'borda', 'edge'], ['loss_grassland', 'campo', 'grass'], ['loss_deforestation_secondary', 'desmat. secundária', 'rose'], ['gain_secondary_vegetation', 'remoção (regeneração)', 'regen']];
+function drawPx() {
+  if (!PX) return;
+  const id = $('pxSel').value;
+  const firstEv = Math.min(...['M1','M2','M3','M4'].flatMap(m => { const t = PX.modules[m][id]; return VARS.flatMap(([v]) => (t[v] || []).map((x, i) => Math.abs(x) > .01 ? t.years[i] : 9999)); }));
+  const y0 = Math.min(2005, firstEv - 2), years = Array.from({length: 2025 - y0 + 1}, (_, i) => y0 + i);
+  seg($('pxMod'), ['M1', 'M2', 'M3', 'M4'].map(m => [m, m]), pxModSel, v => { pxModSel = v; drawPx(); });
+  Chart.defaults.color = C('muted'); Chart.defaults.borderColor = C('line');
+  const ds = ['M1', 'M2', 'M3', 'M4'].map(m => { const s = PX.modules[m][id]; const map = {}; s.years.forEach((y, i) => map[y] = s.stock[i]); return {label: m, data: years.map(y => map[y] ?? null), borderColor: C(m.toLowerCase()), backgroundColor: C(m.toLowerCase()), pointRadius: 0, borderWidth: 2.5, tension: .15}; });
+  if (pxStock) pxStock.destroy();
+  pxStock = new Chart($('pxStock'), {type: 'line', data: {labels: years, datasets: ds}, options: {maintainAspectRatio: false, interaction: {mode: 'index', intersect: false}, plugins: {legend: {position: 'bottom', labels: {boxWidth: 12}}}, scales: {y: {min: 0}}}});
+  const s = PX.modules[pxModSel][id];
+  const yrs = s.years.filter(y => y >= y0);
+  const off = s.years.indexOf(yrs[0]);
+  const bars = VARS.filter(([v]) => s[v] && s[v].some(x => Math.abs(x) > .01)).map(([v, l, c]) => ({label: l, data: s[v].slice(off).map(x => v.startsWith('gain') ? -Math.abs(x) : x), backgroundColor: C(c), stack: 'a', borderRadius: 3}));
+  if (pxEm) pxEm.destroy();
+  $('pxEmTitle').textContent = `Emissões e remoções · ${pxModSel} (tCO₂e/ha)`;
+  pxEm = new Chart($('pxEm'), {type: 'bar', data: {labels: yrs, datasets: bars.length ? bars : [{label: 'sem eventos', data: yrs.map(() => 0)}]}, options: {maintainAspectRatio: false, plugins: {legend: {position: 'bottom', labels: {boxWidth: 12}}}, scales: {x: {stacked: true}, y: {stacked: true}}}});
+  $('pxSum').innerHTML = ['M1', 'M2', 'M3', 'M4'].map(m => { const t = PX.modules[m][id]; const ev = VARS.filter(([v]) => t[v] && t[v].some(x => Math.abs(x) > .01)).map(([v, l]) => { const ys = t.years.filter((_, i) => Math.abs(t[v][i]) > .01); return `${l} (${ys.length > 3 ? ys[0] + '–' + ys[ys.length - 1] : ys.join(', ')})`; });
+    return `<div class="card" style="border-left:4px solid var(--${m.toLowerCase()})"><b>${m}</b><div class="small">estoque ${t.stock[0].toFixed(0)} → ${t.stock[t.stock.length - 1].toFixed(0)} tC/ha</div><div class="small muted">${ev.length ? ev.join(' · ') : 'nenhum evento registrado'}</div></div>`; }).join('');
+}
+fetch('data/pixels.json').then(r => r.json()).then(d => { PX = d; $('pxSel').innerHTML = d.points.map(p => `<option value="${p.id}">${p.label} · ${Math.abs(p.lat).toFixed(3)}° S, ${Math.abs(p.lon).toFixed(3)}° O</option>`).join(''); $('pxSel').value = 'ac_corte_fogo_desm'; $('pxSel').onchange = drawPx; drawPx(); }).catch(() => { $('pxSum').innerHTML = '<p class="muted">Não foi possível carregar os pixels.</p>'; });
+
+document.addEventListener('ccal-theme', () => { drawSim(); drawPx(); });
+</script>
+</body>
+</html>

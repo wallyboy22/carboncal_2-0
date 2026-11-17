@@ -1,3 +1,7 @@
 MODULO3/.obsidian/
 venv/
 MATERIAL_COMPLEMENTAR/
+
+# estatisticas: CSVs brutos do bucket (reprodutíveis)
+STATISTICS/ccal_02_v_1/raw/
+__pycache__/

@@ -3,7 +3,7 @@ import ee
 from .common import spill, stack
 from .modulo4 import correct_transitions
 
-BASE = 'projects/ee-ipam/assets/CCAL/MODULO3/v038'
+BASE = 'projects/ee-ipam/assets/CCAL/MODULO3/v039'  # v038 apagada em 2026-11-16; v039 tem cópia dos intermediários
 LULC = 'projects/mapbiomas-public/assets/brazil/lulc/collection11/mapbiomas_brazil_collection11_coverage_v3'
 TRANSITIONS = 'projects/mapbiomas-public/assets/brazil/lulc/collection11/mapbiomas_brazil_collection11_deforestation_secondary_vegetation_v4'
 QCN = 'projects/ee-ipam/assets/SEEG/SEEG14/RETIFICACAO/c_rect_col11'
@@ -12,6 +12,24 @@ FIRE = 'projects/mapbiomas-public/assets/brazil/fire/collection5_1/mapbiomas_fir
 FREQ = 'projects/mapbiomas-public/assets/brazil/fire/collection5_1/mapbiomas_fire_collection51_fire_frequency_v1'
 TSF = 'projects/mapbiomas-public/assets/brazil/fire/collection5_1/mapbiomas_fire_collection51_time_after_fire_v1'
 LOGGING = 'projects/mapbiomas-public/assets/brazil/lulc/collection10_1/mapbiomas_brazil_collection10_1_degradation_logging_v2'
+LOGGING_LAST_YEAR = 2024  # anos posteriores: nenhum evento novo considerado (hipótese)
+# v5 = v4 + 2025 (concordância 100% 1987–2024 nos recortes testados em 2026-11-16).
+TRANSITIONS_V5 = 'projects/mapbiomas-public/assets/brazil/lulc/collection11/mapbiomas_brazil_collection11_deforestation_secondary_vegetation_v5'
+MAX_YEAR = 2025
+
+
+def _class_masks(year, lc, transition_band):
+    """Máscaras do Stage 0 para um ano: grupo campo/floresta e primárias por fisionomia."""
+    gf = lc.multiply(0)
+    for code in (3, 4, 5, 6, 49):
+        gf = gf.where(lc.eq(code), 2)
+    for code in (11, 12, 50, 29, 13):
+        gf = gf.where(lc.eq(code), 1)
+    primary = transition_band.eq(2)
+    name = f'classification_{year}'
+    return {'grass_forest': gf.rename(name), 'forest_mask': primary.And(lc.eq(3)).rename(name),
+            'savanna_mask': primary.And(lc.eq(4)).rename(name),
+            'grassland_mask': primary.And(lc.eq(11).Or(lc.eq(12)).Or(lc.eq(50))).rename(name)}
 
 
 def stage00(end_year=2024):
@@ -26,17 +44,11 @@ def stage00(end_year=2024):
     outputs = {'desf_reg_corrected': corrected}
     grass_forest, forest, savanna, grassland = [], [], [], []
     for year in years:
-        lc = lulc.select(f'classification_{year}')
-        gf = lc.multiply(0)
-        for code in (3, 4, 5, 6, 49):
-            gf = gf.where(lc.eq(code), 2)
-        for code in (11, 12, 50, 29, 13):
-            gf = gf.where(lc.eq(code), 1)
-        primary = corrected.select(f'classification_{year}').eq(2)
-        grass_forest.append(gf.rename(f'classification_{year}'))
-        forest.append(primary.And(lc.eq(3)).rename(f'classification_{year}'))
-        savanna.append(primary.And(lc.eq(4)).rename(f'classification_{year}'))
-        grassland.append(primary.And(lc.eq(11).Or(lc.eq(12)).Or(lc.eq(50))).rename(f'classification_{year}'))
+        m = _class_masks(year, lulc.select(f'classification_{year}'), corrected.select(f'classification_{year}'))
+        grass_forest.append(m['grass_forest'])
+        forest.append(m['forest_mask'])
+        savanna.append(m['savanna_mask'])
+        grassland.append(m['grassland_mask'])
     outputs.update(grass_forest=stack(grass_forest), forest_mask=stack(forest),
                    savanna_mask=stack(savanna), grassland_mask=stack(grassland))
     return outputs
@@ -48,8 +60,8 @@ def stage01(end_year=2024, base=BASE, prepared=None):
     Por padrão lê assets Stage 0. `prepared=stage00()` liga os grafos diretamente.
     O cálculo preserva convenções de sinal e máscaras JS mesmo quando questionadas.
     """
-    if not 1988 <= end_year <= 2024:
-        raise ValueError('stage01 requer ano final entre 1988 e 2024')
+    if not 1988 <= end_year <= MAX_YEAR:
+        raise ValueError(f'stage01 requer ano final entre 1988 e {MAX_YEAR}')
     years, fire_years, log_years = list(range(1985,end_year+1)), list(range(1986,end_year+1)), list(range(1988,end_year+1))
     data = prepared if prepared is not None else {name: ee.Image(base+'/'+name) for name in
         ('desf_reg_corrected','forest_mask','savanna_mask','grassland_mask','grass_forest')}
@@ -86,6 +98,7 @@ def stage01(end_year=2024, base=BASE, prepared=None):
     factors = {'Amazônia':(0.683,0.643), 'Caatinga':(0.983,0.719), 'Cerrado':(0.683,0.629),
                'Mata Atlântica':(0.683,0.643), 'Pampa':(0.683,0.629), 'Pantanal':(0.683,0.629)}
     forest_out = {key: [None]*len(fire_years) for key in ('CO2','CO2_gross','CH4','N2O','CO','NOX')}
+    fire_state = {'agb': None, 'agn': None}  # estado ao fim de end_year (checkpoint)
     for biome, (fwd, cwd_s) in factors.items():
         prev_agb, prev_agn = ee.Image(0), ee.Image(0)
         bm = biome_masks[biome]
@@ -116,6 +129,9 @@ def stage01(end_year=2024, base=BASE, prepared=None):
                 value = value.float().updateMask(bm)
                 forest_out[key][i] = value if forest_out[key][i] is None else forest_out[key][i].blend(value)
             prev_agb, prev_agn = next_agb, next_agn
+        for key, value in (('agb', prev_agb), ('agn', prev_agn)):
+            value = value.updateMask(bm)
+            fire_state[key] = value if fire_state[key] is None else fire_state[key].blend(value)
     prefixes = {'CO2':'CO2_tC_ha','CO2_gross':'CO2_gross_t_ha','CH4':'CH4_t_ha',
                 'N2O':'N2O_t_ha','CO':'CO_t_ha','NOX':'NOX_t_ha'}
     forest_images = {key: stack([im.rename(f'{prefixes[key]}_{y}').updateMask(forest.select(f'classification_{y}'))
@@ -149,7 +165,9 @@ def stage01(end_year=2024, base=BASE, prepared=None):
     amazon = ee.Image(1).paint(biomes.filter(ee.Filter.eq('Bioma','Amazônia')),1).eq(1)
     logging, cumulative, agb_updated = [], ee.Image(0), agb
     for year in log_years:
-        event = logging_src.select(f'logging_{year}').unmask(0).gt(0).And(forest.select(f'classification_{year}').gt(0)).And(amazon)
+        observed = (logging_src.select(f'logging_{year}').unmask(0) if year <= LOGGING_LAST_YEAR
+                    else ee.Image(0))  # sem dado: nenhum evento novo considerado
+        event = observed.gt(0).And(forest.select(f'classification_{year}').gt(0)).And(amazon)
         cumulative = cumulative.add(event.unmask(0))
         fraction = ee.Image(0.196).multiply(ee.Image(0.0782).multiply(cumulative.subtract(1)).multiply(-1).exp()).multiply(event)
         loss = agb_updated.multiply(fraction).rename(f'CO2_tC_ha_{year}').float()
@@ -164,6 +182,11 @@ def stage01(end_year=2024, base=BASE, prepared=None):
         degradation.append(accumulated.gt(0).And(forest.select(f'classification_{year}').eq(1)).rename(f'degradation_{year}'))
     result = {'secondary_veg_increment':stack(sec_out), 'logging_forest_CO2':log_stack,
               'degradation_mask':stack(degradation)}
+    # Estados internos ao fim de end_year: permitem estender o ano seguinte sem a cadeia inteira.
+    state = [('sec_age', age), ('sec_stock', previous_stock), ('fire_forest_agb', fire_state['agb']),
+             ('fire_forest_agn', fire_state['agn']), ('savanna_agb', agb_current),
+             ('logging_count', cumulative), ('logging_agb', agb_updated), ('degradation_accum', accumulated)]
+    result['state'] = stack([ee.Image(im).rename(f'state_{name}_{end_year}').float() for name, im in state])
     result.update({f'fire_forest_{k}':v for k,v in forest_images.items()})
     result.update({f'fire_savanna_{k}':v for k,v in savanna_images.items()})
     result.update({f'fire_grassland_{k}':v for k,v in grass_images.items()})
@@ -172,8 +195,8 @@ def stage01(end_year=2024, base=BASE, prepared=None):
 
 def balance(end_year=2024, base=BASE, inputs=None):
     """Balanço Stage 2/3 com assets publicados ou imagens dos stages Python."""
-    if not 1986 <= end_year <= 2024:
-        raise ValueError('ano final deve estar entre 1986 e 2024')
+    if not 1986 <= end_year <= MAX_YEAR:
+        raise ValueError(f'ano final deve estar entre 1986 e {MAX_YEAR}')
     years = list(range(1985, end_year + 1))
     def get(name):
         return ee.Image(inputs[name]) if inputs is not None else ee.Image(base + '/' + name)
@@ -225,7 +248,9 @@ def balance(end_year=2024, base=BASE, inputs=None):
         outputs['loss_convergence_degradation'].append(ftotal.add(log_co2).updateMask(ftotal.gt(0).And(log_co2.gt(0))).multiply(area).rename(f'loss_convergence_degradation_{year}').float())
         outputs['biomass_stock'].append(updated)
         past = updated
-    return {key: stack(value) for key, value in outputs.items()}
+    result = {key: stack(value) for key, value in outputs.items()}
+    result['state'] = accum.rename(f'state_balance_accum_{end_year}').float()
+    return result
 
 
 def stage02(end_year=2024, base=BASE, inputs=None):
@@ -248,6 +273,40 @@ def stage03(end_year=2024, base=BASE, inputs=None):
         final.append(outputs[key].selfMask())
     final_image = stack(final).updateMask(ee.Image(LULC).select('classification_1985').neq(0)).float()
     return {'final': final_image, **outputs}
+
+
+PRODUCTS = ('fire_forest_CO2', 'fire_forest_CO2_gross', 'fire_forest_CH4', 'fire_forest_N2O',
+            'fire_forest_CO', 'fire_forest_NOX', 'fire_savanna_CO2', 'fire_savanna_CO2_gross',
+            'fire_savanna_CH4', 'fire_savanna_N2O', 'fire_savanna_CO', 'fire_savanna_NOX',
+            'fire_grassland_CH4', 'fire_grassland_N2O', 'fire_grassland_CO', 'fire_grassland_NOX',
+            'logging_forest_CO2', 'secondary_veg_increment', 'degradation_mask')
+MASKS = ('grass_forest', 'forest_mask', 'savanna_mask', 'grassland_mask')
+
+
+def extension_inputs(year=2025, base=BASE):
+    """Insumos do .1: histórico publicado em `base` + fatia `year` calculada em memória.
+
+    PUXADINHO (remover na próxima .0): o histórico das transições fica congelado no
+    `desf_reg_corrected` publicado; a transição de `year` vem da v5 com a regra de
+    preenchimento para frente (classe 7 repete o ano anterior). A correção completa
+    alteraria anos passados (~0,02% da área nos recortes) pelo backward fill herdado.
+    Retorna (inputs, memória): `inputs` alimenta balance/stage03; `memória` é o stage01 inteiro.
+    """
+    prev = year - 1
+    pub = {name: ee.Image(f'{base}/{name}') for name in PRODUCTS + MASKS + ('desf_reg_corrected',)}
+    current = ee.Image(TRANSITIONS_V5).select(f'classification_{year}')
+    previous = pub['desf_reg_corrected'].select(f'classification_{prev}')
+    transition = previous.where(current.neq(7), current).rename(f'classification_{year}')
+    lc = ee.Image(LULC).select(f'classification_{year}')
+    masks = _class_masks(year, lc, transition)
+    prepared = {'desf_reg_corrected': pub['desf_reg_corrected'].addBands(transition)}
+    prepared.update({name: pub[name].addBands(masks[name]) for name in MASKS})
+    memory = stage01(end_year=year, prepared=prepared)
+    inputs = dict(prepared)
+    for name in PRODUCTS:
+        new = memory[name].select([f'.*_{year}'])
+        inputs[name] = pub[name].addBands(new)
+    return inputs, memory
 
 
 def savanna_balance_diagnostic(agb, burned, factor, mode="parity"):

@@ -1,16 +1,20 @@
 """M1: beta do Stage 01 v04; não inclui o cálculo Stage 00 por bioma."""
 import ee
 from .common import convergence_pair, spill, stack
+from .modulo2 import PRODES_2025, deter_layer
 
 PREFIXES = ("amz", "cerr", "pan", "pam", "caa", "ma")
 SOURCE = "projects/ee-ipam/assets/CCAL/MODULO1/v04"
 BIOMES = "projects/ee-ipam/assets/IBGE/limite_biomas_IBGE_2026"
 
 
-def build_stage00(end_year=2024):
-    """Reproduz M1 v04 Stage 00 em imagens por bioma/ano; não exporta."""
-    if not 2017 <= end_year <= 2024:
-        raise ValueError('end_year deve estar entre 2017 e 2024')
+def build_stage00(end_year=2024, prefixes=None):
+    """Reproduz M1 v04 Stage 00 em imagens por bioma/ano; não exporta.
+
+    `prefixes` filtra os biomas (ex.: ('amz',)) para permitir export por bioma.
+    """
+    if not 2017 <= end_year <= 2025:
+        raise ValueError('end_year deve estar entre 2017 e 2025')
     qcn = ee.ImageCollection('projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1').mosaic()
     large = ee.Image('users/celsojunior/prodes_brasil_2024_v20260407').unmask(0)
     small_raw = ee.Image('projects/ee-celsojunior/assets/yearly_deforestation_smaller_than_625ha_biome')
@@ -21,6 +25,9 @@ def build_stage00(end_year=2024):
     mapped = codes.multiply(0)
     for code in range(16, 25):
         mapped = mapped.where(codes.eq(code), 2000 + code)
+    if end_year >= 2025:
+        # Igual ao M2: histórico no raster anterior; do novo só o evento 2025 (AMZ/CER/PANT).
+        mapped = mapped.where(ee.Image(PRODES_2025).select(0).eq(25).And(codes.eq(100)), 2025)
     managed = ee.Image('projects/ee-ipam/assets/Managed_Land_Brazil').unmask(0)
     pret = ee.Image('projects/ee-ipam/assets/CCAL/DATASETS/UKPact_MRV/brazil_pret_vegetation_qcn_v2').unmask(0).remap([1,2],[1,1],0)
     raw = ee.Image('projects/ee-ipam/assets/REDD/prodes_brasil_2023').unmask(0)
@@ -44,8 +51,8 @@ def build_stage00(end_year=2024):
             state[component] = source.multiply(forest)
         layers = []
         if name == 'Amazônia':
-            for y in range(2017, 2025):
-                dis = ee.Image(deter + str(y) + '_cs_disordered').multiply(pret)
+            for y in range(2017, max(2024, end_year) + 1):
+                dis = deter_layer(deter, y, 'disordered').multiply(pret)
                 # cs_disordered é esparso (EPSG:4674); zero-fill com footprint do pret.
                 layers.append(pret.multiply(0).blend(dis))
             layers.append(ee.Image(0))
@@ -60,7 +67,7 @@ def build_stage00(end_year=2024):
             if name == 'Amazônia':
                 # fire é esparso (EPSG:4674); zero-fill com footprint do managed.
                 fire = managed.multiply(0).blend(
-                    ee.Image(deter + str(year) + '_fire').multiply(managed))
+                    deter_layer(deter, year, 'fire').multiply(managed))
                 above = state['agb'].add(state['dw']).add(state['litter'])
                 save('emission_fire_co2', above.multiply(fire).multiply(0.368).multiply(44/12))
                 save('emission_fire_ch4', above.multiply(fire).multiply(1/0.47).multiply(0.368).multiply(6.8).multiply(0.001).multiply(28))

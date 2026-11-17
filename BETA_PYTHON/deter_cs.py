@@ -13,7 +13,9 @@ ROOT = 'projects/ee-ipam/assets/CCAL/DATASETS/PRODES/PRODES_ANO_CIVIL'
 TEMPLATE_LEGACY = ROOT + '/DeterAnoProdes_2023_cs_geometric'
 TEMPLATE_2024 = ROOT + '/DeterAnoProdes_2024_cs_disordered'
 TABLE = 'projects/ee-ipam/assets/INPE/DETER/deter-amz-public-2026out09'
-CLASSES = {'geometric': 'CS_GEOMETRICO', 'disordered': 'CS_DESORDENADO'}
+CLASSES = {'geometric': 'CS_GEOMETRICO', 'disordered': 'CS_DESORDENADO', 'fire': 'CICATRIZ_DE_QUEIMADA'}
+# Nome do asset por tipo (o fogo do M1 não leva o prefixo cs_).
+SUFFIX = {'geometric': 'cs_geometric', 'disordered': 'cs_disordered', 'fire': 'fire'}
 TASK_PREFIX = 'WS_IPAM_CCAL-'
 
 
@@ -24,7 +26,7 @@ def template_for(year):
 
 def _polygons(year, kind, table=TABLE):
     if kind not in CLASSES:
-        raise ValueError('kind deve ser geometric ou disordered')
+        raise ValueError(f'kind deve ser um de {list(CLASSES)}')
     start = ee.Date.fromYMD(year, 1, 1).millis()
     end = ee.Date.fromYMD(year + 1, 1, 1).millis()
     return (ee.FeatureCollection(table)
@@ -48,10 +50,10 @@ def cs_mask(year, kind, table=TABLE, template=None):
     return inside.selfMask().rename('b1')
 
 
-def validate(year=2023, tile=None):
+def validate(year=2023, tile=None, kinds=None):
     """Compara máscara reconstruída com o raster legado na grade nativa."""
-    for kind in CLASSES:
-        legacy = ee.Image(f'{ROOT}/DeterAnoProdes_{year}_cs_{kind}').select(0).unmask(0, False).gt(0)
+    for kind in (kinds or CLASSES):
+        legacy = ee.Image(f'{ROOT}/DeterAnoProdes_{year}_{SUFFIX[kind]}').select(0).unmask(0, False).gt(0)
         built = cs_mask(year, kind).unmask(0, False).gt(0)
         region = ee.Geometry.Rectangle(tile, None, False) if tile else ee.Geometry.Rectangle(
             [-63.95, -15.67, -46.91, 1.18], None, False)
@@ -80,12 +82,12 @@ def main():
     args = parser.parse_args()
     ee.Initialize(credentials=auth.load(args.account_profile), project=args.project)
     if args.validate:
-        validate(args.year, args.tile)
+        validate(args.year, args.tile, None if args.kind == 'both' else [args.kind])
         return
-    kinds = list(CLASSES) if args.kind == 'both' else [args.kind]
+    kinds = ['geometric', 'disordered'] if args.kind == 'both' else [args.kind]
     template = ee.Image(template_for(args.year))
     for kind in kinds:
-        asset = f'{ROOT}/DeterAnoProdes_{args.year}_cs_{kind}'
+        asset = f'{ROOT}/DeterAnoProdes_{args.year}_{SUFFIX[kind]}'
         print('Destino:', asset)
         if not args.submit:
             print('  dry-run; use --submit para exportar')
@@ -97,7 +99,7 @@ def main():
         except Exception:
             pass
         task = ee.batch.Export.image.toAsset(
-            image=cs_mask(args.year, kind).toByte(), description=f'{TASK_PREFIX}DETER_CS_{args.year}_{kind}',
+            image=cs_mask(args.year, kind).toByte(), description=f'{TASK_PREFIX}DETER_{SUFFIX[kind].upper()}_{args.year}',
             assetId=asset, region=alert_bounds(args.year, kind).buffer(1000),
             crs='EPSG:4674', crsTransform=template.projection().getInfo()['transform'],
             maxPixels=1e13, pyramidingPolicy={'.default': 'mode'})

@@ -15,7 +15,7 @@ def main():
         parser.error("bounds must be a Brazilian extent at most 0.2 degrees wide and high")
     ee.Initialize(project=args.project)
     region = ee.Geometry.Rectangle(args.bounds, None, False)
-    im = ee.Image(f"projects/ee-ipam/assets/CCAL/MODULO4/v02/emissions_removals_v02/{args.year}")
+    im = ee.Image(f"projects/ee-ipam/assets/CCAL/MODULO4/v04/emissions_removals_v04/{args.year}")
     suffix = "_" + str(args.year)
     e, l, f = (im.select(name + suffix) for name in ("loss_edge", "loss_selective_logging", "loss_fire"))
     em = im.select("mask_edge" + suffix).And(e.gt(0))

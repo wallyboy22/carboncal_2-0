@@ -3,6 +3,18 @@ import ee
 from .common import convergence_pair, spill, stack
 
 SOURCE = 'projects/ee-ipam/assets/CCAL/MODULO2/v03/model_assets'
+PRODES_2025 = 'projects/ee-ipam/assets/INPE/PRODES/ProdesBrasil24_AMZ_CER_PANT25'
+
+
+def deter_layer(prefix, year, kind):
+    """Raster DETER de corte seletivo em ano civil; reconstrói em memória se o asset não existir."""
+    from .deter_cs import SUFFIX, cs_mask
+    asset = f'{prefix}{year}_{SUFFIX[kind]}'
+    try:
+        ee.data.getAsset(asset)
+        return ee.Image(asset)
+    except Exception:
+        return cs_mask(year, kind)
 
 
 def stage00(end_year=2024):
@@ -11,8 +23,8 @@ def stage00(end_year=2024):
     Retorna imagens anuais nomeadas; não submete tarefas. A entrada DETER
     geométrica 2024 ausente permanece obrigatória e não recebe substituição.
     """
-    if not 2017 <= end_year <= 2024:
-        raise ValueError('end_year deve estar entre 2017 e 2024')
+    if not 2017 <= end_year <= 2025:
+        raise ValueError('end_year deve estar entre 2017 e 2025')
     qcn = ee.ImageCollection('projects/mapbiomas-workspace/SEEG/2022/QCN/QCN_30m_BR_v2_0_1').mosaic()
     aoi = ee.FeatureCollection('projects/ee-ipam/assets/IBGE/limite_biomas_IBGE_2026').geometry().bounds()
     cf = ee.Image('projects/ee-ipam/assets/BRAZIL_CF_BIOMES_QCN_FREL')
@@ -26,6 +38,12 @@ def stage00(end_year=2024):
     mapped = codes.multiply(0)
     for code in range(16, 25):
         mapped = mapped.where(codes.eq(code), 2000 + code)
+    if end_year >= 2025:
+        # Histórico permanece no raster anterior; o novo só acrescenta o evento 2025
+        # (Amazônia, Cerrado e Pantanal), onde o anterior ainda era vegetação (100).
+        # A base "desmatamento anual < 6,25 ha" não tem 2025 compatível com a série: lacuna declarada.
+        prodes25 = ee.Image(PRODES_2025).select(0)
+        mapped = mapped.where(prodes25.eq(25).And(codes.eq(100)), 2025)
     raw = ee.Image('projects/ee-ipam/assets/REDD/prodes_brasil_2023').unmask(0)
     nonvegetation = raw.eq(91).Or(raw.eq(101))
     exclusion = codes.gte(2).And(codes.lte(16)).Not().And(nonvegetation.Not())
@@ -46,9 +64,9 @@ def stage00(end_year=2024):
         agb, bgb, dw, litter = compartments
         layers = []
         # JS carrega a janela completa de 2017–2024 independentemente de end_year.
-        for y in range(2017, 2025):
-            dis = ee.Image(deter + str(y) + '_cs_disordered').multiply(vegetation).clip(aoi)
-            geo = ee.Image(deter + str(y) + '_cs_geometric').multiply(vegetation).clip(aoi)
+        for y in range(2017, max(2024, end_year) + 1):
+            dis = deter_layer(deter, y, 'disordered').multiply(vegetation).clip(aoi)
+            geo = deter_layer(deter, y, 'geometric').multiply(vegetation).clip(aoi)
             layers.append(ee.Image(0).clip(aoi).blend(dis).blend(geo))
         layers.append(ee.Image(0).clip(aoi))
         logging = layers[0]
@@ -126,8 +144,8 @@ def savanna_response(agb, fire, frequency, time_since_fire, mode="parity"):
 
 def stage01(source=SOURCE, end_year=2024, inputs=None):
     """Síntese v03, anos 2017–end_year; falha se qualquer entrada não existir."""
-    if not 2017 <= end_year <= 2024:
-        raise ValueError('end_year deve estar entre 2017 e 2024')
+    if not 2017 <= end_year <= 2025:
+        raise ValueError('end_year deve estar entre 2017 e 2025')
     years = list(range(2017, end_year + 1))
     def load(name):
         im = ee.Image(inputs[name]) if inputs is not None else ee.Image(f'{source}/{name}')

@@ -6,6 +6,7 @@ de submeter. Por padrão é dry-run; use --submit para criar tarefas.
 import argparse
 import ee
 from . import auth, modulo1, modulo2, modulo3, modulo4
+from .common import stack
 
 ROOT = 'projects/ee-ipam/assets/CCAL'
 TASK_PREFIX = 'WS_IPAM_CCAL-'
@@ -167,7 +168,7 @@ def m4_operations(submit):
 
 
 def m3_operations(submit):
-    src = ROOT + '/MODULO3/v038'
+    src = ROOT + '/MODULO3/v038'  # operação histórica de 2026-11-05; v038 apagada em 2026-11-16
     out = ROOT + '/MODULO3/v039'
     results = []
     ensure_folder(out, submit)
@@ -210,16 +211,201 @@ def m2_operations(submit, end_year=2024):
     return out, results
 
 
+M1_EXTENSION = {'base': 'v06', 'version': 'v06_1', 'year': 2025}
+M1_BIOME_NAMES = {'amz': 'Amazônia', 'cerr': 'Cerrado', 'pan': 'Pantanal',
+                  'pam': 'Pampa', 'caa': 'Caatinga', 'ma': 'Mata Atlântica'}
+
+
+def m1_extension_operations(submit, cfg=M1_EXTENSION):
+    """M1 .1 em duas fases (rode duas vezes):
+
+    A) exporta as fatias `year` do Stage 00 por bioma (cadeia recalculada em memória);
+    B) quando todas existirem, exporta consolidado completo e derivados, relendo
+       base (até year-1) + fatias novas. Requer DeterAnoProdes_<year>_{fire,cs_disordered}.
+    """
+    base, version, year = cfg['base'], cfg['version'], cfg['year']
+    src, out = f'{ROOT}/MODULO1/{base}', f'{ROOT}/MODULO1/{version}'
+    ensure_folder(out, submit)
+    tag = f'M1_{version}_'
+    memory = modulo1.build_stage00(end_year=year)
+    new_keys = sorted(k for k in memory if k.endswith(f'_{year}'))
+    biomes = ee.FeatureCollection(modulo1.BIOMES)
+    results = []
+    missing = [k for k in new_keys if not exists(f'{out}/{k}')]
+    if missing:
+        for key in missing:
+            region = biomes.filter(ee.Filter.eq('Bioma', M1_BIOME_NAMES[key.split('_')[0]])).geometry().bounds()
+            if submit:
+                results.append(export_image(memory[key], f'{out}/{key}', tag + key, 'mean', True, region=region))
+            else:
+                results.append(('plan', f'{out}/{key}', tag + key))
+        results.append(('wait', f'{out}/CCAL_MODULO1-{version} + derivados',
+                        'fase B após as fatias existirem (rode m1x de novo)'))
+        return out, results
+    keys = [a['name'].split('/')[-1] for a in ee.data.listAssets({'parent': src})['assets']]
+    inputs = {k: ee.Image(f'{src}/{k}') for k in keys if k.split('_')[0] in modulo1.PREFIXES}
+    inputs.update({k: ee.Image(f'{out}/{k}') for k in new_keys})
+    stage = modulo1.build_stage01(source=src, end=year, inputs=inputs)
+    props = {'version': version, 'base_version': base, 'extension_year': year,
+             'extension_note': f'2016–{year - 1} relidos de MODULO1/{base}; {year}: PRODES {year} de '
+                               'INPE/PRODES/ProdesBrasil24_AMZ_CER_PANT25 (Amazônia, Cerrado, Pantanal); '
+                               f'base "desmatamento anual < 6,25 ha" sem {year}; DETER fogo e corte '
+                               'desordenado em ano civil'}
+    ops = [(stage['final'].set(props), f'{out}/CCAL_MODULO1-{version}', tag + 'final', 'median')]
+    ops += [(img.set(props), f'{out}/{name}', tag + name, 'mode' if name == 'land_cover_masks' else 'mean')
+            for name, img in stage['densities'].items()]
+    for image, asset, description, pyramiding in ops:
+        if exists(asset):
+            results.append(('skip', asset, 'já existe'))
+        elif submit:
+            results.append(export_image(image, asset, description, pyramiding, True))
+        else:
+            results.append(('plan', asset, description))
+    return out, results
+
+
+M2_EXTENSION = {'base': 'v04', 'version': 'v04_1', 'year': 2025}
+
+
+def m2_extension_operations(submit, cfg=M2_EXTENSION):
+    """M2 .1: cadeia recalculada em memória até o ano novo; exporta consolidado e derivados.
+
+    Histórico idêntico à versão base (verificado na grade de export). Requer os rasters
+    DeterAnoProdes_<ano>_cs_* (deter_cs.py); se ausentes, são reconstruídos em memória.
+    """
+    base, version, year = cfg['base'], cfg['version'], cfg['year']
+    out = f'{ROOT}/MODULO2/{version}'
+    ensure_folder(out, submit)
+    tag = f'CCAL_M2_{version}_'
+    stage = modulo2.stage01(end_year=year, inputs=modulo2.stage00(end_year=year))
+    props = {'version': version, 'base_version': base, 'extension_year': year,
+             'extension_note': f'{year}: PRODES {year} de INPE/PRODES/ProdesBrasil24_AMZ_CER_PANT25 '
+                               '(Amazônia, Cerrado, Pantanal; demais biomas sem PRODES '
+                               f'{year}); base "desmatamento anual < 6,25 ha" sem {year}; '
+                               'corte seletivo DETER em ano civil; fogo MapBiomas Col. 5.1'}
+    ops = [(stage['final'].set(props), f'{out}/CCAL_MODULO2-{version}', f'{tag}final', 'median'),
+           (stage['land_cover_masks'].set(props), f'{out}/land_cover_masks', f'{tag}land_cover_masks', 'mode')]
+    ops += [(img.set(props), f'{out}/{name}', f'{tag}{name}', 'mean') for name, img in stage['densities'].items()]
+    results = []
+    for image, asset, description, pyramiding in ops:
+        if exists(asset):
+            results.append(('skip', asset, 'já existe'))
+        elif submit:
+            results.append(export_image(image, asset, description, pyramiding, True))
+        else:
+            results.append(('plan', asset, description))
+    return out, results
+
+
+M3_EXTENSION = {'base': 'v039', 'version': 'v039_1', 'year': 2025}
+
+
+def m3_extension_operations(submit, cfg=M3_EXTENSION):
+    """M3 .1: consolidado completo (histórico publicado + ano novo) e checkpoint interno.
+
+    O checkpoint guarda a fatia do ano novo de cada intermediário e os estados internos
+    (idade/estoque secundário, AGB/AGN do fogo florestal, AGB savana, logging, acumulados),
+    para a extensão seguinte não precisar da cadeia inteira.
+    """
+    base, version, year = cfg['base'], cfg['version'], cfg['year']
+    out = f'{ROOT}/MODULO3/{version}'
+    ensure_folder(out, submit)
+    tag = f'CCAL_M3_{version}_'
+    inputs, memory = modulo3.extension_inputs(year, base=f'{ROOT}/MODULO3/{base}')
+    stage = modulo3.stage03(year, inputs=inputs)
+    props = {'version': version, 'base_version': base, 'extension_year': year,
+             'extension_note': f'1985–{year - 1} relidos de MODULO3/{base} (idênticos); {year}: transição v5 '
+                               '(classe 7 repete o ano anterior), cobertura C11, Fogo Col. 5.1; logging '
+                               'MapBiomas sem dado: nenhum evento novo considerado'}
+    slices = [ee.Image(inputs[name]).select([f'.*_{year}']).regexpRename('^', f'{name}__')
+              for name in modulo3.PRODUCTS + modulo3.MASKS + ('desf_reg_corrected',)]
+    checkpoint = stack(slices + [memory['state'], stage['state']]).set(props)
+    ops = [(stage['final'].set(props), f'{out}/CCAL_MODULO3-{version}', f'{tag}final', 'median'),
+           (checkpoint, f'{out}/checkpoint_{year}', f'{tag}checkpoint_{year}', 'mean')]
+    results = []
+    for image, asset, description, pyramiding in ops:
+        if exists(asset):
+            results.append(('skip', asset, 'já existe'))
+        elif submit:
+            results.append(export_image(image, asset, description, pyramiding, True))
+        else:
+            results.append(('plan', asset, description))
+    return out, results
+
+
+M4_EXTENSION = {'base': 'v04', 'version': 'v04_1', 'year': 2025,
+                'edge_mode': 'advance', 'sf_mode': 'advance_tr6'}
+
+
+def m4_extension_operations(submit, cfg=M4_EXTENSION):
+    """M4 .1: anual do ano novo a partir do checkpoint + consolidado relendo os anuais base.
+
+    Nada da versão base é alterado. O anual novo entra no consolidado em memória,
+    então todas as tarefas podem ser submetidas juntas.
+    """
+    base, version, year = cfg['base'], cfg['version'], cfg['year']
+    base_annual = f'{ROOT}/MODULO4/{base}/emissions_removals_{base}'
+    out = f'{ROOT}/MODULO4/{version}'
+    annual_dst = f'{out}/emissions_removals_{version}'
+    ensure_folder(out, submit)
+    ensure_collection(annual_dst, submit)
+    tag = f'CCAL_M4_{version}_'
+    new = modulo4.extend_year(year, ee.Image(f'{base_annual}/{year - 1}'), edge_mode=cfg['edge_mode'],
+                              sf_mode=cfg['sf_mode'], version=version)
+    years = tuple(range(1986, year + 1))
+    annual = {y: ee.Image(f'{base_annual}/{y}') for y in years if y < year}
+    annual[year] = new
+    stage = modulo4.stage01(annual=annual, years=years)
+    props = {'version': version, 'base_version': base, 'extension_year': year,
+             'extension_edge_mode': cfg['edge_mode'], 'extension_sf_mode': cfg['sf_mode'],
+             'extension_logging_mode': 'no-new-event',
+             'extension_note': f'{year}: fogo e desmatamento observados; borda, idade secundária e logging '
+                               f'são hipóteses a partir do checkpoint {year - 1}'}
+    ops = [(new, f'{annual_dst}/{year}', f'{tag}stage00_{year}', 'mean'),
+           (stage['final'].set(props), f'{out}/CCAL_MODULO4-{version}', f'{tag}final', 'median'),
+           (stage['land_cover_masks'].set(props), f'{out}/land_cover_masks', f'{tag}land_cover_masks', 'mode')]
+    ops += [(img.set(props), f'{out}/{name}', f'{tag}{name}', 'mean') for name, img in stage['densities'].items()]
+    results = []
+    for image, asset, description, pyramiding in ops:
+        if exists(asset):
+            results.append(('skip', asset, 'já existe'))
+        elif submit:
+            results.append(export_image(image, asset, description, pyramiding, True))
+        else:
+            results.append(('plan', asset, description))
+    return out, results
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--project', required=True)
     parser.add_argument('--account-profile', default='workspace2')
-    parser.add_argument('--modules', nargs='+', choices=['m1', 'm1i', 'm2', 'm3', 'm4', 'm4i'], required=True)
+    parser.add_argument('--modules', nargs='+', choices=['m1', 'm1i', 'm2', 'm3', 'm4', 'm4i', 'm4x', 'm2x', 'm3x', 'm1x'], required=True)
     parser.add_argument('--submit', action='store_true')
     args = parser.parse_args()
     ee.Initialize(credentials=auth.load(args.account_profile), project=args.project)
     print('Conta:', args.account_profile, '| modo:', 'SUBMETER' if args.submit else 'dry-run')
     all_results = []
+    if 'm1x' in args.modules:
+        print('\nM1 %s: extensão %d (fase A fatias / fase B consolidado)' % (
+            M1_EXTENSION['version'], M1_EXTENSION['year']))
+        out, results = m1_extension_operations(args.submit)
+        all_results += results
+    if 'm3x' in args.modules:
+        print('\nM3 %s: extensão %d (histórico %s + ano novo)' % (
+            M3_EXTENSION['version'], M3_EXTENSION['year'], M3_EXTENSION['base']))
+        out, results = m3_extension_operations(args.submit)
+        all_results += results
+    if 'm2x' in args.modules:
+        print('\nM2 %s: extensão %d (cadeia em memória)' % (
+            M2_EXTENSION['version'], M2_EXTENSION['year']))
+        out, results = m2_extension_operations(args.submit)
+        all_results += results
+    if 'm4x' in args.modules:
+        print('\nM4 %s: extensão %d a partir do checkpoint %s' % (
+            M4_EXTENSION['version'], M4_EXTENSION['year'], M4_EXTENSION['base']))
+        out, results = m4_extension_operations(args.submit)
+        all_results += results
     if 'm4i' in args.modules:
         print('\nM4 v04: exportando 39 anuais do Stage 00 (recomputado, correcao by_coverage)')
         out, results = m4_intermediates(args.submit)
@@ -262,4 +448,11 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # Grafos profundos (M3: 40 anos x 6 biomas) excedem a recursão padrão ao serializar.
+    import sys
+    import threading
+    sys.setrecursionlimit(60000)
+    threading.stack_size(256 * 1024 * 1024 - 4096)
+    worker = threading.Thread(target=main)
+    worker.start()
+    worker.join()

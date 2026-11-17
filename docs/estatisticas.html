@@ -57,7 +57,7 @@
   <section class="card"><div class="card-head"><div><h2>De onde vêm as emissões</h2><p>Perdas por processo e remoções pela regeneração, a cada ano, para um módulo.</p></div><div class="seg small" id="fStackMod"></div></div><div class="chart-box"><canvas id="cStack"></canvas></div></section>
   <div class="grid two">
     <section class="card"><div class="card-head"><div><h2>Ranking</h2><p id="sRank"></p></div><div class="seg small" id="fRank"></div></div><div class="chart-box" style="height:420px"><canvas id="cRank"></canvas></div></section>
-    <section class="card"><div class="card-head"><div><h2>Módulo × processo</h2><p id="sMP"></p></div></div><div class="mx" id="mxMP"></div><p class="hint">Cada célula é a soma do período selecionado. As cores comparam as células de uma mesma linha.</p></section>
+    <section class="card"><div class="card-head"><div><h2>Processo × módulo</h2><p id="sMP"></p></div></div><div class="mx" id="mxMP"></div><p class="hint">Cada célula é a soma do período selecionado. As cores comparam os módulos dentro de cada processo.</p></section>
   </div>
   <section class="card"><div class="card-head"><div><h2>Matriz no tempo</h2><p id="sMx"></p></div><div style="display:flex;gap:.5rem;flex-wrap:wrap"><div class="seg small" id="fMxRows"></div><div class="seg small" id="fMxMod"></div></div></div><div class="mx" id="mx"></div></section>
   <p class="hint">Convergências (sobreposição de processos) não aparecem aqui porque já estão dentro das perdas. As remoções aparecem como valores negativos. Os módulos 1 e 2 começam em 2016; os módulos 3 e 4, em 1986. <a href="dados.html#limitacoes">Limitações de 2025</a> · <a href="data/ccal_estatisticas_bioma_uf.csv">baixar CSV</a></p>
@@ -123,8 +123,8 @@ function render(){
   const mp=agg(i=>inScope(i)&&D.y[i]>=y0&&D.y[i]<=y1&&P[VARS[D.p[i]]][2]!=='stock',i=>MODS[D.m[i]]+'|'+VARS[D.p[i]]);
   const pv=Object.keys(P).filter(k=>P[k][2]!=='stock');
   $('sMP').textContent=`Mt CO₂e · ${S.per.replace('-','–')} · ${scopeTxt()}`;
-  $('mxMP').innerHTML='<table><tr><th></th>'+pv.map(k=>`<th>${P[k][0]}</th>`).join('')+'</tr>'+MODS.map(m=>{const row=pv.map(k=>mp[m+'|'+k]==null?null:sign(k,mp[m+'|'+k])/1e6);const mx=Math.max(...row.filter(x=>x!=null).map(Math.abs),1e-9);
-    return `<tr><td><b>${m}</b></td>`+row.map((x,j)=>x==null?'<td class="muted">·</td>':`<td class="h" style="background:color-mix(in srgb,var(--${P[pv[j]][1]}) ${Math.round(Math.abs(x)/mx*70)+6}%,transparent)">${fmt(x)}</td>`).join('')+'</tr>'}).join('')+'</table>';
+  $('mxMP').innerHTML='<table><tr><th></th>'+MODS.map(m=>`<th>${m}</th>`).join('')+'</tr>'+pv.map(k=>{const row=MODS.map(m=>mp[m+'|'+k]==null?null:sign(k,mp[m+'|'+k])/1e6);const mx=Math.max(...row.filter(x=>x!=null).map(Math.abs),1e-9);
+    return `<tr><td><i class="dot" style="background:var(--${P[k][1]});margin-right:.35rem"></i><b>${P[k][0]}</b></td>`+row.map(x=>x==null?'<td class="muted">·</td>':`<td class="h" style="background:color-mix(in srgb,var(--${P[k][1]}) ${Math.round(Math.abs(x)/mx*70)+6}%,transparent)">${fmt(x)}</td>`).join('')+'</tr>'}).join('')+'</table>';
   const mi=MODS.indexOf(S.mxMod),mt=agg(i=>D.m[i]===mi&&D.p[i]===vi&&inScope(i),i=>(S.mxRows==='uf'?UFS[D.u[i]]:BIO[D.b[i]])+'|'+D.y[i]);
   const rows=[...new Set(Object.keys(mt).map(k=>k.split('|')[0]))].sort();const my=years.filter(y=>rows.some(r=>mt[r+'|'+y]!=null));
   const mmax=Math.max(...Object.values(mt).map(x=>Math.abs(x)),1e-9);

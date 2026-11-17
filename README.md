@@ -12,7 +12,7 @@ Este repositório gera mapas anuais a 30 m de estoque de carbono, emissões e re
 | M1 · FREL (PRODES/DETER) | 2016–2025 | `ccal_02_brazil_modulo_1_frell_v6_1` |
 | M2 · FREL adaptado (+ fogo em savanas, corte seletivo DETER) | 2016–2025 | `ccal_02_brazil_modulo_2_frell_adaptado_v3_1` |
 | M3 · QCN + MapBiomas (toda a vegetação nativa, regeneração) | 1986–2025 | `ccal_02_brazil_modulo_3_qcn_mapbiomas_v5_1` |
-| M4 · QCN + MapBiomas + borda | 1986–2025 | `ccal_02_brazil_modulo_4_qcn_mapbiomas_borda_v3_1` |
+| M4 · borda (só floresta, derivado do YbYrá-BR) | 1986–2025 | `ccal_02_brazil_modulo_4_qcn_mapbiomas_borda_v3_1` |
 
 Unidades das bandas:
 

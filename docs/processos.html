@@ -66,7 +66,7 @@ table.rates td:first-child,table.rates th:first-child{text-align:left}
         <h2>A degradação só acontece na vegetação primária.</h2>
         <p>Fogo, corte seletivo e borda reduzem o estoque da <strong>vegetação primária</strong>, aquela que existe desde o início da série e nunca foi desmatada. Uma vegetação que foi degradada continua primária, só que com menos carbono.</p>
         <p>A <strong>vegetação secundária</strong>, que cresce depois de um desmatamento, segue outra regra. Ela acumula carbono (remoção) e pode ser desmatada de novo, mas não recebe perdas por fogo, corte ou borda.</p>
-        <p class="small muted">O que conta como primária muda por módulo. No M1 e no M2 é a vegetação pretérita (florestal; no M2, também a savânica) que o PRODES ainda não desmatou. No M3 é a classe primária das transições do MapBiomas, cruzada com a cobertura do ano. No M4 é o estoque florestal inicial, separado do estoque da floresta secundária.</p>
+        <p class="small muted">O M4 é um módulo só de floresta, derivado do modelo YbYrá-BR: todos os processos dele valem só para floresta. O que conta como primária muda por módulo. No M1 e no M2 é a vegetação pretérita (florestal; no M2, também a savânica) que o PRODES ainda não desmatou. No M3 é a classe primária das transições do MapBiomas, cruzada com a cobertura do ano. No M4 é o estoque florestal inicial, separado do estoque da floresta secundária.</p>
       </div>
       <div class="states">
         <svg viewBox="0 0 560 330" role="img" aria-label="Estados do pixel: primária, primária degradada, desmatada e secundária">
@@ -98,9 +98,9 @@ table.rates td:first-child,table.rates th:first-child{text-align:left}
 
   <section class="block" id="fitofisionomia">
     <div class="sec-head"><span class="num">fitofisionomia</span><h2>Cada processo, em cada tipo de vegetação.</h2>
-      <p class="muted">O mesmo processo muda entre módulos e, dentro de um módulo, entre floresta, savana e campo. A borda é exclusiva de floresta. O corte seletivo é florestal no M3 e no M4.</p></div>
+      <p class="muted">O mesmo processo muda entre módulos e, dentro de um módulo, entre floresta, savana e campo. A borda é exclusiva de floresta. O corte seletivo é florestal no M3 e no M4. O M4 inteiro é florestal: ele deriva do modelo YbYrá-BR e não é uma extensão do M3.</p></div>
     <div class="table-wrap"><table class="fito">
-      <thead><tr><th>Processo · vegetação</th><th>M1 · FREL</th><th>M2 · FREL adaptado</th><th>M3 · QCN + MapBiomas</th><th>M4 · borda</th></tr></thead>
+      <thead><tr><th>Processo · vegetação</th><th>M1 · FREL</th><th>M2 · FREL adaptado</th><th>M3 · QCN + MapBiomas</th><th>M4 · borda <small>(só floresta)</small></th></tr></thead>
       <tbody>
         <tr class="g"><td colspan="5"><i class="dot" style="background:var(--fire)"></i> Fogo</td></tr>
         <tr><td>Floresta</td><td>● fração fixa 36,8% <small>(DETER, Amazônia)</small></td><td>● fator de combustão</td><td>● mortalidade tardia</td><td>● curva de potência</td></tr>
@@ -190,7 +190,7 @@ table.rates td:first-child,table.rates th:first-child{text-align:left}
         <p>A fração depende do <strong>número acumulado</strong> de eventos no pixel e cai de forma exponencial.</p>
         <div class="mini"><canvas id="cLog"></canvas></div>
         <div class="eq">f(n) = <b>0,196 × e<sup>−0,0782 (n − 1)</sup></b><br>perda = AGB × f(n) × 44/12</div>
-        <div class="where"><b>Onde:</b> só floresta primária. M3, corte seletivo do MapBiomas na Amazônia. M4, frequência de exploração, fora do desmatamento do ano.</div>
+        <div class="where"><b>Onde:</b> só floresta primária. M3, corte seletivo do MapBiomas, com a contagem acumulada calculada pelo módulo. M4, frequência de exploração do YbYrá-BR, fora do desmatamento do ano. A equação é a mesma, mas as fontes diferem, e por isso os números não coincidem.</div>
       </article>
     </div>
   </section>
